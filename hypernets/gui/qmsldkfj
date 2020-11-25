@@ -1,2 +1,0 @@
-mode, action, vis, swir, nb_cap, total, reso = [v.get() for v in self.radiometer_var]    
-print(mode, action, vis, swir, nb_cap, total, reso)           
