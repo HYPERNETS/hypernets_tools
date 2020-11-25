@@ -1,0 +1,2 @@
+azimuth,move(abs/nor/sun),zenith,mode(vis,swi,bot,non),action(irr/rad/bot/bla/cal/pic/non),int_time(ms,0:ins),repeat_mea(or mea_time), mea_time(sec, or repeat_mea)
+-1,sun,-1,non,pic,0,0,0
