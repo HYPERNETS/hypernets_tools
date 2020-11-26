@@ -17,6 +17,7 @@
 set -o nounset                              # Treat unset variables as an error
 set -euo pipefail                           # Bash Strict Mode
 
+echo $PWD
 
 # Ensure Yocto is online
 yoctopuceIP=$(awk -F "[ =]+" '/yoctopuce_ip/ {print $2}' config_hypernets.ini)
@@ -37,7 +38,7 @@ sleep 20  # Time for waking up
 # sequence_file="hypernets/resources/sequences_samples/sequence_water_1_STD.csv"
 sequence_file="hypernets/resources/sequences_samples/sequence_1_spectra.csv"
 
-python -m hypernets.open_sequence.py -df $sequence_file
+python -m hypernets.open_sequence -df $sequence_file
 
 python -m hypernets.scripts.relay_command -n2 -soff
 python -m hypernets.scripts.relay_command -n3 -soff
