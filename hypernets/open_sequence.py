@@ -16,6 +16,7 @@ from hypernets.virtual.read_protocol import create_block_position_name
 from hypernets.scripts.pan_tilt import move_to
 from hypernets.scripts.spa.spa_hypernets import spa_from_datetime
 from hypernets.scripts.call_radiometer import take_picture, take_spectra
+from hypernets.scripts.call_radiometer import set_tec
 
 last_it_vnir = 0
 last_it_swir = 0
@@ -76,7 +77,13 @@ def hypstar_python(line, block_position, output_dir="DATA"):
     return output_name
 
 
-def run_sequence_file(sequence_file, driver=True):
+def run_sequence_file(sequence_file, driver=True, swir=None):
+
+    if swir:
+        TEC = 5
+        print(f"Setting TEC to {TEC} °C...")
+        set_tec(TEC)
+        print('DONE')
 
     with open(sequence_file, mode='r') as sequence:
 
@@ -157,10 +164,16 @@ def run_sequence_file(sequence_file, driver=True):
             output_name = hypstar_python(line, block_position, output_dir=path.
                                          join(DATA_DIR, seq_name, "RADIOMETER"))  # noqa
 
+            # TODO utc ? should be :
+            # now_str = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
             now_str = datetime.now().strftime("%Y%m%dT%H%M%S")
             mdfile.write(f"{output_name}={now_str}\n")
 
         mdfile.close()
+
+        print(f"Disabling Cooling...")
+        set_tec(-100)
+        print('DONE')
 
         replace(path.join(DATA_DIR, seq_name),
                 path.join(DATA_DIR, create_seq_name(now=start)))
@@ -185,6 +198,10 @@ if __name__ == '__main__':
                         help="Select input sequence file",
                         required=True)
 
+    parser.add_argument("-s", "--swir", type=bool,
+                        help="")
+
     args = parser.parse_args()
     # run_sequence_file(args.file, hypstar=args.hypstar)
-    run_sequence_file(args.file, driver=None)
+
+    run_sequence_file(args.file, driver=None, swir=args.swir)
