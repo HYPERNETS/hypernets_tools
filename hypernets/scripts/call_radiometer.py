@@ -19,7 +19,7 @@ def set_tec(TEC=0):
         return e
 
 
-def take_picture(path_to_picture=None, params=None):
+def take_picture(path_to_picture=None, params=None, return_stream=False):
     # Note : 'params = None' for now, only 5MP is working
 
     if path_to_picture is None:
@@ -35,6 +35,8 @@ def take_picture(path_to_picture=None, params=None):
         with open(path_to_picture, 'wb') as f:
             f.write(stream)
         print(f"Saved to {path_to_picture}.")
+        if return_stream:
+            return stream
         return True
 
     except Exception as e:
