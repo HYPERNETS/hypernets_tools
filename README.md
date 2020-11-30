@@ -2,20 +2,20 @@
   
   
 ## Instructions :
-First download this repository (as a zip file under the tab "code") or using "git clone".
+First download this repository (as a zip file under the tab *code*) or using *git clone*.
   
-After unzipping (or clone), go to the folder hypernets_tools-main and edit
-the config_hypernets.ini according to your configuration.  
-The most important section is "yoctopuce". 
+After unzipping (or clone), go to the folder *hypernets_tools-main* and edit
+the *config_hypernets.ini* according to your configuration.  
+The most important section is *yoctopuce*. 
 
-## Prerequisite :
+## Prerequisite : 
 ### Installing Boost v1.71 (~1h)
 > cd hypernets/install  
 > sudo bash 02_install_boost.sh
-  
-  
+   
+   
 ## Optional :
-As an option , 
+As an option, 
 
 ### Jupyter Notebook
 > cd hypernets/install  
