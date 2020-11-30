@@ -1,4 +1,4 @@
-<img alt="Hypernets Processor" align="left" src="hypernets/resources/logo.png" width=110 />
+<img alt="Hypernets Processor" align="left" src="hypernets/resources/logo.png"/>
 
 # hypernets_tools
 Hypernets Tools for Host System
