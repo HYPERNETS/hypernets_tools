@@ -11,6 +11,9 @@ section is *yoctopuce*.
 
 ## Prerequisite : 
 ### Installing Boost v1.71 (~1h)
+You will first have to install *libboost-python* dependency, it's pretty 
+straightforward but a bit long : 
+
 > cd hypernets/install  
 > sudo bash 02_install_boost.sh
    
