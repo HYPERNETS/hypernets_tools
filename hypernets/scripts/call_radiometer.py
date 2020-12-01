@@ -102,47 +102,33 @@ def take_spectra(path_to_file, mode, action, it_vnir, it_swir, cap_count):
 
 
 if __name__ == '__main__':
+
     parser = ArgumentParser()
 
     mode = parser.add_mutually_exclusive_group(required=True)
 
-    mode.add_argument("-r", "--rad", action="store_true",
-                      help="display relay's states")
+    mode.add_argument("-p", "--picture", action="store_true",
+                      help="Take a picture (5MP)")
 
-    mode.add_argument("-s", "--swir", type=str,
-                      help="set the state of the relay",
-                      metavar="{on, off}",
-                      choices=["on", "off"])
+    mode.add_argument("-r", "--radiometer", type=str,
+                      metavar="{vnir, swir, both}",
+                      choices=["vnir", "swir", "both"],
+                      help="Select a radiometer")
 
-    mode.add_argument("-r", "--both", action="store_true",
-                      help="reset relay (1 sec off, then on)")
+    parser.add_argument("-e", "--entrance", type=str,
+                        metavar="{irr, rad, dark}",
+                        choices=["irr", "rad", "dark"],
+                        help="Select an entrance")
 
-#    mode.add_argument("-p", "--set-at-power-on", type=str,
-#                      help="schedule the state of the relay for next wakeup "
-#                           "(use --force [-f] to write in flash memory)",
-#                      metavar="{on, off, unchanged}",
-#                      choices=["on", "off", "unchanged"])
+    parser.add_argument("-a", "--count", type=int, default=1,
+                        help="Number of capture (default=1)")
 
-#    parser.add_argument("-n", "--id-relay", type=int,
-#                        help="ID number of the relay (-1 stands for 'all')",
-#                        required=True,
-#                        metavar="{-1,1..6}",
-#                        choices=[-1] + list(range(1, 7, 1)))
+    args = parser.parse_args()
 
-#    parser.add_argument("-f", "--force", action="store_true",
-#                        help="force relay #1 to switch off")
+    if args.radiometer and not args.entrance:
+        parser.error(f"Please select an entrance for the {args.radiometer}.")
 
-#    args = parser.parse_args()
+    if args.entrance and not args.radiometer:
+        parser.error(f"Please select a radiometer for {args.entrance}.")
 
-#    if args.get:
-#        get_state_relay(args.id_relay)
-
-#    elif args.set:
-#        set_state_relay(args.id_relay, args.set)
-
-#    elif args.reset:
-#        set_state_relay(args.id_relay, "reset")
-
-#    elif args.set_at_power_on:
-#        set_at_power_on(args.id_relay, args.set_at_power_on)
-#        take_picture()
+    print(args)
