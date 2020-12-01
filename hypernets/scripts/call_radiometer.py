@@ -9,33 +9,46 @@ from hypernets.binary.libhypstar import s_img_data
 from argparse import ArgumentParser
 
 
-def set_tec(TEC=0):
+def set_tec(TEC=5):
     try:
+        if TEC == -100:
+            print("Disabling Cooling...")
+        else:
+            print(f"Setting TEC to {TEC} °C...")
         hs = Hypstar("/dev/ttyUSB5")
         hs.setTECSetpoint(TEC)
+        print('DONE')
 
     except Exception as e:
         print(f"Error : {e}")
         return e
 
 
-def take_picture(path_to_picture=None, params=None, return_stream=False):
+def unset_tec():
+    set_tec(-100)
+
+
+def make_datetime_name(extension=".jpg"):
+    return datetime.utcnow().strftime("%Y%m%dT%H%M%S")+extension
+
+
+def take_picture(path_to_file=None, params=None, return_stream=False):
 
     # Note : 'params = None' for now, only 5MP is working
 
-    if path_to_picture is None:
+    if path_to_file is None:
         from os import path
-        path_to_picture = datetime.utcnow().strftime("%Y%m%dT%H%M%S.jpg")
-        path_to_picture = path.join("DATA", path_to_picture)
+        path_to_file = make_datetime_name()
+        path_to_file = path.join("DATA", path_to_file)
 
     try:
         hs = Hypstar("/dev/ttyUSB5")
         im_data = s_img_data()
         hs.acquireDefaultJpeg(True, False, im_data)
         stream = im_data.jpeg_to_bytes()
-        with open(path_to_picture, 'wb') as f:
+        with open(path_to_file, 'wb') as f:
             f.write(stream)
-        print(f"Saved to {path_to_picture}.")
+        print(f"Saved to {path_to_file}.")
         if return_stream:
             return stream
         return True
@@ -53,7 +66,15 @@ def take_spectra(path_to_file, mode, action, it_vnir, it_swir, cap_count):
     ent = {'rad': entrance.RADIANCE, 'irr': entrance.IRRADIANCE,
            'bla': entrance.DARK}[action]
 
+    if rad in [radiometer.SWIR, radiometer.BOTH]:
+        set_tec()
+
     print(f"--> [{rad} {ent} {it_vnir} {it_swir}] x {cap_count}")
+
+    if path_to_file is None:
+        from os import path
+        path_to_file = make_datetime_name(extension=".spe")
+        path_to_file = path.join("DATA", path_to_file)
 
     try:
         hs = Hypstar('/dev/ttyUSB5')
@@ -105,6 +126,7 @@ def take_spectra(path_to_file, mode, action, it_vnir, it_swir, cap_count):
 def _cli_extra_parser(args):
     if args.picture:
         take_picture(path_to_file=args.output)
+
     else:
         if args.radiometer == 'vnir':
             mode = "vis"

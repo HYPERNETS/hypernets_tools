@@ -36,7 +36,8 @@ sleep 20  # Time for waking up
 
 # sequence_file="hypernets/resources/sequences_samples/sequence_land_STD.csv"
 # sequence_file="hypernets/resources/sequences_samples/sequence_water_1_STD.csv"
-sequence_file="hypernets/resources/sequences_samples/sequence_1_spectra.csv"
+# sequence_file="hypernets/resources/sequences_samples/sequence_1_spectra.csv"
+sequence_file="hypernets/resources/sequences_samples/sequence_2_swir_vnir.csv"
 
 python -m hypernets.open_sequence -df $sequence_file
 

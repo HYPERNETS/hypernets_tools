@@ -16,15 +16,17 @@ from hypernets.virtual.read_protocol import create_block_position_name
 from hypernets.scripts.pan_tilt import move_to
 from hypernets.scripts.spa.spa_hypernets import spa_from_datetime
 from hypernets.scripts.call_radiometer import take_picture, take_spectra
-from hypernets.scripts.call_radiometer import set_tec
+from hypernets.scripts.call_radiometer import unset_tec
+
 
 last_it_vnir = 0
 last_it_swir = 0
+swir = False
 
 
 def hypstar_python(line, block_position, output_dir="DATA"):
 
-    global last_it_vnir, last_it_swir
+    global last_it_vnir, last_it_swir, swir
 
     _, _, _, mode, action, it_vnir, cap_count, total_time = line
 
@@ -67,6 +69,7 @@ def hypstar_python(line, block_position, output_dir="DATA"):
                 print(f"Last AIT-VNIR is now : {last_it_vnir}")
 
             if mode == 'swi' or mode == 'bot':
+                swir = True
                 last_it_swir = it_swir
                 print(f"Last AIT-SWIR is now : {last_it_swir}")
 
@@ -77,14 +80,7 @@ def hypstar_python(line, block_position, output_dir="DATA"):
     return output_name
 
 
-def run_sequence_file(sequence_file, driver=True, swir=None):
-
-    if swir:
-        TEC = 5
-        print(f"Setting TEC to {TEC} °C...")
-        set_tec(TEC)
-        print('DONE')
-
+def run_sequence_file(sequence_file, driver=True):
     with open(sequence_file, mode='r') as sequence:
 
         DATA_DIR = "DATA"  # XXX Add option
@@ -171,12 +167,10 @@ def run_sequence_file(sequence_file, driver=True, swir=None):
 
         mdfile.close()
 
-        print(f"Disabling Cooling...")
-        set_tec(-100)
-        print('DONE')
-
         replace(path.join(DATA_DIR, seq_name),
                 path.join(DATA_DIR, create_seq_name(now=start)))
+    if swir:
+        unset_tec()
 
 
 if __name__ == '__main__':
@@ -198,10 +192,7 @@ if __name__ == '__main__':
                         help="Select input sequence file",
                         required=True)
 
-    parser.add_argument("-s", "--swir", type=bool,
-                        help="")
-
     args = parser.parse_args()
     # run_sequence_file(args.file, hypstar=args.hypstar)
 
-    run_sequence_file(args.file, driver=None, swir=args.swir)
+    run_sequence_file(args.file, driver=None)
