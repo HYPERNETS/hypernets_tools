@@ -9,6 +9,15 @@ After unzipping (or clone), go to the folder *hypernets_tools-main* and edit
 the *config_hypernets.ini* according to your configuration. The most important
 section is *yoctopuce*. 
 
+## Prerequisite : 
+### Installing Boost v1.71 (~1h)
+You will first have to install *libboost-python* dependency, it's pretty 
+straightforward but a bit long (internet connection needed) :
+
+> cd hypernets/install  
+> sudo bash 02_install_boost.sh
+
+
 ## New set of commands :
 
 #### Launch the GUI : 
@@ -33,14 +42,12 @@ Both Visible and Short-Waved Infrared Irradiance :
 Taking a picture :
 > python -m hypernets.scripts.call_radiometer -p
 
+## Autonomous Mode
+### Setting up service
 
-## Prerequisite : 
-### Installing Boost v1.71 (~1h)
-You will first have to install *libboost-python* dependency, it's pretty 
-straightforward but a bit long (internet connection needed) :
-
-> cd hypernets/install  
-> sudo bash 02_install_boost.sh
+### Wakeup Conditions :
+Please refer to the Yoctopuce User Manual to set up Wakeup conditions for the system : 
+http://www.yoctopuce.com/EN/products/yoctohub-wireless/doc/YHUBWLN1.usermanual.html#CHAP9SEC1
    
    
 ## Optional :
