@@ -37,6 +37,7 @@ Visible Radiance single spectra (automatic integration time) :
 Both Visible and Short-Waved Infrared Irradiance :  
 (IT vnir : 64 ms ; IT swir : 128 ms)
 > python -m hypernets.scripts.call_radiometer -r both -e irr -v 64 -w 128   
+
 *Note : This will output 3 spectra (2 vnir + 1 swir).*  
 
 Taking a picture :
