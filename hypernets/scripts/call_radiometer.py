@@ -101,6 +101,27 @@ def take_spectra(path_to_file, mode, action, it_vnir, it_swir, cap_count):
     return it_vnir, it_swir
 
 
+# FIXME : write more generic function (refactor with take_spectra)
+def _cli_extra_parser(args):
+    if args.picture:
+        take_picture(path_to_file=args.output)
+    else:
+        if args.radiometer == 'vnir':
+            mode = "vis"
+        elif args.radiometer == 'swir':
+            mode = "swi"
+        elif args.radiometer == 'both':
+            mode = "bot"
+
+        if args.entrance == 'dark':
+            action = 'bla'
+        else:
+            action = args.entrance
+
+        take_spectra(args.output, mode, action,
+                     args.it_vnir, args.it_swir, args.count)
+
+
 if __name__ == '__main__':
 
     parser = ArgumentParser()
@@ -120,8 +141,17 @@ if __name__ == '__main__':
                         choices=["irr", "rad", "dark"],
                         help="Select an entrance")
 
-    parser.add_argument("-a", "--count", type=int, default=1,
+    parser.add_argument("-v", "--it-vnir", type=int, default=0,
+                        help="Integration Time for VNIR (default=0)")
+
+    parser.add_argument("-w", "--it-swir", type=int, default=0,
+                        help="Integration Time for SWIR (default=0)")
+
+    parser.add_argument("-n", "--count", type=int, default=1,
                         help="Number of capture (default=1)")
+
+    parser.add_argument("-o", "--output", type=str, default=None,
+                        help="Specify output file name")
 
     args = parser.parse_args()
 
@@ -131,4 +161,4 @@ if __name__ == '__main__':
     if args.entrance and not args.radiometer:
         parser.error(f"Please select a radiometer for {args.entrance}.")
 
-    print(args)
+    _cli_extra_parser(args)
