@@ -32,7 +32,7 @@ straightforward but a bit long (internet connection needed) :
    
 ## Optional :
 ### Jupyter Notebook
-If you want to connect (ssh or python) on the host system from any web browser via wifi, 
+If you want to connect (ssh or python) on the host system from any web browser via Wi-Fi, 
 you should install first *jupyter notebook* :
 
 > cd hypernets/install  
@@ -41,5 +41,9 @@ you should install first *jupyter notebook* :
 You can then launch the notebook :
 > jupyter notebook 
 
-And should be able (once Wi-Fi connection is up) to access the address : 
+Then connect to the Wi-Fi hotspot of the rugged PC (from any laptop) and you should be able
+to access the address :
+
 > 10.42.0.1:8888
+
+More information about jupyter notbook : https://jupyter.org/
