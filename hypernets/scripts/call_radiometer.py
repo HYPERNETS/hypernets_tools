@@ -20,6 +20,7 @@ def set_tec(TEC=0):
 
 
 def take_picture(path_to_picture=None, params=None, return_stream=False):
+
     # Note : 'params = None' for now, only 5MP is working
 
     if path_to_picture is None:
