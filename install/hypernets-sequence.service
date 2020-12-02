@@ -8,6 +8,7 @@ SuccessAction=poweroff
 User=
 ExecStart=
 WorkingDirectory=
+EnvironmentFile=/etc/environment
 
 [Install]
 WantedBy=multi-user.target
