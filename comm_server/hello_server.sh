@@ -34,7 +34,6 @@ bidirectional_sync "config_hypernets.ini" \
 	"$ipServer" "~/config_hypernets.ini"
 
 # Send data
-# rsync -rt "../DATA" "$ipServer:/home/hypernets/public_html/data/data_hypernets/FROM_TRANSFER/r2d2-beta"
 rsync -rt --exclude "CUR*" "DATA" "$ipServer:/home/hypernets/public_html/r2d2-beta"
 
 # Sync the whole config folder from remote to local
