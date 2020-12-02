@@ -8,8 +8,6 @@
 # ipServer=193.49.112.3
 
 # Npl :
-ipServer="139.143.5.63"
-ipServer="lovr2d2001@hypernetssvr1.npl.co.uk"
 
 # -f : stdin > /dev/null
 #
