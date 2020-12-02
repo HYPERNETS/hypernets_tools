@@ -1,22 +1,26 @@
 from hypernets.scripts.spa.spa_py import spa_calc
-from configparser import ConfigParser
 from datetime import datetime
 
 
 def spa_from_datetime():
-
+    from configparser import ConfigParser
     config = ConfigParser()
     config.read("config_hypernets.ini")
 
-    elevation = float(config["SPA"]["elevation"])
-    time_zone = int(config["SPA"]["time_zone"])
+    try:
+        elevation = float(config["SPA"]["elevation"])
+    except KeyError:
+        elevation = 0.0
+
     latitude = float(config["GPS"]["latitude"])
     longitude = float(config["GPS"]["longitude"])
-    now = datetime.now()
+
+    # now = datetime.now()
+    # time_zone = int(config["SPA"]["time_zone"])
 
     # TODO : make a choice with alternative :
-    # time_zone = 0
-    # now = datetime.utcnow()
+    time_zone = 0
+    now = datetime.utcnow()
 
     spa = spa_calc(year=now.year, month=now.month, day=now.day,
                    hour=now.hour, minute=now.minute, second=now.second,
@@ -32,9 +36,27 @@ def spa_from_datetime():
 
 
 def spa_from_gps():
-    pass
+    from hypernets.scripts.yocto_gps import get_gps
+    latitude, longitude, now = get_gps()
+    now = datetime.strptime(now, '%Y/%m/%d %H:%M:%S')
+
+    spa = spa_calc(year=now.year, month=now.month, day=now.day,
+                   hour=now.hour, minute=now.minute, second=now.second,
+                   time_zone=0,  # GPS = utc
+                   longitude=longitude,
+                   latitude=latitude,
+                   elevation=0,  # TODO : test with elevation
+                   pressure=820,
+                   temperature=11,
+                   delta_t=67)
+
+    return spa['azimuth'], spa['zenith']
 
 
 if __name__ == '__main__':
+    print("From datetime + fixed coords in config_hypenets.ini : ")
     azimuth_sun, zenith_sun = spa_from_datetime()
+    print(f"Azimuth Sun  : {azimuth_sun} ; Zenith Sun : {zenith_sun}")
+    print("From GPS")
+    azimuth_sun, zenith_sun = spa_from_gps()
     print(f"Azimuth Sun  : {azimuth_sun} ; Zenith Sun : {zenith_sun}")

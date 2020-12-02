@@ -14,9 +14,10 @@ from hypernets.virtual.read_protocol import create_spectra_name
 from hypernets.virtual.read_protocol import create_block_position_name
 
 from hypernets.scripts.pan_tilt import move_to
-from hypernets.scripts.spa.spa_hypernets import spa_from_datetime
+from hypernets.scripts.spa.spa_hypernets import spa_from_datetime, spa_from_gps
 from hypernets.scripts.call_radiometer import take_picture, take_spectra
 from hypernets.scripts.call_radiometer import unset_tec
+from hypernets.scripts.yocto_meteo import get_meteo
 
 
 last_it_vnir = 0
@@ -80,7 +81,7 @@ def hypstar_python(line, block_position, output_dir="DATA"):
     return output_name
 
 
-def run_sequence_file(sequence_file, driver=True):
+def run_sequence_file(sequence_file, driver=True): # FIXME : # noqa C901
     with open(sequence_file, mode='r') as sequence:
 
         DATA_DIR = "DATA"  # XXX Add option
@@ -94,8 +95,19 @@ def run_sequence_file(sequence_file, driver=True):
 
         # XXX Add option :
         # copy(sequence_file, path.join(seq_name, sequence_file))
-        # mkdir(path.join(DATA_DIR, seq_name, "/WEBCAM"))
-        # mkdir(path.join(DATA_DIR, seq_name, "/METEO"))
+        # mkdir(path.join(DATA_DIR, seq_name, "WEBCAM"))
+
+        # Write one line meteo file
+        # mkdir(path.join(DATA_DIR, seq_name, "METEO"))
+        # with open(path.join(DATA_DIR, seq_name, "METEO", "meteo.csv"), "w") as meteo:  # noqa
+        with open(path.join(DATA_DIR, seq_name, "meteo.csv"), "w") as meteo:
+            try:
+                meteo_data = get_meteo()
+                meteo_data = "; ".join([str(val) + unit for val, unit in meteo_data])  # noqa
+                meteo.write(meteo_data)
+
+            except Exception as e:
+                meteo_data.write(e)
 
         mdfile = open(path.join(DATA_DIR, seq_name, "metadata.txt"), "w")
         sequence_reader = reader(sequence)
@@ -121,7 +133,11 @@ def run_sequence_file(sequence_file, driver=True):
             mdfile.write(f"pt_ask={pan:.2f}; {tilt:.2f}\n")
 
             if ref == "sun":
-                azimuth_sun, zenith_sun = spa_from_datetime()
+                try:
+                    azimuth_sun, zenith_sun = spa_from_gps()
+                except Exception as e:
+                    print(f"Error : {e}")
+                    azimuth_sun, zenith_sun = spa_from_datetime()
                 print(f"--> Sun Position  (azimuth : {azimuth_sun:.2f}, "
                       f"zenith : {zenith_sun:.2f})")
 
@@ -182,15 +198,15 @@ if __name__ == '__main__':
     driver.add_argument("-d", "--hypstar-dynamic", action='store_true',
                         help="Use dynamic libhypstar driver")
 
+    parser.add_argument("-f", "--file", type=str,
+                        help="Select input sequence file",
+                        required=True)
+
     # driver.add_argument("-y", "--hypstar", action='store_true',
     #                     help="Use libhypstar driver")
 
     # driver.add_argument("-p", "--phystar", action='store_true',
     #                     help="Use phystar driver")
-
-    parser.add_argument("-f", "--file", type=str,
-                        help="Select input sequence file",
-                        required=True)
 
     args = parser.parse_args()
     # run_sequence_file(args.file, hypstar=args.hypstar)
