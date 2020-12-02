@@ -6,4 +6,4 @@ cd boost_1_71_0/
 ./bootstrap.sh
 sudo ./b2 install
 # Add the library path to env
-sudo echo 'LD_LIBRARY_PATH="/usr/local/lib"' >> /etc/environment
+echo 'LD_LIBRARY_PATH="/usr/local/lib"' | sudo tee -a /etc/environment > /dev/null
