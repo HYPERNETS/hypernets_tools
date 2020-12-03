@@ -28,26 +28,27 @@ python -m hypernets.gui
 # Open a sequence :
 python -m hypernets.open_sequence -df hypernets/resources/sequences_sample/sequence_file.csv
 
+# Playing with relays :
+python -m hypernets.scripts.relay_command
+
+# Playing with the instrument (examples) :
+# Visible Radiance single spectra (automatic integration time) :
+python -m hypernets.scripts.call_radiometer -r vnir -e rad
+
+# Both Visible and Short-Waved Infrared Irradiance :  
+# (IT vnir : 64 ms ; IT swir : 128 ms)
+python -m hypernets.scripts.call_radiometer -r both -e irr -v 64 -w 128   
+# *Note : This will output 3 spectra (2 vnir + 1 swir).*
+
+# Taking a picture :
+> python -m hypernets.scripts.call_radiometer -p
+
 ```
 
-```sh
 
-#### Playing with relays : 
-> python -m hypernets.scripts.relay_command
+  
 
-#### Playing with the instrument (examples) :
 
-Visible Radiance single spectra (automatic integration time) :
-> python -m hypernets.scripts.call_radiometer -r vnir -e rad
-
-Both Visible and Short-Waved Infrared Irradiance :  
-(IT vnir : 64 ms ; IT swir : 128 ms)
-> python -m hypernets.scripts.call_radiometer -r both -e irr -v 64 -w 128   
-
-*Note : This will output 3 spectra (2 vnir + 1 swir).*  
-
-Taking a picture :
-> python -m hypernets.scripts.call_radiometer -p
 
 ## Autonomous Mode
 ### Setting up service
