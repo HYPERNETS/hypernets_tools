@@ -14,17 +14,23 @@ section is *yoctopuce*.
 You will first have to install *libboost-python* dependency, it's pretty 
 straightforward but a bit long (internet connection needed) :
 
-> cd hypernets/install  
+```sh
+cd hypernets/install  
 > sudo bash 02_install_boost.sh
-
+```
 
 ## New set of commands :
 
-#### Launch the GUI : 
-> python -m hypernets.gui
+```sh
+# Launch the GUI
+python -m hypernets.gui
 
-#### Open a sequence :
-> python -m hypernets.open_sequence -df hypernets/resources/sequences_sample/sequence_file.csv
+# Open a sequence :
+python -m hypernets.open_sequence -df hypernets/resources/sequences_sample/sequence_file.csv
+
+```
+
+```sh
 
 #### Playing with relays : 
 > python -m hypernets.scripts.relay_command
