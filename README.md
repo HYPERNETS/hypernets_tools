@@ -5,8 +5,9 @@
 First download this repository (as a zip file under the tab *code*) or using
 *git clone*.
   
-After unzipping (or clone), go to the folder *hypernets_tools-main* and edit
-the *config_hypernets.ini* according to your configuration. The most important
+After unzipping (or cloning), go to the folder *hypernets_tools-main* and make
+a copy the file *config_hypernets.ini.template* named *config_hypernets.ini*.
+Edit the new file according to your configuration. The most important
 section is *yoctopuce*. 
 
 ## Prerequisite : 
@@ -44,7 +45,6 @@ python -m hypernets.scripts.call_radiometer -r both -e irr -v 64 -w 128
 > python -m hypernets.scripts.call_radiometer -p
 
 ```
-
 
   
 
