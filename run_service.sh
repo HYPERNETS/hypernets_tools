@@ -5,9 +5,7 @@
 #
 #         USAGE: ./run_service.sh
 #
-#   DESCRIPTION: Script called by systemd to run a sequence at boot time
-#
-#       OPTIONS: ---
+#   DESCRIPTION: Script called by systemd to run a sequence at boot time # #       OPTIONS: ---
 #        AUTHOR: Alexandre CORIZZI, alexandre.corizzi@obs-vlfr.fr
 #  ORGANIZATION: Laboratoire d'oceanographie de Villefranche-sur-mer (LOV)
 #       CREATED: 22/10/2020 18:19
@@ -35,11 +33,10 @@ python -m hypernets.scripts.relay_command -n6 -son
 echo "Waiting for instrument to boot"
 sleep 30  # Time for waking up
 
-# sequence_file="hypernets/resources/sequences_samples/sequence_land_STD.csv"
-# sequence_file="hypernets/resources/sequences_samples/sequence_water_1_STD.csv"
-# sequence_file="hypernets/resources/sequences_samples/sequence_1_spectra.csv"
-# sequence_file="hypernets/resources/sequences_samples/sequence_2_swir_vnir.csv"
-sequence_file="hypernets/resources/sequences_samples/sequence_picture_sun.csv"
+sequence_file=$(awk -F "[ =]+" '/sequence_file/ {print $2}' config_hypernets.ini)
+
+# sequence_file="hypernets/resources/sequences_samples/sequence_picture_sun.csv"
+echo $sequence_file
 
 python -m hypernets.open_sequence -df $sequence_file
 
