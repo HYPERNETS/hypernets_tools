@@ -2,7 +2,7 @@ from hypernets.scripts.spa.spa_py import spa_calc
 from datetime import datetime
 
 
-def spa_from_datetime():
+def spa_from_datetime(now=datetime.utcnow()):
     from configparser import ConfigParser
     config = ConfigParser()
     config.read("config_hypernets.ini")
@@ -20,7 +20,6 @@ def spa_from_datetime():
 
     # TODO : make a choice with alternative :
     time_zone = 0
-    now = datetime.utcnow()
 
     spa = spa_calc(year=now.year, month=now.month, day=now.day,
                    hour=now.hour, minute=now.minute, second=now.second,
