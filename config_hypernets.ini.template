@@ -25,6 +25,7 @@ time_zone = 0
 
 [network]
 credentials = user@server
+remote_dir = ~/DATA
 
 [pantilt]
 offset_pan = 0

@@ -5,7 +5,8 @@
 #
 #         USAGE: ./run_service.sh
 #
-#   DESCRIPTION: Script called by systemd to run a sequence at boot time # #       OPTIONS: ---
+#   DESCRIPTION: Script called by systemd to run a sequence at boot time # #       
+#       OPTIONS: ---
 #        AUTHOR: Alexandre CORIZZI, alexandre.corizzi@obs-vlfr.fr
 #  ORGANIZATION: Laboratoire d'oceanographie de Villefranche-sur-mer (LOV)
 #       CREATED: 22/10/2020 18:19

@@ -138,6 +138,7 @@ def run_sequence_file(sequence_file, driver=True): # FIXME : # noqa C901
                 except Exception as e:
                     print(f"Error : {e}")
                     azimuth_sun, zenith_sun = spa_from_datetime()
+
                 print(f"--> Sun Position  (azimuth : {azimuth_sun:.2f}, "
                       f"zenith : {zenith_sun:.2f})")
 
