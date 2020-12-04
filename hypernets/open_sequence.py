@@ -1,5 +1,5 @@
 """
-05/10/2020 : Mini-pyxis to execute sequence from csv file
+05/10/2020 : open_sequence : to read sequence from csv file
 """
 
 from argparse import ArgumentParser
@@ -13,11 +13,12 @@ from hypernets.virtual.read_protocol import create_seq_name
 from hypernets.virtual.read_protocol import create_spectra_name
 from hypernets.virtual.read_protocol import create_block_position_name
 
+from hypernets.scripts.yocto_meteo import get_meteo
 from hypernets.scripts.pan_tilt import move_to
 from hypernets.scripts.spa.spa_hypernets import spa_from_datetime, spa_from_gps
+
 from hypernets.scripts.call_radiometer import take_picture, take_spectra
 from hypernets.scripts.call_radiometer import unset_tec
-from hypernets.scripts.yocto_meteo import get_meteo
 
 
 last_it_vnir = 0
@@ -210,6 +211,7 @@ if __name__ == '__main__':
     #                     help="Use phystar driver")
 
     args = parser.parse_args()
+
     # run_sequence_file(args.file, hypstar=args.hypstar)
 
     run_sequence_file(args.file, driver=None)
