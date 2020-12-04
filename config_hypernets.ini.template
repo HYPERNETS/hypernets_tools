@@ -1,3 +1,6 @@
+
+# Note : parameters should be unique
+
 [general]
 keep_pc = on
 sequence_file = hypernets/resources/sequences_samples/your_sequence.csv
