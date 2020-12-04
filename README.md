@@ -54,7 +54,7 @@ python -m hypernets.scripts.call_radiometer -r both -e irr -v 64 -w 128
 ### Setting up service
 
 ### Wakeup Conditions :
-Please refer to the Yoctopuce User Manual to set up Wakeup conditions for the system : 
+Please refer to the Yoctopuce User Manual to set up Wakeup conditions for the system :  
 http://www.yoctopuce.com/EN/products/yoctohub-wireless/doc/YHUBWLN1.usermanual.html#CHAP9SEC1
    
    
