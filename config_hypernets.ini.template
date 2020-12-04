@@ -1,5 +1,7 @@
 [general]
 keep_pc = on
+sequence_file="hypernets/resources/sequences_samples/sequence_water_1_STD.csv"
+
 
 [yoctopuce]
 yoctopuce_ip  = 10.42.0.184
