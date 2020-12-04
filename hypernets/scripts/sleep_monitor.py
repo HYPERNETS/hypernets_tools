@@ -1,5 +1,5 @@
 #  from argparse import ArgumentParser
-from yocto_init import init
+from hypernets.scripts.yocto_init import init
 from yoctopuce.yocto_api import YAPI
 from yoctopuce.yocto_wakeupmonitor import YWakeUpMonitor
 
