@@ -6,9 +6,8 @@ First download this repository (as a zip file under the tab *code*) or using
 *git clone*.
   
 After unzipping (or cloning), go to the folder *hypernets_tools-main* and make
-a copy the file *config_hypernets.ini.template* named *config_hypernets.ini*.
-Edit the new file according to your configuration. The most important
-section is *yoctopuce*. 
+a copy of the file *config_hypernets.ini.template* that you will name *config_hypernets.ini*.
+Edit the new file according to your configuration. The most important section is *yoctopuce*. 
 
 ## Prerequisite : 
 ### Installing Boost v1.71 (~1h)
