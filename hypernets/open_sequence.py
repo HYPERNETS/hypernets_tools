@@ -100,7 +100,6 @@ def run_sequence_file(sequence_file, driver=True): # FIXME : # noqa C901
 
         # Write one line meteo file
         # mkdir(path.join(DATA_DIR, seq_name, "METEO"))
-        # with open(path.join(DATA_DIR, seq_name, "METEO", "meteo.csv"), "w") as meteo:  # noqa
         with open(path.join(DATA_DIR, seq_name, "meteo.csv"), "w") as meteo:
             try:
                 meteo_data = get_meteo()
@@ -149,7 +148,13 @@ def run_sequence_file(sequence_file, driver=True): # FIXME : # noqa C901
                     tilt = 180 - zenith_sun
 
                 else:
-                    pan += azimuth_sun  # XXX : here '+' means clockwise
+                    if azimuth_sun <= 180:
+                        print(" -- Morning : +90 (=clockwise)")
+                        pan = azimuth_sun + pan  # clockwise
+                    else:
+                        print(" -- Afternoon : -90 (=counter-clockwise)")
+                        pan = azimuth_sun - pan  # clockwise
+
                 print(f"--> Converted Position (pan : {pan:.2f} / {ref} ; "
                       f"tilt :{tilt:.2f})")
 
@@ -164,7 +169,6 @@ def run_sequence_file(sequence_file, driver=True): # FIXME : # noqa C901
 
             except TypeError:
                 pan_real, tilt_real = -999, -999
-
             print(f"--> final pan : {pan_real} ; final tilt : {tilt_real}")
             mdfile.write(f"pt_ref={pan_real:.2f}; {tilt_real:.2f}\n")
 
