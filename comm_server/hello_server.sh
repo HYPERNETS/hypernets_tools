@@ -48,4 +48,5 @@ rsync -rt "LOGS" "$ipServer:$remoteDir"
 # rsync -rt "$ipServer:~/config/" "/opt/pyxis/config/"
 
 # Set up the reverse ssh
-# bash /opt/corsica/scripts/comm_server/reverse_ssh.sh
+source comm_server/reverse_ssh.sh
+reverse_ssh $ipServer

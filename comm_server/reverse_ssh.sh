@@ -4,10 +4,6 @@
 # use autossh with an independant service : 
 # see : https://gist.github.com/thomasfr/9707568
 
-# Oceane :
-# ipServer=193.49.112.3
-
-# Npl :
 
 # -f : stdin > /dev/null
 #
@@ -16,5 +12,12 @@
 # -R : Specifies that connections to the given TCP port or Unix socket on 
 #      the remote (server) host are to be forwarded to the local side. 
 
-ssh -o "ExitOnForwardFailure yes" -f -N -R0:127.0.0.1:22 $ipServer > /tmp/ssh_last 2>&1
-ssh $ipServer "cat >> ssh_ports" < /tmp/ssh_last 
+set -o nounset                              # Treat unset variables as an error
+set -euo pipefail                           # Bash Strict Mode	
+
+
+reverse_ssh(){
+	ipServer="$1"
+	ssh -o "ExitOnForwardFailure yes" -f -N -R0:127.0.0.1:22 $ipServer > /tmp/ssh_last 2>&1
+	ssh $ipServer "cat >> ssh_ports" < /tmp/ssh_last 
+}
