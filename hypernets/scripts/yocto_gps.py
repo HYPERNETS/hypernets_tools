@@ -12,17 +12,21 @@ def get_gps(print_value=True, return_float=True):
     yocto_prefix = config["yoctopuce"]["yocto_gps"]
 
     gps = YGps.FindGps(yocto_prefix + '.gps')
+    values = list()
 
-    if print_value and gps.isOnline():
-        if print_value:
-            print(f"Position : {gps.get_latitude()} {gps.get_longitude()}")
-            print(f"Datetime : {gps.get_dateTime()}")
+    if print_value or not return_float:
+        values = f"Position : {gps.get_latitude()} {gps.get_longitude()}"\
+            f"\nDatetime : {gps.get_dateTime()}"
 
-    if return_float:
+    if print_value:
+        print(values)
+
+    if not return_float:
+        return values
+    else:
         latitude = YLatitude.FindLatitude(yocto_prefix + '.latitude')
         longitude = YLongitude.FindLongitude(yocto_prefix + '.longitude')
 
-        values = list()
         if latitude.isOnline():
             values.append(latitude.get_currentValue()/1000)
 

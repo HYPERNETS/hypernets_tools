@@ -7,6 +7,7 @@ from tkinter import Tk, Button, Label, StringVar
 
 from hypernets.scripts.relay_command import get_state_relay, set_state_relay
 from hypernets.scripts.yocto_meteo import get_meteo
+from hypernets.scripts.yocto_gps import get_gps
 
 
 class FrameYoctopuce(LabelFrame):
@@ -16,8 +17,9 @@ class FrameYoctopuce(LabelFrame):
                          text="Yocto-Pictor", padx=2, pady=4)
 
         self.relays_states = [None for _ in range(6)]
-        self.meteo_data = StringVar()
 
+        self.meteo_data = StringVar()
+        self.gps_data = StringVar()
         self.configure_items_yocto()
 
     def configure_items_yocto(self):
@@ -27,6 +29,7 @@ class FrameYoctopuce(LabelFrame):
         def _connection():
             self.connection()
             self.update_meteo()
+            self.update_gps()
 
         connection = Button(self, text="Connection", command=_connection)
         # ---------------------------------------------------------------------
@@ -51,9 +54,17 @@ class FrameYoctopuce(LabelFrame):
         update_meteo.grid(column=0, row=0)
         lbl_meteo.grid(column=1, row=0, padx=8)
         # ---------------------------------------------------------------------
+        frm_gps = LabelFrame(self, relief="groove", labelanchor='nw',
+                             text="GPS")
+        update_gps = Button(frm_gps, text="update", command=self.update_gps)
+        lbl_gps = Label(frm_gps, textvariable=self.gps_data)
+        update_gps.grid(column=0, row=0)
+        lbl_gps.grid(column=1, row=0, padx=8)
+        # ---------------------------------------------------------------------
         connection.grid(column=0, row=0)
         frm_relays.grid(sticky=W, column=0, row=1)
         frm_meteo.grid(sticky=W, column=0, row=2)
+        frm_gps.grid(sticky=W, column=0, row=3)
 
     def callback(self, i):
         if self.relays_states[i-1] is True:
@@ -77,9 +88,14 @@ class FrameYoctopuce(LabelFrame):
 
     def update_meteo(self):
         meteo_data = get_meteo()
-        meteo_data = "   ".join([str(val) + unit for val, unit in get_meteo()])
+        meteo_data = "   ".join([str(val) + unit for val, unit in meteo_data])
         print(meteo_data)
         self.meteo_data.set(meteo_data)
+
+    def update_gps(self):
+        gps_data = get_gps(print_value=False, return_float=False)
+        print(gps_data)
+        self.gps_data.set(gps_data)
 
 
 if __name__ == '__main__':
