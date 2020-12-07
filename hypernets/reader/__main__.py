@@ -4,17 +4,23 @@ from hypernets.reader.spectra import Spectra
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 
+from argparse import ArgumentParser
 
 if __name__ == '__main__':
 
-    filename = "DATA/20201126T161358_BOTH_Irr_00000_00000_01.spe"
-    # filename = "DATA/20201126T163617_SWIR_Irr_00000_00000_01.spe"
-    filename = "DATA/20201130T103936_BOTH_Dar_00000_00000_01.spe"
+    parser = ArgumentParser()
+
+    parser.add_argument("-f", "--filename", type=str, required=True,
+                        help="Select Spectra file")
+
+    args = parser.parse_args()
+
+    filename = args.filename
 
     fig, ax = plt.subplots()
     plt.subplots_adjust(bottom=0.2)
-    # spectrum = Spectra(filename).current_spectrum
-    # line, = plt.plot(range(len(spectrum.counts)), spectrum.counts)
+    spectrum = Spectra(filename).current_spectrum
+    line, = plt.plot(range(len(spectrum.counts)), spectrum.counts)
 
     callback = Spectra(filename, line=None, plt=plt)
 
