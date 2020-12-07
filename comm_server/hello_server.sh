@@ -26,6 +26,10 @@ sleep 30
 ipServer=$(awk -F "= " '/credentials/ {print $2}' config_hypernets.ini)
 remoteDir=$(awk -F "= " '/remote_dir/ {print $2}' config_hypernets.ini)
 
+# Make Logs
+journalctl -eu hypernets-sequence -n 1500 --no-pager > LOGS/hypernets-sequence.log
+journalctl -eu hypernets-hello -n 150 --no-pager > LOGS/hypernets-hello.log
+
 
 # Update the datetime flag on the server
 ssh -t $ipServer 'touch ~/system_is_up' > /dev/null 2>&1 
@@ -38,6 +42,7 @@ bidirectional_sync "config_hypernets.ini" \
 
 # Send data
 rsync -rt --exclude "CUR*" "DATA" "$ipServer:$remoteDir"
+rsync -rt "LOGS" "$ipServer:$remoteDir"
 
 # Sync the whole config folder from remote to local :
 # rsync -rt "$ipServer:~/config/" "/opt/pyxis/config/"
