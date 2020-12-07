@@ -34,7 +34,7 @@ def get_state_relay(id_relay, verbose=False):
     return relay_states
 
 
-def set_state_relay(id_relay, state):
+def set_state_relay(id_relay, state, force=False):
     config = init()
     yocto_prefix = config["yoctopuce"]["yocto_prefix1"]
 
@@ -42,7 +42,7 @@ def set_state_relay(id_relay, state):
         print("Not implemented")
         return
 
-    elif id_relay == 1 and state in ["off", "reset"] and not args.force:
+    elif id_relay == 1 and state in ["off", "reset"] and not force:
         print("""Warning : if your rugged pc is connected throught this
           relay, this action could switch it off. (use --force [-f]
           to enable this functionality)""")
@@ -64,7 +64,7 @@ def set_state_relay(id_relay, state):
     YAPI.FreeAPI()
 
 
-def set_at_power_on(id_relay, state):
+def set_at_power_on(id_relay, state, force=False):
     config = init()
     yocto_prefix = config["yoctopuce"]["yocto_prefix1"]
 
@@ -83,7 +83,7 @@ def set_at_power_on(id_relay, state):
     elif state == "unchanged":
         relay.set_stateAtPowerOn(YRelay.STATEATPOWERON_UNCHANGED)
 
-    if not args.force:
+    if not force:
         print("""Warning : You need to use --force [-f] to write on flash
               memory, else modifications will be lost""")
     else:
@@ -132,10 +132,10 @@ if __name__ == '__main__':
         get_state_relay(args.id_relay)
 
     elif args.set:
-        set_state_relay(args.id_relay, args.set)
+        set_state_relay(args.id_relay, args.set, args.force)
 
     elif args.reset:
         set_state_relay(args.id_relay, "reset")
 
     elif args.set_at_power_on:
-        set_at_power_on(args.id_relay, args.set_at_power_on)
+        set_at_power_on(args.id_relay, args.set_at_power_on, args.force)
