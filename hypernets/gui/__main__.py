@@ -65,4 +65,5 @@ class Guied(Tk):
 
 
 if __name__ == '__main__':
+    # TODO : global var for YOCTO api
     gui = Guied()

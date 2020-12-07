@@ -3,9 +3,10 @@
 
 from tkinter import E, W, N, S
 from tkinter import LabelFrame
-from tkinter import Tk, Button
+from tkinter import Tk, Button, Label, StringVar
 
 from hypernets.scripts.relay_command import get_state_relay, set_state_relay
+from hypernets.scripts.yocto_meteo import get_meteo
 
 
 class FrameYoctopuce(LabelFrame):
@@ -14,14 +15,20 @@ class FrameYoctopuce(LabelFrame):
         super().__init__(parent, relief="groove", labelanchor='nw',
                          text="Yocto-Pictor", padx=2, pady=4)
 
-        self.configure_items_yocto()
         self.relays_states = [None for _ in range(6)]
+        self.meteo_data = StringVar()
+
+        self.configure_items_yocto()
 
     def configure_items_yocto(self):
         # --------------------------------------------------------------------
         # Objects definitions
         # ---------------------------------------------------------------------
-        connection = Button(self, text="Connection", command=self.connection)
+        def _connection():
+            self.connection()
+            self.update_meteo()
+
+        connection = Button(self, text="Connection", command=_connection)
         # ---------------------------------------------------------------------
         frm_relays = LabelFrame(self, relief="groove", labelanchor='nw',
                                 text="Relays")
@@ -31,11 +38,22 @@ class FrameYoctopuce(LabelFrame):
                        for i in range(6)]
 
         for i, relay in enumerate(self.relays):
-            relay.grid(column=i, row=0)
+            relay.grid(column=i, row=1)
         # ---------------------------------------------------------------------
+        frm_meteo = LabelFrame(self, relief="groove", labelanchor='nw',
+                               text="Meteo")
 
-        connection.grid(sticky=W, column=0, row=0)
+        update_meteo = Button(frm_meteo, text="update",
+                              command=self.update_meteo)
+
+        lbl_meteo = Label(frm_meteo, textvariable=self.meteo_data)
+
+        update_meteo.grid(column=0, row=0)
+        lbl_meteo.grid(column=1, row=0, padx=8)
+        # ---------------------------------------------------------------------
+        connection.grid(column=0, row=0)
         frm_relays.grid(sticky=W, column=0, row=1)
+        frm_meteo.grid(sticky=W, column=0, row=2)
 
     def callback(self, i):
         if self.relays_states[i-1] is True:
@@ -47,6 +65,7 @@ class FrameYoctopuce(LabelFrame):
         self.connection()
 
     def connection(self):
+        """color update"""
         states_relay = get_state_relay(-1)
         for id_relay, state in enumerate(states_relay):
             if state[1]:
@@ -55,6 +74,12 @@ class FrameYoctopuce(LabelFrame):
             else:
                 self.relays[id_relay].configure(bg="red")
                 self.relays_states[id_relay] = False
+
+    def update_meteo(self):
+        meteo_data = get_meteo()
+        meteo_data = "   ".join([str(val) + unit for val, unit in get_meteo()])
+        print(meteo_data)
+        self.meteo_data.set(meteo_data)
 
 
 if __name__ == '__main__':
