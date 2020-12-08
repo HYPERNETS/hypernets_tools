@@ -92,8 +92,16 @@ def take_spectra(path_to_file, mode, action, it_vnir, it_swir, cap_count):
         # Concatenation
         spectra = b''
         for n, spectrum in enumerate(cap_list):
-            spectra += spectrum.getRawData()
+            spectrum_data = spectrum.getRawData()
+            spectra += spectrum_data
             print(f"Spectrum #{n} added")
+            # Read ITs :
+            if it_vnir == 0 and spectrum.radiometer == radiometer.VNIR:
+                it_vnir, = unpack('<H', spectrum_data[11:13])
+                # print(f"AIT update : {spectrum.radiometer}->{it_vnir} ms")
+            elif it_swir == 0 and spectrum.radiometer == radiometer.SWIR:
+                it_swir, = unpack('<H', spectrum_data[11:13])
+                # print(f"AIT update : {spectrum.radiometer}->{it_swir} ms")
 
         # Save
         with open(path_to_file, "wb") as f:
@@ -104,20 +112,6 @@ def take_spectra(path_to_file, mode, action, it_vnir, it_swir, cap_count):
     except Exception as e:
         print(f"Error : {e}")
         return e
-
-    # Read AIT Time from first spectrum in data
-    if it_vnir == 0 and mode == "vis":
-        it_vnir, = unpack('<H', spectra[11:13])
-
-    if it_swir == 0 and mode == "swi":
-        it_swir, = unpack('<H', spectra[11:13])
-
-    if action != "bla" and mode == "bot" and it_swir == 0 and it_vnir == 0:
-        print("Warning : do not try dark just after double zero IT")
-        print("(not implemented)")
-        first_it, = unpack('<H', spectra[11:13])
-        it_swir = first_it
-        it_vnir = first_it
 
     return it_vnir, it_swir
 
