@@ -48,19 +48,19 @@ class Guied(Tk):
 
         if self.pantilt:
             frmPanTilt = FramePanTilt(self)
-            frmPanTilt.grid(sticky=W+E+N+S,    column=1, row=1, padx=1, pady=5)
+            frmPanTilt.grid(sticky=W+E+N+S,    column=1, row=2, padx=2, pady=2)
 
         if self.yoctopuce:
             frmYocto = FrameYoctopuce(self)
-            frmYocto.grid(sticky=W+E+N+S,      column=0, row=2, padx=1, pady=5)
+            frmYocto.grid(sticky=W+E+N+S,      column=1, row=1, padx=2, pady=2)
 
         if self.webcam:
             frmWebcam = FrameWebcam(self)
-            frmWebcam.grid(sticky=W+E+N+S,     column=1, row=2, padx=1, pady=5)
+            frmWebcam.grid(sticky=W+E+N+S,     column=1, row=2, padx=1, pady=2)
 
         if self.console:
             frmConsole = FrameConsole(self)
-            frmConsole.grid(sticky=W+E+N+S,    column=0, row=3, padx=1, pady=5,
+            frmConsole.grid(sticky=W+E+N+S,    column=0, row=3, padx=1, pady=2,
                             columnspan=2)
 
 
