@@ -15,7 +15,7 @@ You will first have to install *libboost-python* dependency, it's pretty
 straightforward but a bit long (internet connection needed) :
 
 ```sh
-cd hypernets/install  
+cd install  
 > sudo bash 02_install_boost.sh
 ```
 
