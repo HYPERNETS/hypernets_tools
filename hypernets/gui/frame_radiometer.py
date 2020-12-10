@@ -21,6 +21,7 @@ class FrameRadiometer(LabelFrame):
                          text="Radiometer", padx=2, pady=10)
 
         self.configure_items_radiometer()
+        self.configure_items_output()
 
     def configure_items_radiometer(self):
         self.radiometer_var = [StringVar(self) for _ in range(7)]
@@ -89,7 +90,7 @@ class FrameRadiometer(LabelFrame):
         repeat.grid(sticky=E,     column=1, row=4)
         IT_total.grid(sticky=E,   column=1, row=5)
         resolution.grid(sticky=E, column=1, row=6)
-        run.grid(sticky=W+E+S+N,  column=0, row=7,  columnspan=4,
+        run.grid(sticky=W+E+S+N,  column=0, row=7,  columnspan=2,
                  padx=2, pady=2)
         # --------------------------------------------------------------------
         # Some labels :
@@ -148,6 +149,15 @@ class FrameRadiometer(LabelFrame):
             elif isinstance(int_times, tuple):
                 print(f"Integration Times : VNIR : {int_times[0]} ms")
                 print(f"                  : SWIR : {int_times[1]} ms")
+
+    def configure_items_output(self):
+
+        output_frame = LabelFrame(self, text="Output")
+        output_frame.grid(sticky=W+E+S+N,  column=0, row=8,  columnspan=2)
+        show_graph = Button(output_frame, text="Show graph !")
+        # ---------------------------------------------------------------------
+        show_graph.grid(sticky=W, column=1, row=1)
+        # ---------------------------------------------------------------------
 
 
 if __name__ == '__main__':

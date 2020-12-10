@@ -182,8 +182,6 @@ def run_sequence_file(sequence_file, driver=True): # FIXME : # noqa C901
             output_name = hypstar_python(line, block_position, output_dir=path.
                                          join(DATA_DIR, seq_name, "RADIOMETER"))  # noqa
 
-            # TODO utc ? should be :
-            # now_str = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
             now_str = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
             mdfile.write(f"{output_name}={now_str}\n")
 
