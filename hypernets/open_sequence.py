@@ -184,7 +184,7 @@ def run_sequence_file(sequence_file, driver=True): # FIXME : # noqa C901
 
             # TODO utc ? should be :
             # now_str = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
-            now_str = datetime.now().strftime("%Y%m%dT%H%M%S")
+            now_str = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
             mdfile.write(f"{output_name}={now_str}\n")
 
         mdfile.close()
