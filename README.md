@@ -23,7 +23,7 @@ straightforward but a bit long (internet connection needed) :
 
 ```sh
 cd install  
-> sudo bash 02_install_boost.sh
+sudo bash 02_install_boost.sh
 ```
 
 ## New set of commands :
