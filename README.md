@@ -9,7 +9,7 @@ After unzipping (or cloning), go to the folder *hypernets_tools-main* and make
 a copy of the file *config_hypernets.ini.template* that you will name *config_hypernets.ini*.
 Edit the new file according to your configuration. The most important section is *yoctopuce*. 
 
-```
+```sh
 cd hypernets_tools 
 cp config_hypernets.ini.template config_hypernets.ini
 mousepad config_hypernets.ini
@@ -21,7 +21,7 @@ mousepad config_hypernets.ini
 You will first have to install *libboost-python* dependency, it's pretty 
 straightforward but a bit long (internet connection needed) :
 
-sh
+```sh
 cd install  
 > sudo bash 02_install_boost.sh
 ```
