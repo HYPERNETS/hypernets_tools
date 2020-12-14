@@ -9,7 +9,7 @@ from hypernets.binary.libhypstar import s_img_data
 from argparse import ArgumentParser
 
 
-def set_tec(TEC=5):
+def set_tec(TEC=0):
     try:
         if TEC == -100:
             print("Disabling Cooling...")
