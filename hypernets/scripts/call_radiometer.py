@@ -58,7 +58,8 @@ def take_picture(path_to_file=None, params=None, return_stream=False):
         return e
 
 
-def take_spectra(path_to_file, mode, action, it_vnir, it_swir, cap_count):
+def take_spectra(path_to_file, mode, action, it_vnir, it_swir, cap_count,
+                 gui=False):
 
     rad = {'vis': radiometer.VNIR, 'swi': radiometer.SWIR,
            'bot': radiometer.BOTH}[mode]
@@ -112,6 +113,9 @@ def take_spectra(path_to_file, mode, action, it_vnir, it_swir, cap_count):
     except Exception as e:
         print(f"Error : {e}")
         return e
+
+    if gui:
+        return it_vnir, it_swir, path_to_file
 
     return it_vnir, it_swir
 

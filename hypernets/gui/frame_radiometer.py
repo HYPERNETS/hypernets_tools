@@ -10,6 +10,8 @@ from tkinter.ttk import Combobox
 from tkinter.messagebox import showerror
 
 from hypernets.scripts.call_radiometer import take_spectra, take_picture
+from hypernets.reader.spectrum import Spectrum
+
 from datetime import datetime
 
 from os import path
@@ -140,24 +142,81 @@ class FrameRadiometer(LabelFrame):
             action = {"Radiance": "rad", "Irradiance": "irr",
                       "Dark": "bla"}[action]
 
-            int_times = take_spectra(path.join(output_dir, output_name),
-                                     mode, action, vnir, swir, cap_count)
+            output = take_spectra(path.join(output_dir, output_name),
+                                  mode, action, vnir, swir, cap_count,
+                                  gui=True)
 
-            if isinstance(int_times, Exception):
-                showerror("Error", str(int_times))
+            if isinstance(output, Exception):
+                showerror("Error", str(output))
 
-            elif isinstance(int_times, tuple):
-                print(f"Integration Times : VNIR : {int_times[0]} ms")
-                print(f"                  : SWIR : {int_times[1]} ms")
+            elif isinstance(output, tuple):
+                print(f"Integration Times : VNIR : {output[0]} ms")
+                print(f"                  : SWIR : {output[1]} ms")
+                last_spectra_path = output[2]
+                self.update_output(last_spectra_path)
 
     def configure_items_output(self):
-
         output_frame = LabelFrame(self, text="Output")
         output_frame.grid(sticky=W+E+S+N,  column=0, row=8,  columnspan=2)
-        show_graph = Button(output_frame, text="Show graph !")
+        show_graph = Button(output_frame, text="Show graph !",
+                            command=self.update_output)
         # ---------------------------------------------------------------------
-        show_graph.grid(sticky=W, column=1, row=1)
-        # ---------------------------------------------------------------------
+
+        for text, col, row, padx, pady, sticky in \
+                [("Length : ",       0, 0, 2, 2, E),
+                 ("Type : ",         0, 1, 2, 2, E),
+                 ("Exposure : ",     0, 2, 2, 2, E),
+                 ("Temperature : ",  0, 3, 2, 2, E),
+                 ("Acceleration : ", 0, 4, 2, 2, E),
+                 ("Timestamp : ",    0, 5, 2, 2, E)]:
+
+            Label(output_frame, text=text)\
+                .grid(column=col, row=row, padx=padx, pady=pady, sticky=sticky)
+
+        self.str_lenght = StringVar(self)
+        self.str_type = StringVar(self)
+        self.str_expo = StringVar(self)
+        self.str_temperature = StringVar(self)
+        self.str_accel = StringVar(self)
+        self.str_timestamp = StringVar(self)
+
+        for text, col, row, padx, pady, sticky in \
+                [(self.str_lenght,      1, 0, 2, 2, W),
+                 (self.str_type,        1, 1, 2, 2, W),
+                 (self.str_expo,        1, 2, 2, 2, W),
+                 (self.str_temperature, 1, 3, 2, 2, W),
+                 (self.str_accel,       1, 4, 2, 2, W),
+                 (self.str_timestamp,   1, 5, 2, 2, W)]:
+
+            Label(output_frame, textvariable=text)\
+                .grid(column=col, row=row, padx=padx, pady=pady, sticky=sticky)
+            # -----------------------------------------------------------------
+        show_graph.grid(sticky=W, column=0, row=6, columnspan=2)
+
+    def update_output(self, last_spectra_path):
+        if last_spectra_path is None:
+            showerror("Error", "Please take an acquisition")
+            return
+
+        fd = open(last_spectra_path, "rb")
+        spec = Spectrum(fd.read())
+
+        self.str_lenght.set(
+            f"{spec.total} bytes"
+            f" ; {spec.pixel_count} pixels")
+
+        spec_type = Spectrum.read_spectrum_info(spec.spec_type)
+        self.str_type.set(f"{spec_type[0]} -> {spec_type[1]}")
+        self.str_expo.set(f"{spec.exposure_time} ms")
+        self.str_temperature.set(f"{spec.timestamp} ms")
+        self.str_accel.set(
+            f"X: {spec.mean_X} \u00b1 {spec.std_Z} ; "
+            f"Y: {spec.mean_Y} \u00b1 {spec.std_Y} ; "
+            f"Z: {spec.mean_Z} \u00b1 {spec.std_Z}"
+        )
+        self.str_timestamp.set(f"{spec.temperature}\u00b0C")
+
+        # print(last_spectra_path)
 
 
 if __name__ == '__main__':
