@@ -16,7 +16,13 @@
 set -o nounset                              # Treat unset variables as an error
 set -euo pipefail                           # Bash Strict Mode
 
-echo $PWD
+
+startSequence=$(awk -F "[ =]+" '/start_sequence/ {print $2}' config_hypernets.ini)
+
+if [[ "$startSequence" == "no" ]] ; then
+	echo "Start sequence = no"
+	exit 1
+fi
 
 # Ensure Yocto is online
 yoctopuceIP=$(awk -F "[ =]+" '/yoctopuce_ip/ {print $2}' config_hypernets.ini)

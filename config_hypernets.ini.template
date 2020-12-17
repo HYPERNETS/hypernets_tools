@@ -3,6 +3,7 @@
 
 [general]
 keep_pc = on
+start_sequence = no
 sequence_file = hypernets/resources/sequences_samples/your_sequence.csv
 
 
