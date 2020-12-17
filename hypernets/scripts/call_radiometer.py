@@ -59,7 +59,7 @@ def take_picture(path_to_file=None, params=None, return_stream=False):
 
 
 def take_spectra(path_to_file, mode, action, it_vnir, it_swir, cap_count,
-                 gui=False):
+                 gui=False, return_cap_list=False):
 
     rad = {'vis': radiometer.VNIR, 'swi': radiometer.SWIR,
            'bot': radiometer.BOTH}[mode]
@@ -89,6 +89,10 @@ def take_spectra(path_to_file, mode, action, it_vnir, it_swir, cap_count,
 
         if len(cap_list) == 0:
             return Exception("Cap list length is zero")
+
+        # XXX : Very alpha version
+        if return_cap_list is True:
+            return cap_list
 
         # Concatenation
         spectra = b''
