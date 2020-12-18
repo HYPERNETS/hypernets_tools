@@ -7,7 +7,7 @@ from tkinter import Label, LabelFrame, Spinbox, StringVar
 from tkinter import Tk, Button
 from tkinter.ttk import Combobox
 
-from tkinter.messagebox import showerror
+from tkinter.messagebox import showerror, showinfo
 
 from hypernets.scripts.call_radiometer import take_spectra, take_picture
 from hypernets.reader.spectrum import Spectrum
@@ -154,6 +154,7 @@ class FrameRadiometer(LabelFrame):
                 print(f"                  : SWIR : {output[1]} ms")
                 last_spectra_path = output[2]
                 self.update_output(last_spectra_path)
+                showinfo("End Acquisition", f"Saved to : {last_spectra_path}")
 
     def configure_items_output(self):
         output_frame = LabelFrame(self, text="Output")
@@ -161,7 +162,7 @@ class FrameRadiometer(LabelFrame):
         show_graph = Button(output_frame, text="Show graph !",
                             command=self.update_output)
         # ---------------------------------------------------------------------
-
+        # Labels
         for text, col, row, padx, pady, sticky in \
                 [("Length : ",       0, 0, 2, 2, E),
                  ("Type : ",         0, 1, 2, 2, E),
@@ -172,7 +173,8 @@ class FrameRadiometer(LabelFrame):
 
             Label(output_frame, text=text)\
                 .grid(column=col, row=row, padx=padx, pady=pady, sticky=sticky)
-
+        # ---------------------------------------------------------------------
+        # Values
         self.str_lenght = StringVar(self)
         self.str_type = StringVar(self)
         self.str_expo = StringVar(self)
@@ -190,7 +192,8 @@ class FrameRadiometer(LabelFrame):
 
             Label(output_frame, textvariable=text)\
                 .grid(column=col, row=row, padx=padx, pady=pady, sticky=sticky)
-            # -----------------------------------------------------------------
+        # ---------------------------------------------------------------------
+
         show_graph.grid(sticky=W, column=0, row=6, columnspan=2)
 
     def update_output(self, last_spectra_path):
@@ -208,15 +211,13 @@ class FrameRadiometer(LabelFrame):
         spec_type = Spectrum.read_spectrum_info(spec.spec_type)
         self.str_type.set(f"{spec_type[0]} -> {spec_type[1]}")
         self.str_expo.set(f"{spec.exposure_time} ms")
-        self.str_temperature.set(f"{spec.timestamp} ms")
+        self.str_temperature.set(f"{spec.temperature}\u00b0C")
         self.str_accel.set(
             f"X: {spec.mean_X} \u00b1 {spec.std_Z} ; "
             f"Y: {spec.mean_Y} \u00b1 {spec.std_Y} ; "
             f"Z: {spec.mean_Z} \u00b1 {spec.std_Z}"
         )
-        self.str_timestamp.set(f"{spec.temperature}\u00b0C")
-
-        # print(last_spectra_path)
+        self.str_timestamp.set(f"{spec.timestamp} ms")
 
 
 if __name__ == '__main__':
