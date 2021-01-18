@@ -30,7 +30,7 @@ systemctl daemon-reload
 #6:  vérifier que le script de démarrage fonctionne avec:
 systemctl start yvirtualhub.service
 #7: enregistrer le service pour qu'il soit démarré automatiquement
-systemctl enable yvirtualhub.service
+# systemctl enable yvirtualhub.service
 rm -rf Yoctopuce "$last_version_yocto"
 #8: redémarrer la machine
 # reboot
