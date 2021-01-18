@@ -18,23 +18,24 @@ def get_gps(print_value=True, return_float=True):
         values = f"Position : {gps.get_latitude()} {gps.get_longitude()}"\
             f"\nDatetime : {gps.get_dateTime()}"
 
-    if print_value:
-        print(values)
+        if print_value:
+            print(values)
 
-    if not return_float:
-        return values
-    else:
-        latitude = YLatitude.FindLatitude(yocto_prefix + '.latitude')
-        longitude = YLongitude.FindLongitude(yocto_prefix + '.longitude')
+        if not return_float:
+            return values
 
-        if latitude.isOnline():
-            values.append(latitude.get_currentValue()/1000)
+    values = list()
+    latitude = YLatitude.FindLatitude(yocto_prefix + '.latitude')
+    longitude = YLongitude.FindLongitude(yocto_prefix + '.longitude')
 
-        if longitude.isOnline():
-            values.append(longitude.get_currentValue()/1000)
+    if latitude.isOnline():
+        values.append(latitude.get_currentValue()/1000)
 
-        if gps.isOnline():
-            values.append(gps.get_dateTime())
+    if longitude.isOnline():
+        values.append(longitude.get_currentValue()/1000)
+
+    if gps.isOnline():
+        values.append(gps.get_dateTime())
 
     YAPI.FreeAPI()
     return values
