@@ -3,7 +3,9 @@
 set -o nounset
 set -euo pipefail
 
+
 pip install jupyter
+
 jupyter notebook --generate-config
 jupyter notebook password
 jupyter nbextension enable --py widgetsnbextension
@@ -18,3 +20,9 @@ sed -i "s/# c.NotebookApp.allow_origin = ''/c.NotebookApp.allow_origin = '*'/g"\
 
 # Then, try :
 # jupyter notebook --no-browser
+
+
+pip install voila
+# Try : 
+voila --no-browser installation_on_site.ipynb
+# TODO : allow config file to start installation at startup time 
