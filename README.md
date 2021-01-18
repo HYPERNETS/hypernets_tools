@@ -1,4 +1,4 @@
-![Hypernets Logo](hypernets/resources/logo.png)
+![Hypernets Logo](hypernets/resources/img/logo.png)
   
   
 ## Instructions :
