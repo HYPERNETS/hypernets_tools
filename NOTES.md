@@ -47,3 +47,6 @@ Where {variable} are parsed by the protocol reader.
 * Forward of jupyter
 * Forward of Yoctopuce Config page
 * Security Issues ?
+
+### Light measurement during acquisition
+* knowledge about stability of the sky light
