@@ -42,7 +42,7 @@ Where {variable} are parsed by the protocol reader.
 * At the end of the sequence
 * Using Threads ?
 
-### Bind useful configuration port using auto-ssh
+### Forward useful configuration port using auto-ssh
 * Forward of ssh
 * Forward of jupyter
 * Forward of Yoctopuce Config page
