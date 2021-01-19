@@ -1,7 +1,7 @@
 # TODO : 
 
 ## Software Watchdog 
-* to ensure shuting down before power-cycling
+* to ensure shutting down before power-cycling
 * should be an option in the config file 
 
 ## Virtual environments for the application
@@ -17,13 +17,13 @@ from where we can grab all informations to put in metadata.txt of each SEQ.
 Example : 
 
 [Metadata Header]
-PI = LOV
-site_name = Villefranche
-SN_Hypstar = {serial_instrument}
-FW_Hypstar = {fw_instrument}
-datetime = {datetime}
-protocol = {protocol_file_name}
-comments = First Test in Villefranche
+PI = LOV<br />
+site_name = Villefranche<br />
+SN_Hypstar = {serial_instrument}<br />
+FW_Hypstar = {fw_instrument}<br />
+datetime = {datetime}<br />
+protocol = {protocol_file_name}<br />
+comments = First Test in Villefranche<br />
 
 Where {variable} are parsed by the protocol reader.
 
