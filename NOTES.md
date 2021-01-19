@@ -9,6 +9,7 @@
 ### Virtual environments for the application
 * Avoid python update issues
 * pipenv for example
+* Use of requirements.txt
  
 
 ## New Ideas : 
