@@ -103,11 +103,16 @@ http://www.yoctopuce.com/EN/products/yoctohub-wireless/doc/YHUBWLN1.usermanual.h
 If you want to connect (ssh or python) on the host system from any web browser via Wi-Fi, 
 you should install first *jupyter notebook* :
 
-> cd hypernets/install  
-> bash 03_install_jupyter.sh
+```sh
+cd hypernets/install  
+bash 03_install_jupyter.sh
+```
 
 You can then launch the notebook :
-> jupyter notebook 
+
+```sh
+jupyter notebook --no-browser
+```
 
 Then connect to the Wi-Fi hotspot of the rugged PC (from any laptop) and you should be able
 to access the address :
@@ -115,3 +120,17 @@ to access the address :
 > 10.42.0.1:8888
 
 More information about jupyter notbook : https://jupyter.org/
+
+### Helpful *(draft!)* webpage for field deployment :
+From documentation : *Voilà allows you to convert a Jupyter Notebook into an interactive dashboard*
+(more information : https://voila.readthedocs.io/en/stable/)
+
+ssh to the rugged pc and start *voilà* :
+```sh
+voila installation_on_site.ipynb --no-browser
+```
+
+Connect to the Wi-Fi hotspot of the rugged PC (from any laptop) and you should be able
+to access the address :
+
+> 10.42.0.1:8866
