@@ -54,10 +54,44 @@ python -m hypernets.scripts.call_radiometer -r both -e irr -v 64 -w 128
 
   
 
-
-
 ## Autonomous Mode
-### Setting up service
+
+* First check if one sequence execution is working : 
+
+```sh
+python -m hypernets.open_sequence -df hypernets/resources/sequences_sample/sequence_file.csv
+```
+
+* Then edit "[general]" section of your configuration file according to desired settings and
+test it with :
+```sh
+bash run_service.sh
+```
+
+### Setup service at boot time
+Copy the template of the service in */etc/systemd/system* and edit it :
+```sh
+sudo cp install/hypernets-sequence.service /etc/systemd/system
+sudo nano /etc/systemd/system/hypernets.sequence.service 
+```
+
+* *User=your_username*
+* *ExecStart=*/path/to/hypernets_tools/run_service.sh*
+* *WorkingDirectory=/path/to/hypernets_tools*
+
+Try to start and watch what happens with :
+
+```sh
+sudo systemctl start hypernets-sequence
+journalctl -u hypernets-sequence --follow
+```
+
+If everything works as you expect, then enable the service with : 
+
+```sh
+sudo systemctl enable hypernets-sequence
+```
+
 
 ### Wakeup Conditions :
 Please refer to the Yoctopuce User Manual to set up Wakeup conditions for the system :  
@@ -69,11 +103,16 @@ http://www.yoctopuce.com/EN/products/yoctohub-wireless/doc/YHUBWLN1.usermanual.h
 If you want to connect (ssh or python) on the host system from any web browser via Wi-Fi, 
 you should install first *jupyter notebook* :
 
-> cd hypernets/install  
-> bash 03_install_jupyter.sh
+```sh
+cd hypernets/install  
+bash 03_install_jupyter.sh
+```
 
 You can then launch the notebook :
-> jupyter notebook 
+
+```sh
+jupyter notebook --no-browser
+```
 
 Then connect to the Wi-Fi hotspot of the rugged PC (from any laptop) and you should be able
 to access the address :
@@ -81,3 +120,17 @@ to access the address :
 > 10.42.0.1:8888
 
 More information about jupyter notbook : https://jupyter.org/
+
+### Helpful *(draft!)* webpage for field deployment :
+From documentation : *Voilà allows you to convert a Jupyter Notebook into an interactive dashboard*
+(more information : https://voila.readthedocs.io/en/stable/)
+
+ssh to the rugged pc and start *voilà* :
+```sh
+voila installation_on_site.ipynb --no-browser
+```
+
+Connect to the Wi-Fi hotspot of the rugged PC (from any laptop) and you should be able
+to access the address :
+
+> 10.42.0.1:8866
