@@ -54,10 +54,27 @@ python -m hypernets.scripts.call_radiometer -r both -e irr -v 64 -w 128
 
   
 
-
-
 ## Autonomous Mode
-### Setting up service
+
+* First check if one sequence execution is working : 
+
+```sh
+python -m hypernets.open_sequence -df hypernets/resources/sequences_sample/sequence_file.csv
+```
+
+* Then edit "[general]" section of your configuration file according to desired settings and
+test it with :
+```sh
+bash run_service.sh
+```
+
+### Setup service at boot time
+
+```sh
+sudo cp install/hypernets-sequence.service /etc/systemd/system
+sudo nano /etc/systemd/system/hypernets.sequence.service 
+```
+
 
 ### Wakeup Conditions :
 Please refer to the Yoctopuce User Manual to set up Wakeup conditions for the system :  
