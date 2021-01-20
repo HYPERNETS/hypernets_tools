@@ -69,10 +69,27 @@ bash run_service.sh
 ```
 
 ### Setup service at boot time
-
+Copy the template of the service in */etc/systemd/system* and edit it :
 ```sh
 sudo cp install/hypernets-sequence.service /etc/systemd/system
 sudo nano /etc/systemd/system/hypernets.sequence.service 
+```
+
+* *User=your_username*
+* *ExecStart=*/path/to/hypernets_tools/run_service.sh*
+* *WorkingDirectory=/path/to/hypernets_tools*
+
+Try to start and watch what happens with :
+
+```sh
+sudo systemctl start hypernets-sequence
+journalctl -u hypernets-sequence --follow
+```
+
+If everything works as you expect, then enable the service with : 
+
+```sh
+sudo systemctl enable hypernets-sequence
 ```
 
 
