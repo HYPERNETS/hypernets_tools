@@ -48,7 +48,7 @@ python -m hypernets.scripts.call_radiometer -r both -e irr -v 64 -w 128
 # *Note : This will output 3 spectra (2 vnir + 1 swir).*
 
 # Taking a picture :
-> python -m hypernets.scripts.call_radiometer -p
+python -m hypernets.scripts.call_radiometer -p
 
 ```
 
@@ -134,3 +134,5 @@ Connect to the Wi-Fi hotspot of the rugged PC (from any laptop) and you should b
 to access the address :
 
 > 10.42.0.1:8866
+
+Notes : any comments or suggestions are welcomed here :) 
