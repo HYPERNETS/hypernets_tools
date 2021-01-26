@@ -2,7 +2,7 @@ from hypernets.scripts.spa.spa_py import spa_calc
 from datetime import datetime
 
 
-def spa_from_datetime(now=datetime.utcnow()):
+def spa_from_datetime(now=datetime.utcnow(), verbose=False):
     from configparser import ConfigParser
     config = ConfigParser()
     config.read("config_hypernets.ini")
@@ -15,6 +15,9 @@ def spa_from_datetime(now=datetime.utcnow()):
     latitude = float(config["GPS"]["latitude"])
     longitude = float(config["GPS"]["longitude"])
 
+    if verbose:
+        print(f"Latitude from config : {latitude}")
+        print(f"Longitude from config : {longitude}")
     # now = datetime.now()
     # time_zone = int(config["SPA"]["time_zone"])
 
@@ -37,8 +40,8 @@ def spa_from_datetime(now=datetime.utcnow()):
 def spa_from_gps():
     from hypernets.scripts.yocto_gps import get_gps
     latitude, longitude, now = get_gps()
+    # TODO : test the gps trame
     now = datetime.strptime(now, '%Y/%m/%d %H:%M:%S')
-
     spa = spa_calc(year=now.year, month=now.month, day=now.day,
                    hour=now.hour, minute=now.minute, second=now.second,
                    time_zone=0,  # GPS = utc
@@ -54,7 +57,7 @@ def spa_from_gps():
 
 if __name__ == '__main__':
     print("From datetime + fixed coords in config_hypenets.ini : ")
-    azimuth_sun, zenith_sun = spa_from_datetime()
+    azimuth_sun, zenith_sun = spa_from_datetime(verbose=True)
     print(f"Azimuth Sun  : {azimuth_sun} ; Zenith Sun : {zenith_sun}")
     print("From GPS")
     azimuth_sun, zenith_sun = spa_from_gps()
