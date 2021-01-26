@@ -1,5 +1,6 @@
 import struct
 from ctypes import *
+from enum import IntEnum
 
 from data_structs.hardware_info import BootedPacketStruct, HypstarSupportedBaudRates
 from data_structs.calibration_coefficients import CalibrationCoefficients, ExtendedCalibrationCoefficients
@@ -7,6 +8,22 @@ from data_structs.environment_log import EnvironmentLogEntry
 from data_structs.image import HypstarImage
 from data_structs.spectrum_raw import RadiometerEntranceType, RadiometerType, HypstarSpectrum
 from data_structs.varia import HypstarAutoITStatus
+
+
+class HypstarLogLevel(IntEnum):
+	ERROR = 0
+	WARNING = 1
+	INFO = 2
+	DEBUG = 3
+	TRACE = 4
+
+	def __init__(self, value):
+		self._as_parameter = int(value)
+
+	# needed for CTypes passing as argument
+	@classmethod
+	def from_param(cls, obj):
+		return int(obj)
 
 
 class Hypstar:
@@ -24,7 +41,7 @@ class Hypstar:
 		self.lib.hypstar_close(self.handle)
 
 	def set_log_level(self, loglevel):
-		self.lib.hypstar_set_loglevel(self.handle, 4)
+		self.lib.hypstar_set_loglevel(self.handle, loglevel)
 
 	def get_hw_info(self):
 		self.hw_info = BootedPacketStruct()

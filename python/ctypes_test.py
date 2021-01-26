@@ -5,7 +5,7 @@ from PIL import Image
 
 from data_structs.hardware_info import HypstarSupportedBaudRates
 from data_structs.spectrum_raw import RadiometerType, RadiometerEntranceType
-from hypstar_wrapper import Hypstar
+from hypstar_wrapper import Hypstar, HypstarLogLevel
 
 serial_port = '/dev/ttyUSB0'
 
@@ -14,7 +14,8 @@ class CtypeTests(unittest.TestCase):
 
 	def test_hw_info(self):
 		radiometer = Hypstar(serial_port)
-		# radiometer.set_log_level("TRACE")
+		radiometer.set_log_level(HypstarLogLevel.DEBUG)
+		radiometer.set_log_level(HypstarLogLevel.TRACE)
 		print(radiometer.hw_info)
 
 	def test_reboot(self):
