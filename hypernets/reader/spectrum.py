@@ -63,4 +63,4 @@ class Spectrum(object):
 
     @staticmethod
     def read_timestamp(timestamp):
-        return datetime.utcfromtimestamp(int(timestamp/1000))
+        return datetime.utcfromtimestamp(timestamp/1000)

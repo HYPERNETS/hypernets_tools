@@ -29,7 +29,7 @@ def unset_tec():
 
 
 def make_datetime_name(extension=".jpg"):
-    return datetime.utcnow().strftime("%Y%m%dT%H%M%S")+extension
+    return datetime.utcnow().strftime("%Y%m%dT%H%M%S") + extension
 
 
 def take_picture(path_to_file=None, params=None, return_stream=False):
@@ -58,8 +58,8 @@ def take_picture(path_to_file=None, params=None, return_stream=False):
         return e
 
 
-def take_spectra(path_to_file, mode, action, it_vnir, it_swir, cap_count,
-                 gui=False, return_cap_list=False):
+def take_spectra(path_to_file, mode, action, it_vnir, it_swir, cap_count, # noqa 901
+                 gui=False, return_cap_list=False, set_time=True):
 
     rad = {'vis': radiometer.VNIR, 'swi': radiometer.SWIR,
            'bot': radiometer.BOTH}[mode]
@@ -79,6 +79,8 @@ def take_spectra(path_to_file, mode, action, it_vnir, it_swir, cap_count,
 
     try:
         hs = Hypstar('/dev/ttyUSB5')
+        if set_time:
+            hs.setTime(int(datetime.now().timestamp()))
 
     except Exception as e:
         print(f"Error : {e}")
