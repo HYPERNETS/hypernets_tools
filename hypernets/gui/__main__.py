@@ -11,8 +11,8 @@ from hypernets.gui.frame_yoctopuce import FrameYoctopuce
 from hypernets.gui.frame_webcam import FrameWebcam
 from hypernets.gui.frame_console import FrameConsole
 
-from importlib import resources as get_resources
-from hypernets import resources
+from importlib import resources
+from hypernets.resources import img
 
 
 class Guied(Tk):
@@ -38,7 +38,7 @@ class Guied(Tk):
         # self.resizable(0, 0)
 
     def create_logo(self):
-        logo_hypernets = get_resources.read_binary(resources, "logo.png")
+        logo_hypernets = resources.read_binary(img, "logo.png")
         self.img_hyp = PhotoImage(data=logo_hypernets)
         logo_lbl = Label(self, image=self.img_hyp)
         logo_lbl.grid(column=0, row=0, columnspan=2)
