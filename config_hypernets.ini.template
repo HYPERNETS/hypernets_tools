@@ -6,6 +6,9 @@ keep_pc = on
 start_sequence = no
 sequence_file = hypernets/resources/sequences_samples/your_sequence.csv
 
+webcam_sky = credentials@ip_cam_sky
+webcam_site = credentials@ip_cam_site
+
 
 [yoctopuce]
 yoctopuce_ip  = 10.42.0.X

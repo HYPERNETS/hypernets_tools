@@ -97,8 +97,8 @@ def query_position(ser, verbose=False):
     return pan, tilt
 
 
-def move_to(ser, pan, tilt, wait=False, verbose=False,  # FIXME : C901 # noqa
-            offset_pan=0, offset_tilt=-60):
+def move_to(ser, pan, tilt, wait=False, verbose=False): # FIXME : C901 # noqa
+    # offset_pan=0, offset_tilt=-60):
 
     if ser is None:
         ser = open_serial()
@@ -119,7 +119,7 @@ def move_to(ser, pan, tilt, wait=False, verbose=False,  # FIXME : C901 # noqa
     print(f"offset_pan: {offset_pan}")
 
     # Orientation
-    pan += offset_pan
+    pan -= offset_pan
     tilt -= offset_tilt
 
     # Conversion FIXME : here modulo should fit pan/tilt range specification
