@@ -5,15 +5,16 @@
 using namespace std;
 
 int main() {
-	std::string port = "/dev/ttyUSB1";
+	std::string port = "/dev/ttyUSB0";
 	Hypstar *hs = Hypstar::getInstance(port);
+	hs->setBaudRate(B_3000000);
 	// test double inits
+//	sleep(10);
 	Hypstar *hs_copy = Hypstar::getInstance(port);
 	assert (hs == hs_copy);
 
 	hs->setLoglevel(DEBUG);
-
-	hs->setBaudRate(B_3000000);
+	hs->setLoglevel(TRACE);
 
 	uint32_t sn = hs->hw_info.instrument_serial_number;
 	printf("Instrument SN: %d\n", hs->hw_info.instrument_serial_number);

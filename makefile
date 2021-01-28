@@ -28,7 +28,7 @@ test_%: $(BUILD_DIR)/lib$(NAME).so
 	@echo --------------------------
 	@echo Building $@
 	@echo --------------------------
-	$(CC) $(INCLUDES) -L./$(BUILD_DIR) -Wl,-rpath=./$(BUILD_DIR) -o $(BUILD_DIR)/$@ test/$@.c -lhypstar
+	$(CC) -rdynamic $(INCLUDES) -L./$(BUILD_DIR) -Wl,-rpath=./$(BUILD_DIR) -o $(BUILD_DIR)/$@ test/$@.c -lhypstar -lrt 
 
 	@echo --------------------------
 	@echo Executing $@
@@ -37,18 +37,19 @@ test_%: $(BUILD_DIR)/lib$(NAME).so
 	
 
 $(BUILD_DIR)/lib$(NAME).so: $(BUILD_DIR)/lib$(NAME).so.$(VERSION)
-	@echo ----- INFO: Linking lib 
+#	@echo ----- INFO: Linking lib 
+	$(RM) $(BUILD_DIR)/lib$(NAME).so
 	ln -s lib$(NAME).so.$(VERSION) $(BUILD_DIR)/lib$(NAME).so
 
 $(BUILD_DIR)/lib$(NAME).so.$(VERSION): $(OBJECTS) 
 	@echo ----- INFO: Building lib
 	@echo C_SOURCES = $(C_SOURCES)
 	@echo OBJECTS = $(OBJECTS)
-	$(CC) -fPIC -shared -Wl,--export-dynamic -o $@ $(OBJECTS)
+	$(CC) -rdynamic -fPIC -lrt -shared -Wl,--export-dynamic -o $@ $(OBJECTS)
 
 $(BUILD_DIR)/%.o : %.cpp | $(BUILD_DIR)
 	@echo ----- INFO: Building file $<
-	$(CC) -fPIC -O0 -g -Wall -Werror $(INCLUDES) -c $< -o $@
+	$(CC) -rdynamic -fPIC -O0 -g -Wall -Werror $(INCLUDES) -c $< -o $@
 
 .PHONY: clean
 clean:

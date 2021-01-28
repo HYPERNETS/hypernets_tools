@@ -7,7 +7,7 @@
 using namespace std;
 
 int main() {
-	std::string port = "/dev/ttyUSB1";
+	std::string port = "/dev/ttyUSB0";
 	Hypstar *hs = Hypstar::getInstance(port);
 	s_environment_log_entry log, log2;
 	hs->setLoglevel(DEBUG);

@@ -5,7 +5,9 @@ build-essentials
 
 ## Usage:
 > $ make lib	# compiles source code into binary
+
 > $ make test_<name> runs predefined tests
+
 > $ sudo make install	# copies current binary version to /usr/lib and (re)creates a symlink to current version
 
 /test/ directory shows how to use C/C++ for controlling the instrument. These tests can be run using "make <test_file_name>", e.g.:

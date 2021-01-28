@@ -8,7 +8,7 @@ using namespace std;
 void fill_cal_coef_struct(s_extended_calibration_coefficients *s);
 void test_returned_struct_content(s_extended_calibration_coefficients *a, s_extended_calibration_coefficients *b);
 int main() {
-	std::string port = "/dev/ttyUSB1";
+	std::string port = "/dev/ttyUSB0";
 	s_extended_calibration_coefficients out;
 	fill_cal_coef_struct(&out);
 

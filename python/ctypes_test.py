@@ -223,6 +223,7 @@ class CtypeTests(unittest.TestCase):
 
 	def test_capture_JPEG(self):
 		radiometer = Hypstar(serial_port)
+		radiometer.set_log_level("TRACE")
 		radiometer.capture_JPEG_image(flip=True, mirror=False)
 		radiometer.set_baud_rate(HypstarSupportedBaudRates.B_6000000)
 

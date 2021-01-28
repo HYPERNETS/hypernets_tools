@@ -50,13 +50,13 @@ class Hypstar
 				// if found, return pointer to that
 				if (portname.compare(i.port) == 0)
 				{
-					i.instance->logInfo("Returning existing driver instance %p\n", i.instance);
+					i.instance->outputLog(INFO, "INFO", stdout, "Returning existing driver instance %p\n", i.instance);
 					return i.instance;
 				}
 			}
 			// otherwise instantiate and append to instance_holder
 			Hypstar* h = new Hypstar(portname);
-			h->logInfo("Created driver instance %p\n", static_cast<void*>(h));
+			h->outputLog(INFO, "INFO", stdout, "Created driver instance %p\n", static_cast<void*>(h));
 			s_hypstar_instance new_hs = {
 					.port = portname,
 					.instance = h
@@ -311,7 +311,7 @@ class Hypstar
 		/* Hardware availability on this particular unit*/
 		struct s_available_hardware available_hardware;
 		/* Basic calibration coefficients, required for running (pixel to wavelength mapping, non-linearity compensation, etc) */
-		struct s_calibration_coefficients_unpacked cal_coefs;
+		struct s_calibration_coefficients_unpacked calibration_coefficients_basic;
 		/* Advanced calibration coefficients, necessary for uncertainty evaluation */
 		struct s_extended_calibration_coefficients extended_calibration_coefficients;
 
@@ -331,13 +331,9 @@ class Hypstar
 		bool sendPacketedData(const char commandId, unsigned char * pDataSet, int datasetLength, const char *pCommandIdtring);
 		void outputStream(FILE *stream, const char * type, const char* fmt, ...);
 		int findInstrumentBaudrate(int expectedBaudrate);
-		void logInfo(const char * fmt, ...);
-		void logErr(const char * fmt, ...);
-		void logDebug(const char * fmt, ...);
-		void logTrace(const char * fmt, ...);
 		void logBinPacket(const char * direction, unsigned char * pPacket, int packetLength);
 		void logBytesRead(int rx_count, const char * expectedCommand, const char * pCommandNameString);
-
+		void outputLog(e_loglevel level, const char* level_string, FILE *stream, const char* fmt, ...);
 		linuxserial *hnport; //serial port object
 		unsigned char rxbuf[RX_BUFFER_PLUS_CRC32_SIZE];
 		e_loglevel _loglevel = ERROR;

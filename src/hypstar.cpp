@@ -9,47 +9,26 @@
 #include <iostream>
 #include <fstream>
 
-void Hypstar::logInfo(const char* fmt, ...)
+#define LOG(level, stream, format, ...) outputLog(level, #level, stream, format, ##__VA_ARGS__)
+#define LOG_DEBUG(format, ...) LOG(DEBUG, stdout, format, ##__VA_ARGS__)
+#define LOG_INFO(format, ...) LOG(INFO, stdout, format, ##__VA_ARGS__)
+#define LOG_ERROR(format, ...) LOG(ERROR, stderr, format, ##__VA_ARGS__)
+#define LOG_TRACE(format, ...) LOG(TRACE, stdout, format, ##__VA_ARGS__)
+
+void Hypstar::outputLog(e_loglevel level, const char* level_string, FILE *stream, const char* fmt, ...)
 {
-	if (_loglevel >= INFO)
+	if (_loglevel >= level)
 	{
-		fprintf(stdout, "[INFO] ");
+		time_t now = time(NULL);
+		auto tm = localtime(&now);
+		char timebuf[22];
+		strftime(timebuf, 20, "%Y-%m-%dT%H:%M:%S", tm);
+
+		fprintf(stream, "[%s]\t[%s] ", level_string, timebuf);
+
 		va_list args;
 		va_start(args, fmt);
-		vfprintf(stdout, fmt, args);
-		va_end(args);
-	}
-}
-
-void Hypstar::logErr(const char* fmt, ...)
-{
-	fprintf(stderr, "[ERROR] ");
-	va_list args;
-	va_start(args, fmt);
-	vfprintf(stderr, fmt, args);
-	va_end(args);
-}
-
-void Hypstar::logDebug(const char* fmt, ...)
-{
-	if (_loglevel >= DEBUG)
-	{
-		fprintf(stdout, "[DEBUG] ");
-		va_list args;
-		va_start(args, fmt);
-		vfprintf(stdout, fmt, args);
-		va_end(args);
-	}
-}
-
-void Hypstar::logTrace(const char* fmt, ...)
-{
-	if (_loglevel >= TRACE)
-	{
-		fprintf(stdout, "[TRACE] ");
-		va_list args;
-		va_start(args, fmt);
-		vfprintf(stdout, fmt, args);
+		vfprintf(stream, fmt, args);
 		va_end(args);
 	}
 }
@@ -61,7 +40,7 @@ void Hypstar::logBinPacket(const char* direction, unsigned char* packet, int len
 	{
 		sprintf(&out[i*3], "%.2X ", packet[i]);
 	}
-	logTrace("%s %s\n", direction, out);
+	LOG_TRACE("%s %s\n", direction, out);
 }
 
 void Hypstar::logBytesRead(int rx_count, const char * expectedCommand, const char * cmd)
@@ -71,8 +50,8 @@ void Hypstar::logBytesRead(int rx_count, const char * expectedCommand, const cha
 	{
 		sprintf(&out[i*3], "%.2X ", rxbuf[i]);
 	}
-	logErr("Did not receive %s for command %.2X in %d attempts\n", expectedCommand, cmd, CMD_RETRY);
-	logErr("%d bytes read: %s\n", rx_count, out);
+	LOG_ERROR("Did not receive %s for command %.2X in %d attempts\n", expectedCommand, cmd, CMD_RETRY);
+	LOG_ERROR("%d bytes read: %s\n", rx_count, out);
 }
 
 void Hypstar::setLoglevel(e_loglevel loglevel) {
@@ -83,7 +62,7 @@ int Hypstar::findInstrumentBaudrate(int expectedBbaudrate)
 {
 	for (auto br : {B_115200, B_460800, B_921600, B_3000000, B_6000000, B_8000000})
 	{
-		logErr("Trying baud rate %d\n", br);
+		LOG_ERROR("Trying baud rate %d\n", br);
 		hnport->setBaud(br);
 		try
 		{
@@ -114,16 +93,16 @@ Hypstar::Hypstar(std::string portname)
 
 	try
 	{
-		logInfo("Creating serial port (baud=%d, portname=%s)\n", DEFAULT_BAUD_RATE, portname.c_str());
+		LOG_INFO("Creating serial port (baud=%d, portname=%s)\n", DEFAULT_BAUD_RATE, portname.c_str());
 		hnport = new linuxserial(DEFAULT_BAUD_RATE, portname.c_str());
 	}
 	catch (eSerialOpenFailed&)
 	{
-		logErr("%s port open failed\n\n", portname);
+		LOG_ERROR("%s port open failed\n\n", portname.c_str());
 		throw eHypstar();
 	}
 
-	logDebug("Got serial port\n");
+	LOG_DEBUG("Got serial port\n");
 
 	// clear serial buffer
 	try
@@ -145,9 +124,9 @@ Hypstar::Hypstar(std::string portname)
 	}
 	catch (eHypstar&)
 	{
-		logErr("Did not get response from instrument, will try different baud rates\n");
+		LOG_ERROR("Did not get response from instrument, will try different baud rates\n");
 		int response = findInstrumentBaudrate(DEFAULT_BAUD_RATE);
-		logErr("Got baud rate %d\n", response);
+		LOG_ERROR("Got baud rate %d\n", response);
 		if(!response)
 		{
 			throw eHypstar();
@@ -177,7 +156,7 @@ Hypstar::~Hypstar()
 		// if found, return pointer to that
 		if (Hypstar::instance_holder[i].instance == this)
 		{
-			logInfo("Found driver instance %p, index %d. Deleting...\n", static_cast<void*>(this), i);
+			LOG_INFO("Found driver instance %p, index %d. Deleting...\n", static_cast<void*>(this), i);
 			Hypstar::instance_holder.erase(Hypstar::instance_holder.begin()+i);
 		}
 	}
@@ -221,7 +200,7 @@ bool Hypstar::sendCmd(unsigned char cmd, unsigned char* pPacketParams, unsigned 
 	crc = Compute_CRC32_BE(crclen, crcbuf);
 	crcbuf[txlen - 1] = crc & 0xFF;
 
-	logDebug("sendCmd, len=%d, txlen=%d, crclen=%d, buflen=%d, crc=0x%.8X\n", paramLength, txlen, crclen, buflen, crc);
+	LOG_DEBUG("sendCmd, len=%d, txlen=%d, crclen=%d, buflen=%d, crc=0x%.8X\n", paramLength, txlen, crclen, buflen, crc);
 	logBinPacket(">>", crcbuf, txlen);
 
 	try
@@ -230,7 +209,7 @@ bool Hypstar::sendCmd(unsigned char cmd, unsigned char* pPacketParams, unsigned 
 	}
 	catch(eSerialError &e)
 	{
-		logErr("%s: could not send command to spectrometer\n", __PRETTY_FUNCTION__);
+		LOG_ERROR("%s: could not send command to spectrometer\n", __PRETTY_FUNCTION__);
 		return false;
 	}
 
@@ -259,11 +238,11 @@ bool Hypstar::sendAndWaitForAcknowledge(unsigned char cmd, unsigned char* pPacke
 			logBytesRead(receivedByteCount, "ACK", pCommandNameString);
 			return false;
 		}
-		logDebug("Got ACK for %s\n", pCommandNameString);
+		LOG_DEBUG("Got ACK for %s\n", pCommandNameString);
 	}
 	catch (eHypstar &e)
 	{
-		logErr("sendAckCmd failed with exception, cmd = %.2X\n", cmd);
+		LOG_ERROR("sendAckCmd failed with exception, cmd = %.2X\n", cmd);
 		return false;
 	}
 
@@ -282,7 +261,7 @@ bool Hypstar::waitForDone(unsigned char cmd, const char* cmd_str, float timeout_
 
 		if ((rxbuf[0] == DONE) && (rxbuf[3] == cmd))
 		{
-			logDebug("Got DONE for %s\n", cmd_str);
+			LOG_DEBUG("Got DONE for %s\n", cmd_str);
 			return true;
 		}
 	}
@@ -292,7 +271,7 @@ bool Hypstar::waitForDone(unsigned char cmd, const char* cmd_str, float timeout_
 		logBytesRead(receivedByteCount, "DONE", cmd_str);
 		return false;
 	}
-	logErr("NO DONE for %s\n", cmd_str);
+	LOG_ERROR("NO DONE for %s\n", cmd_str);
 	return false;
 }
 
@@ -318,7 +297,7 @@ int Hypstar::readData(float timeout_s)
 	unsigned char calc_crc, rx_crc, errcode;
 	std::stringstream error_ss;
 
-	logDebug("readData timeout_sec = %.3f\n", timeout_s);
+	LOG_DEBUG("readData timeout_sec = %.3f\n", timeout_s);
     auto t1 = std::chrono::high_resolution_clock::now();
 
 	try
@@ -345,12 +324,12 @@ int Hypstar::readData(float timeout_s)
 	auto t2 = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
 
-	logDebug("Got %d bytes in %d ms\n", count, duration);
+	LOG_DEBUG("Got %d bytes in %d ms\n", count, duration);
 	logBinPacket("<<", rxbuf, count);
 
 	if (count < 3)
 	{
-		logErr("Received less than 3 bytes (%d)\n", count);
+		LOG_ERROR("Received less than 3 bytes (%d)\n", count);
 		throw eBadLength();
 	}
 
@@ -365,13 +344,13 @@ int Hypstar::readData(float timeout_s)
 
 	if (!good_id)
 	{
-		logErr("Unknown packet identifier 0x%.2X\n", rxbuf[0]);
+		LOG_ERROR("Unknown packet identifier 0x%.2X\n", rxbuf[0]);
 		throw eBadID();
 	}
 
 	if (count != length)
 	{
-		logErr("Received %d bytes instead of %d bytes\n", count, length);
+		LOG_ERROR("Received %d bytes instead of %d bytes\n", count, length);
 		throw eBadLength();
 	}
 
@@ -381,7 +360,7 @@ int Hypstar::readData(float timeout_s)
 
 	if (crc_buflen > RX_BUFFER_PLUS_CRC32_SIZE)
 	{
-		logErr("Data buffer (len=%d) is too small for CRC calculation (required len=%d)\n", RX_BUFFER_PLUS_CRC32_SIZE, crc_buflen);
+		LOG_ERROR("Data buffer (len=%d) is too small for CRC calculation (required len=%d)\n", RX_BUFFER_PLUS_CRC32_SIZE, crc_buflen);
 		throw eHypstar();
 	}
 
@@ -393,7 +372,7 @@ int Hypstar::readData(float timeout_s)
 	calc_crc = Compute_CRC32_BE(crc_buflen, rxbuf);
 	if ((calc_crc & 0xFF) != rx_crc)
 	{
-		logErr("Packet CRC (0x%.2X) does not match calculated CRC (0x%.2X)\n", rx_crc, calc_crc);
+		LOG_ERROR("Packet CRC (0x%.2X) does not match calculated CRC (0x%.2X)\n", rx_crc, calc_crc);
 		throw eBadRxCRC();
 	}
 
@@ -405,7 +384,7 @@ int Hypstar::readData(float timeout_s)
 		// is faulty and decoding it is meaningless
 		if (rxbuf[count - 2] == BAD_CRC)
 		{
-			logErr("Spectrometer responded with error 0x%.2X - bad crc\n", BAD_CRC);
+			LOG_ERROR("Spectrometer responded with error 0x%.2X - bad crc\n", BAD_CRC);
 			throw eBadTxCRC();
 		}
 
@@ -414,7 +393,7 @@ int Hypstar::readData(float timeout_s)
 		// is shorter than declared in the header and decoding it is meaningless
 		if (rxbuf[count - 2] == TOO_SHORT)
 		{
-			logErr("Spectrometer responded with error 0x%.2X - too short\n", TOO_SHORT);
+			LOG_ERROR("Spectrometer responded with error 0x%.2X - too short\n", TOO_SHORT);
 			throw eBadTxCRC();
 		}
 
@@ -424,7 +403,7 @@ int Hypstar::readData(float timeout_s)
 		// returned to command that is actually implemented (comms error with matching crc?)
 		if (rxbuf[count - 2] == NOT_IMPLEMENTED)
 		{
-			logErr("Spectrometer responded with error 0x%.2X - not implemented\n", NOT_IMPLEMENTED);
+			LOG_ERROR("Spectrometer responded with error 0x%.2X - not implemented\n", NOT_IMPLEMENTED);
 			throw eBadTxCRC();
 		}
 
@@ -434,7 +413,7 @@ int Hypstar::readData(float timeout_s)
 		// sanity check
 		if ((3 + cmd_len) > (count - 1))
 		{
-			logErr("Command length (%hu) in error packet is too long compared to received data length (%hu)\n", cmd_len, count);
+			LOG_ERROR("Command length (%hu) in error packet is too long compared to received data length (%hu)\n", cmd_len, count);
 			throw eBadRx();
 		}
 
@@ -448,11 +427,11 @@ int Hypstar::readData(float timeout_s)
 		switch(errcode)
 		{
 		case BAD_CRC:
-			logErr("bad crc\n");
+			LOG_ERROR("bad crc\n");
 			throw eBadTxCRC();
 			break;
 		case BAD_LENGTH:
-			logErr("bad length\n");
+			LOG_ERROR("bad length\n");
 			break;
 		case BAD_PARM:
 			for (unsigned short j = 0; j < n_errors; j++)
@@ -497,27 +476,27 @@ int Hypstar::readData(float timeout_s)
 			}
 			break;
 		case TOO_SHORT:
-			logErr("too short\n");
+			LOG_ERROR("too short\n");
 			break;
 		case NOT_IMPLEMENTED:
-			logErr("command 0x%.2X not implemented\n", rxbuf[3]);
+			LOG_ERROR("command 0x%.2X not implemented\n", rxbuf[3]);
 			break;
 		case BAD_STATE:
-			logErr("instrument is in firmware update mode\n");
+			LOG_ERROR("instrument is in firmware update mode\n");
 			throw eBadInstrumentState();
 			break;
 		case MISSING_PARMS:
-			logErr("command too short to fill all the parameters\n");
+			LOG_ERROR("command too short to fill all the parameters\n");
 			break;
 		default:
-			logErr("unknown error code\n");
+			LOG_ERROR("unknown error code\n");
 			break;
 		}
 
 		for (int i = 0; i < count; i++)
 			error_ss << " " << std::hex << std::setfill('0') << std::uppercase << std::setw(2) << (unsigned short) rxbuf[i];
 
-		logErr("%s\n", error_ss.str().c_str());
+		LOG_ERROR("%s\n", error_ss.str().c_str());
 
 		throw eBadResponse();
 	}
@@ -535,14 +514,14 @@ int Hypstar::exchange(unsigned char cmd, unsigned char* pPacketParams, unsigned 
 		{
 			if (resend)
 			{
-				logDebug("%s: sendCmd(RESEND)\n", __PRETTY_FUNCTION__);
+				LOG_DEBUG("%s: sendCmd(RESEND)\n", __PRETTY_FUNCTION__);
 				hnport->emptyInputBuf();
 				sendCmd(RESEND);
 				resend = false;
 			}
 			else
 			{
-				logDebug("%s: sendCmd(%s)\n", __PRETTY_FUNCTION__, pCommandNameString);
+				LOG_DEBUG("%s: sendCmd(%s)\n", __PRETTY_FUNCTION__, pCommandNameString);
 				sendCmd(cmd, pPacketParams, paramLength);
 			}
 
@@ -553,13 +532,13 @@ int Hypstar::exchange(unsigned char cmd, unsigned char* pPacketParams, unsigned 
 			catch (eBadTxCRC &e)
 			{
 				// try again if instrument reported Tx crc error
-				logDebug("Instrument reported TX CRC error\n");
+				LOG_DEBUG("Instrument reported TX CRC error\n");
 				continue;
 			}
 			catch (eBadRx &e)
 			{
 				// Resend if Rx crc error or too few bytes received
-				logDebug("Got garbage from instrument, requesting repeat\n");
+				LOG_DEBUG("Got garbage from instrument, requesting repeat\n");
 				resend = true;
 				continue;
 			}
@@ -569,7 +548,7 @@ int Hypstar::exchange(unsigned char cmd, unsigned char* pPacketParams, unsigned 
 		}
 		catch (eHypstar &e)
 		{
-			logErr("Failed to get %s packet\n", pCommandNameString);
+			LOG_ERROR("Failed to get %s packet\n", pCommandNameString);
 			throw e;
 		}
 
@@ -599,7 +578,7 @@ int Hypstar::getPacketedData(char cmd, unsigned char * pPacketParams, unsigned s
 
 	do
 	{
-		logDebug("packet=%hu/%hu, data_len=%hu\n", *packet_id + 1, packet_count, data_len);
+		LOG_DEBUG("packet=%hu/%hu, data_len=%hu\n", *packet_id + 1, packet_count, data_len);
 		exchange(cmd, param_holder, packet_param_len, pCommandNameString);
 		data_len = *((unsigned short*)(rxbuf + 1)) - 1 - 2 - 2 - 2 - 1;
 		packet_count = *((unsigned short*)(rxbuf + 5));
@@ -622,7 +601,7 @@ int Hypstar::getPacketedData(char cmd, unsigned char * pPacketParams, unsigned s
 	// put back CRC32
 	*(unsigned int*)(dataset_tail - 4) = rx_crc32;
 
-	logDebug("Dataset total length=%d, crc32_buflen=%d, calc_crc32=0x%.8X, rx_crc32=0x%.8X\n",
+	LOG_DEBUG("Dataset total length=%d, crc32_buflen=%d, calc_crc32=0x%.8X, rx_crc32=0x%.8X\n",
 					total_length, crc32_buflen, calc_crc32, rx_crc32);
 
 
@@ -630,12 +609,12 @@ int Hypstar::getPacketedData(char cmd, unsigned char * pPacketParams, unsigned s
 		/* @TODO: Outstanding bug in firmware, where CRC32 of GET_SLOTS dataset is not appended. Will get fixed in further FW release */
 		if (cmd != GET_SLOTS)
 		{
-			logErr("Dataset CRC32 mismatch!\n");
+			LOG_ERROR("Dataset CRC32 mismatch!\n");
 			// application should decide whether to do re-request
 			throw eBadRxCRC();
 		}
 	}
-	logDebug("Dataset CRC32 matches\n");
+	LOG_DEBUG("Dataset CRC32 matches\n");
 
 	return total_length;
 }
@@ -655,7 +634,7 @@ bool Hypstar::sendPacketedData(const char commandId, unsigned char * pDataSet, i
 	{
 		memcpy(&currentPacket[4], pDatasetHead, packetLength);
 		long chunk = (long)pDatasetHead-(long)pDataSet;
-		logDebug("Sending packet %d/%d (bytes [%lu..%lu]/%lu) \n", *pPacketNumber+1, totalPacketCount, chunk, chunk+packetLength,  datasetLength);
+		LOG_DEBUG("Sending packet %d/%d (bytes [%lu..%lu]/%lu) \n", *pPacketNumber+1, totalPacketCount, chunk, chunk+packetLength,  datasetLength);
 		// @TODO: should unify this in firmware (FW returns DONE, while CAL_COEFS returns ACK on last packet
 		// +4 packetLength here to include space for packet number/total number without affecting tracking of location in dataset
 		if (((commandId & 0xFF) == FW_DATA) && ((totalPacketCount-1) == *pPacketNumber))
@@ -672,11 +651,11 @@ bool Hypstar::sendPacketedData(const char commandId, unsigned char * pDataSet, i
 		// Check and adjust length of next packet
 		if (((long)pDatasetHead + DATA_PACKET_BODY_SIZE_MAX) > datasetEndAddress)
 		{
-			logTrace("Start: %p, Head: %p, next head: %p, end: %p\n", pDataSet, pDatasetHead, (char*)(pDatasetHead + DATA_PACKET_BODY_SIZE_MAX), (char*)datasetEndAddress);
+			LOG_TRACE("Start: %p, Head: %p, next head: %p, end: %p\n", pDataSet, pDatasetHead, (char*)(pDatasetHead + DATA_PACKET_BODY_SIZE_MAX), (char*)datasetEndAddress);
 			packetLength = (long)datasetEndAddress - (long)pDatasetHead;
 		}
 
-		logDebug("Instrument accepted packet %d/%d\n", ++*pPacketNumber, totalPacketCount);
+		LOG_DEBUG("Instrument accepted packet %d/%d\n", ++*pPacketNumber, totalPacketCount);
 	} while (*pPacketNumber < totalPacketCount);
 	return false;
 }
@@ -686,7 +665,7 @@ bool Hypstar::getHardWareInfo(void)
 	exchange(BOOTED, NULL, 0, "BOOTED", 0.1);
 	memcpy(&hw_info, (rxbuf + 3), sizeof(struct s_booted));
 
-	logDebug("memory slots %hu, vnir=%d, swir=%d, mux=%d, cam=%d, accel=%d, rh=%d, pressure=%d, swir_tec=%d SD=%d, PM1=%d, PM2=%d\n",
+	LOG_DEBUG("memory slots %hu, vnir=%d, swir=%d, mux=%d, cam=%d, accel=%d, rh=%d, pressure=%d, swir_tec=%d SD=%d, PM1=%d, PM2=%d\n",
 			hw_info.memory_slot_count, hw_info.vnir_module_available, hw_info.swir_module_available, hw_info.optical_multiplexer_available, hw_info.camera_available,
 			hw_info.accelerometer_available, hw_info.humidity_sensor_available, hw_info.pressure_sensor_available, hw_info.swir_tec_module_available, hw_info.sd_card_available, hw_info.power_monitor_1_available, hw_info.power_monitor_2_available);
 
@@ -705,7 +684,7 @@ bool Hypstar::getCalibrationCoefficientsBasic(void)
 
 		if ((rx_count - 4) != (int)sizeof(struct s_calibration_coefficients_raw))
 		{
-			logErr("Received calibration coefficients data packet (%d) does not match the size of packet structure (%zu)\n", (rx_count - 4), sizeof(struct s_calibration_coefficients_unpacked));
+			LOG_ERROR("Received calibration coefficients data packet (%d) does not match the size of packet structure (%zu)\n", (rx_count - 4), sizeof(struct s_calibration_coefficients_unpacked));
 			return false;
 		}
 
@@ -716,9 +695,9 @@ bool Hypstar::getCalibrationCoefficientsBasic(void)
 		{
 			memcpy(tmp, coefs_raw->vnir_wavelength_coefficientss_raw + i * 14, 14);
 			tmp[14] = 0;
-			cal_coefs.vnir_wavelength_coefficients[i] = atof(tmp);
+			calibration_coefficients_basic.vnir_wavelength_coefficients[i] = atof(tmp);
 
-			logDebug("VNIR wl coef %d: \"%s\" = %+.7e\n", i, tmp, cal_coefs.vnir_wavelength_coefficients[i]);
+			LOG_DEBUG("VNIR wl coef %d: \"%s\" = %+.7e\n", i, tmp, calibration_coefficients_basic.vnir_wavelength_coefficients[i]);
 		}
 
 		// vnir lin coefs
@@ -726,9 +705,9 @@ bool Hypstar::getCalibrationCoefficientsBasic(void)
 		{
 			memcpy(tmp, coefs_raw->vnir_linerity_coefficients_raw + i * 14, 14);
 			tmp[14] = 0;
-			cal_coefs.vnir_linearity_coefficients[i] = atof(tmp);
+			calibration_coefficients_basic.vnir_linearity_coefficients[i] = atof(tmp);
 
-			logDebug("VNIR lin coef %d: \"%s\" = %+.7e\n", i, tmp, cal_coefs.vnir_linearity_coefficients[i]);
+			LOG_DEBUG("VNIR lin coef %d: \"%s\" = %+.7e\n", i, tmp, calibration_coefficients_basic.vnir_linearity_coefficients[i]);
 		}
 
 		// swir wl coefs
@@ -736,7 +715,7 @@ bool Hypstar::getCalibrationCoefficientsBasic(void)
 		{
 			memcpy(tmp, coefs_raw->swir_wavelength_coefficients_raw + i * 14, 14);
 			tmp[14] = 0;
-			cal_coefs.swir_wavelength_coefs[i] = atof(tmp);
+			calibration_coefficients_basic.swir_wavelength_coefs[i] = atof(tmp);
 
 			// remove CR
 			for (int j = 0; j < 14; j++)
@@ -746,14 +725,14 @@ bool Hypstar::getCalibrationCoefficientsBasic(void)
 					break;
 				}
 
-			logDebug("SWIR wl coef %d: \"%s\" = %+.7e\n", i, tmp, cal_coefs.swir_wavelength_coefs[i]);
+			LOG_DEBUG("SWIR wl coef %d: \"%s\" = %+.7e\n", i, tmp, calibration_coefficients_basic.swir_wavelength_coefs[i]);
 		}
 
 		// accelerometer cal coefs
 		for (i = 0; i < 3; i++)
 		{
-			cal_coefs.accelerometer_horizontal_reference[i] = coefs_raw->accelerometer_horizontal_reference[i];
-			logDebug("Accelerometer cal coef %d: %hu\n", i, cal_coefs.accelerometer_horizontal_reference[i]);
+			calibration_coefficients_basic.accelerometer_horizontal_reference[i] = coefs_raw->accelerometer_horizontal_reference[i];
+			LOG_DEBUG("Accelerometer cal coef %d: %hu\n", i, calibration_coefficients_basic.accelerometer_horizontal_reference[i]);
 		}
 		return true;
 }
@@ -776,12 +755,12 @@ bool Hypstar::getCalibrationCoefficientsExtended(void)
 	{
 //		if (ext_cal_coefs.crc32 == 0xFFFFFFFF)
 		{
-			logErr("Extended calibration coefficients not available (at least CRC32 isn't)\n");
+			LOG_ERROR("Extended calibration coefficients not available (at least CRC32 isn't)\n");
 		}
 	}
 	catch (eHypstar &e)
 	{
-		logErr("Caught unhandled eHypstar exception, failed to get calibration coefficients\n");
+		LOG_ERROR("Caught unhandled eHypstar exception, failed to get calibration coefficients\n");
 		return false;
 	}
 
@@ -821,7 +800,7 @@ bool Hypstar::getEnvironmentLogEntry(struct s_environment_log_entry *pTarget, un
 	}
 	catch (eHypstar &e)
 	{
-		logErr("Failed to get envlog\n");
+		LOG_ERROR("Failed to get envlog\n");
 		return false;
 	}
 
@@ -841,14 +820,14 @@ bool Hypstar::setBaudRate(e_baudrate baudRate)
 
 		if ((rxbuf[0] != DONE) || (rxbuf[3] != SET_BAUD))
 		{
-			logErr("Did not receive DONE after switching baud rate\n");
+			LOG_ERROR("Did not receive DONE after switching baud rate\n");
 			return false;
 		}
-		logDebug("Successfully switched baudrate to %d\n", baudRate);
+		LOG_DEBUG("Successfully switched baudrate to %d\n", baudRate);
 	}
 	catch (eHypstar &e)
 	{
-		logErr("Failed to switch baud rate\n");
+		LOG_ERROR("Failed to switch baud rate\n");
 		return false;
 	}
 
@@ -881,14 +860,14 @@ unsigned short Hypstar::captureImage(struct s_capture_image_request captureReque
 	{
 		if (!SEND_AND_WAIT_FOR_ACK_AND_DONE(CAPTURE_MM_IMG, (unsigned char*)&captureRequestParameters, (unsigned short)sizeof(struct s_capture_image_request), timeout_s))
 		{
-			logErr("Failed to capture image\n");
+			LOG_ERROR("Failed to capture image\n");
 			return 0;
 		}
 		return *((unsigned short*)(rxbuf + 4));
 	}
 	catch (eHypstar &e)
 	{
-		logErr("Failed to capture image\n");
+		LOG_ERROR("Failed to capture image\n");
 	}
 
 	return 0;
@@ -986,7 +965,7 @@ int Hypstar::getImage(struct s_img_data_holder *pImageDatasetTarget)
 	}
 	catch (eHypstar &e)
 	{
-		logErr("Failed to get image\n");
+		LOG_ERROR("Failed to get image\n");
 	}
 
 	return total_length;
@@ -1019,7 +998,7 @@ unsigned short Hypstar::captureSpectra(enum e_radiometer spectrumType, enum e_en
 	capture_spec_packet.scan_count = scanCount;
 	capture_spec_packet.maximum_total_series_time_s = seriesMaxDuration_s;
 
-	logDebug("vnir=%d, swir=%d, L=%d, E=%d, v_it=%hu, s_it=%hu, scan_count=%hu, series_time=%hu\n",
+	LOG_DEBUG("vnir=%d, swir=%d, L=%d, E=%d, v_it=%hu, s_it=%hu, scan_count=%hu, series_time=%hu\n",
 			capture_spec_packet.capture_spectra_parameters.vnir, capture_spec_packet.capture_spectra_parameters.swir,
 			capture_spec_packet.capture_spectra_parameters.radiance, capture_spec_packet.capture_spectra_parameters.irradiance,
 			capture_spec_packet.vnir_integration_time_ms, capture_spec_packet.swir_integration_time_ms,
@@ -1027,7 +1006,7 @@ unsigned short Hypstar::captureSpectra(enum e_radiometer spectrumType, enum e_en
 
 	if (!SEND_AND_WAIT_FOR_ACK(CAPTURE_SPEC, (unsigned char *)&capture_spec_packet, (unsigned short)sizeof(struct s_capture_spectra_request_packet)))
 	{
-		logErr("Failed to capture spectra\n");
+		LOG_ERROR("Failed to capture spectra\n");
 		return 0;
 	}
 
@@ -1037,7 +1016,7 @@ unsigned short Hypstar::captureSpectra(enum e_radiometer spectrumType, enum e_en
 		if (((capture_spec_packet.capture_spectra_parameters.vnir == 0) || (vnirIntegrationTime_ms != 0)) &&
 				((capture_spec_packet.capture_spectra_parameters.swir == 0) || (swirIntegrationTime_ms != 0)))
 		{
-			logDebug("Capture fixed IT\n");
+			LOG_DEBUG("Capture fixed IT\n");
 			unsigned short max_inttime = (vnirIntegrationTime_ms > swirIntegrationTime_ms ? vnirIntegrationTime_ms : swirIntegrationTime_ms);
 			lastCaptureLongestIntegrationTime_ms = max_inttime;
 
@@ -1059,7 +1038,7 @@ unsigned short Hypstar::captureSpectra(enum e_radiometer spectrumType, enum e_en
 				timeout_s = CAPTURE_TIMEOUT_ADD;
 			}
 
-			logDebug("Waiting for done fixed IT\n");
+			LOG_DEBUG("Waiting for done fixed IT\n");
 			if (!WAIT_FOR_DONE(CAPTURE_SPEC, timeout_s))
 			{
 				return 0;
@@ -1136,7 +1115,7 @@ unsigned short Hypstar::captureSpectra(enum e_radiometer spectrumType, enum e_en
 						dbg_out << "vnir=" << status.spectrum_config.vnir << ", swir=" << status.spectrum_config.swir \
 							<< ", radiance=" << status.spectrum_config.radiance << ", irradiance=" \
 							<< status.spectrum_config.irradiance << " , slot=" << status.memory_slot_id;
-						logDebug("%s\n", dbg_out.str().c_str());
+						LOG_DEBUG("%s\n", dbg_out.str().c_str());
 
 						// save last capture integration time, to provide correct read timeout, since DARK automatic integration time uses that
 						lastCaptureLongestIntegrationTime_ms = status.next_integration_time_ms > lastCaptureLongestIntegrationTime_ms ? status.next_integration_time_ms : lastCaptureLongestIntegrationTime_ms;
@@ -1148,11 +1127,11 @@ unsigned short Hypstar::captureSpectra(enum e_radiometer spectrumType, enum e_en
 		// rxbuf[0] == DONE
 		n_captures = *((unsigned short*)(rxbuf + 4));
 
-		logDebug("Captured %d spectra\n", n_captures);
+		LOG_DEBUG("Captured %d spectra\n", n_captures);
 	}
 	catch (eHypstar &e)
 	{
-		logErr("Failed to capture spectrum\n");
+		LOG_ERROR("Failed to capture spectrum\n");
 		return 0;
 	}
 
@@ -1167,7 +1146,7 @@ unsigned short Hypstar::getLastSpectraCaptureMemorySlots(unsigned short *pMemory
 
 	if (slot_count != numberOfCaptures)
 	{
-		logErr("Memory slot count (%d) does not match number of captured spectra (%d).\n", slot_count, numberOfCaptures);
+		LOG_ERROR("Memory slot count (%d) does not match number of captured spectra (%d).\n", slot_count, numberOfCaptures);
 		return 0;
 	}
 
@@ -1179,7 +1158,7 @@ unsigned short Hypstar::getLastSpectraCaptureMemorySlots(unsigned short *pMemory
 		dbg_out << " " << pMemorySlotIdTarget[i];
 	}
 
-	logDebug("%s\n", dbg_out.str().c_str());
+	LOG_DEBUG("%s\n", dbg_out.str().c_str());
 	return slot_count;
 }
 
@@ -1197,10 +1176,10 @@ unsigned short Hypstar::getSpectraFromMemorySlots(unsigned short *pMemorySlotIds
 
 			// clear for CRC calculation
 			memset(pSpectraDataTarget[n_success].spectrum_body, 0, MAX_SPEC_LENGTH * sizeof(unsigned short));
-			logDebug("Getting spec %d from slot %d\n", n, pMemorySlotIds[n]);
+			LOG_DEBUG("Getting spec %d from slot %d\n", n, pMemorySlotIds[n]);
 
 			spectrum_length = GET_PACKETED_DATA(GET_SPEC, (unsigned char*)&pMemorySlotIds[n], sizeof(pMemorySlotIds[n]), p_spec_data);
-			logDebug("Spectrum total_length=%d, crc_slot pointer = %p, target slot pointer = %p, crc32_in position = 0x%.8X\n",
+			LOG_DEBUG("Spectrum total_length=%d, crc_slot pointer = %p, target slot pointer = %p, crc32_in position = 0x%.8X\n",
 					spectrum_length, p_spec_data, (void*)((long)p_spec_data+spectrum_length-4),
 					*((uint32_t*) ((long)p_spec_data+spectrum_length-4) ));
 
@@ -1216,7 +1195,7 @@ unsigned short Hypstar::getSpectraFromMemorySlots(unsigned short *pMemorySlotIds
 	}
 	catch (eHypstar &e)
 	{
-		logErr("Caught unhandled eHypstar exception, failed to get spectrum\n");
+		LOG_ERROR("Caught unhandled eHypstar exception, failed to get spectrum\n");
 	}
 
 	return n_success;
@@ -1258,7 +1237,7 @@ bool Hypstar::setTECSetpoint(float setpoint_C)
 {
 	if ((setpoint_C != TEC_OFF) && ((setpoint_C < MIN_TEC_SETPOINT) || (setpoint_C > MAX_TEC_SETPOINT)))
 	{
-		logErr("TEC setpoint (%.1f) is outside the allowed range [%.1f ... %.1f]\n\n",
+		LOG_ERROR("TEC setpoint (%.1f) is outside the allowed range [%.1f ... %.1f]\n\n",
 				setpoint_C, MIN_TEC_SETPOINT, MAX_TEC_SETPOINT);
 
 		return false;
@@ -1270,7 +1249,7 @@ bool Hypstar::setTECSetpoint(float setpoint_C)
 	}
 	catch (eHypstar &e)
 	{
-		logErr("Failed to stabilize SWIR temperature\n");
+		LOG_ERROR("Failed to stabilize SWIR temperature\n");
 		return false;
 	}
 
@@ -1291,8 +1270,8 @@ bool Hypstar::enterFlashWriteMode(void)
 
 bool Hypstar::sendCalibrationCoefficients(s_extended_calibration_coefficients *pNewExternalCalibrationCoeficients)
 {
-	logDebug("Starting calibration coefficient upload, ptr: %p\n", pNewExternalCalibrationCoeficients);
-	logDebug("Cal date in send coefs: %d-%d-%d\n", pNewExternalCalibrationCoeficients->calibration_year, pNewExternalCalibrationCoeficients->calibration_month, pNewExternalCalibrationCoeficients->calibration_day);
+	LOG_DEBUG("Starting calibration coefficient upload, ptr: %p\n", pNewExternalCalibrationCoeficients);
+	LOG_DEBUG("Cal date in send coefs: %d-%d-%d\n", pNewExternalCalibrationCoeficients->calibration_year, pNewExternalCalibrationCoeficients->calibration_month, pNewExternalCalibrationCoeficients->calibration_day);
 	// update dataset crc32
 	pNewExternalCalibrationCoeficients->crc32 = 0;
 
@@ -1303,7 +1282,7 @@ bool Hypstar::sendCalibrationCoefficients(s_extended_calibration_coefficients *p
 
 	int calc_crc32 = Compute_CRC32_BE(crc32_buflen, (unsigned char*)pNewExternalCalibrationCoeficients);
 	pNewExternalCalibrationCoeficients->crc32 = calc_crc32;
-	logDebug("Calibration coefficient crc32: 0x%08X\n", pNewExternalCalibrationCoeficients->crc32);
+	LOG_DEBUG("Calibration coefficient crc32: 0x%08X\n", pNewExternalCalibrationCoeficients->crc32);
 
 	// According to "protection from user" logic, we should already be in FLASH_WRITE mode
 	return SEND_PACKETED_DATA(SET_CAL_COEF, (unsigned char *) pNewExternalCalibrationCoeficients, sizeof(s_extended_calibration_coefficients));
@@ -1332,7 +1311,6 @@ bool Hypstar::getFirmwareInfo(void)
 	return true;
 }
 
-// @TODO: working on now
 bool Hypstar::sendNewFirmwareData(std::string filePath) {
 	std::ifstream binFile(filePath.c_str(), std::ios::in | std::ios::binary);
 	if (!binFile) {
@@ -1350,7 +1328,7 @@ bool Hypstar::sendNewFirmwareData(std::string filePath) {
 	uint32_t calc_crc32 = Compute_CRC32_BE(crc32_buflen, (unsigned char*)buffer.data());
 	std::vector<unsigned char> crcvec(((unsigned char*)&calc_crc32), ((unsigned char*)&calc_crc32)+4);
 	buffer.insert(buffer.end(), crcvec.begin(), crcvec.end());
-	logDebug("Firmware buffer length with CRC: %lu, CRC: %08X, in buf: %08X\n", buffer.size(), calc_crc32, *(uint32_t*)&buffer[buffer.size()-4]);
+	LOG_DEBUG("Firmware buffer length with CRC: %lu, CRC: %08X, in buf: %08X\n", buffer.size(), calc_crc32, *(uint32_t*)&buffer[buffer.size()-4]);
 
 	unsigned int size = buffer.size();
 	// notify the instrument about length of our new firmware
@@ -1488,7 +1466,7 @@ bool hypstar_get_calibration_coefficients_basic(hypstar_t *hs, s_calibration_coe
 	{
 		return response;
 	}
-	memcpy(coef_target, &instance->cal_coefs, sizeof(s_calibration_coefficients_unpacked));
+	memcpy(coef_target, &instance->calibration_coefficients_basic, sizeof(s_calibration_coefficients_unpacked));
 
 	return response;
 }
