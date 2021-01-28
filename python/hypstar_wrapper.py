@@ -26,6 +26,13 @@ class HypstarLogLevel(IntEnum):
 		return int(obj)
 
 
+class HypstarObjectHolder(Structure):
+	_pack_ = 1
+	_fields_ = [
+		('hs_instance', c_void_p)
+	]
+
+
 class Hypstar:
 	handle = None
 	lib = None
@@ -34,8 +41,9 @@ class Hypstar:
 	def __init__(self, port):
 		self.lib = CDLL('libhypstar.so')
 		port = create_string_buffer(bytes(port, 'ascii'))
-		self.handle = self.lib.hypstar_init(port)
 		self.define_argument_types()
+		self.handle = self.lib.hypstar_init(port)
+		print("\n{}".format(hex(self.handle)))
 		self.get_hw_info()
 
 	def __del__(self):
@@ -149,6 +157,8 @@ class Hypstar:
 		return r
 
 	def define_argument_types(self):
+		self.lib.hypstar_init.restype = c_void_p
+		self.lib.hypstar_close.argtypes = [c_void_p]
 		self.lib.hypstar_get_hw_info.argtypes = [c_void_p]
 		self.lib.hypstar_set_loglevel.argtypes = [c_void_p, HypstarLogLevel]
 		self.lib.hypstar_reboot.argtypes = [c_void_p]
