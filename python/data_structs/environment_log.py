@@ -117,7 +117,7 @@ class EnvironmentLogEntry(Structure):
 			   '\t3.3 V camera: \t\t{}\n' \
 			   '{}'.format(self.timestamp, datetime.utcfromtimestamp(int(self.timestamp / 1000)),
 						   self.internal_ambient_temp, self.humidity_sensor_temp, self.pressure_sensor_temp,
-						   self.swir_body_temperatureemp, self.swir_heatsink_temperature,
+						   self.swir_body_temperature, self.swir_heatsink_temperature,
 						   self.humidity, self.pressure,
 						   self.input_12V, self.optical_multiplexer_12V, self.swir_12V, self.vnir_5V, self.common_3V3, self.digital_electronics_3V3, self.camera_3V3,
 						   self.accelerometer_data)

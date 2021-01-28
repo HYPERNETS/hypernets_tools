@@ -35,6 +35,7 @@ class Hypstar:
 		self.lib = CDLL('libhypstar.so')
 		port = create_string_buffer(bytes(port, 'ascii'))
 		self.handle = self.lib.hypstar_init(port)
+		self.define_argument_types()
 		self.get_hw_info()
 
 	def __del__(self):
@@ -65,7 +66,6 @@ class Hypstar:
 	# returns instrument internal UNIX timestamp in milliseconds since 01.01.1970
 	# millisecond resolution provided to distinguish spectra taken with sub-second integration time
 	def get_time_ms(self):
-		self.lib.hypstar_get_time.restype = c_uint64
 		ts = self.lib.hypstar_get_time(self.handle)
 		return ts
 
@@ -108,7 +108,6 @@ class Hypstar:
 	# when switching from one entrance type to another with time limit set, less than theoretical maximum number of spectra will be captured
 	# this is due to optical multiplexer physical movement taking some time (~300 ms)
 	def capture_spectra(self, spectrum_type, entrance, vnir_int_time_ms, swir_int_time_ms, scan_count, series_time_max_s):
-		self.lib.hypstar_capture_spectra.argtypes = [c_void_p, RadiometerType, RadiometerEntranceType, c_uint16, c_uint16, c_uint16, c_uint16]
 		return self.lib.hypstar_capture_spectra(self.handle, spectrum_type, entrance, vnir_int_time_ms, swir_int_time_ms, scan_count, series_time_max_s)
 
 	def get_last_capture_spectra_memory_slots(self, count):
@@ -138,7 +137,6 @@ class Hypstar:
 		return bin
 
 	def set_SWIR_module_temperature(self, target_C):
-		self.lib.hypstar_set_TEC_target_temperature.argtypes = [c_void_p, c_float]
 		r = self.lib.hypstar_set_TEC_target_temperature(self.handle, target_C)
 		if not r:
 			raise Exception("Could not set target temperature")
@@ -149,6 +147,26 @@ class Hypstar:
 		if not r:
 			raise Exception("Did not succedd in shutting down SWIR TEC")
 		return r
+
+	def define_argument_types(self):
+		self.lib.hypstar_get_hw_info.argtypes = [c_void_p]
+		self.lib.hypstar_set_loglevel.argtypes = [c_void_p, HypstarLogLevel]
+		self.lib.hypstar_reboot.argtypes = [c_void_p]
+		self.lib.hypstar_set_baudrate.argtypes = [c_void_p, HypstarSupportedBaudRates]
+		self.lib.hypstar_get_time.argtypes = [c_void_p]
+		self.lib.hypstar_get_time.restype = c_uint64
+		self.lib.hypstar_set_time.argtypes = [c_void_p, c_uint64]
+		self.lib.hypstar_get_env_log.argtypes = [c_void_p, c_uint8, c_void_p]
+		self.lib.hypstar_get_calibration_coefficients_basic.argtypes = [c_void_p, c_void_p]
+		self.lib.hypstar_get_calibration_coefficients_extended.argtypes = [c_void_p, c_void_p]
+		self.lib.hypstar_get_calibration_coefficients_all.argtypes = [c_void_p, c_void_p, c_void_p]
+		self.lib.hypstar_capture_spectra.argtypes = [c_void_p, RadiometerType, RadiometerEntranceType, c_uint16, c_uint16, c_uint16, c_uint16]
+		self.lib.hypstar_get_last_capture_memory_slots.argtypes = [c_void_p, c_void_p, c_uint16]
+		self.lib.hypstar_download_spectra.argtypes = [c_void_p, c_void_p, c_uint16, c_void_p]
+		self.lib.hypstar_capture_JPEG_image.argtypes = [c_void_p, c_bool, c_bool]
+		self.lib.hypstar_download_JPEG_image.argtypes = [c_void_p, c_void_p]
+		self.lib.hypstar_set_TEC_target_temperature.argtypes = [c_void_p, c_float]
+		self.lib.hypstar_shutdown_TEC.argtypes = [c_void_p]
 
 	def callback_test_fn(self, it_status):
 		print(type(it_status))
