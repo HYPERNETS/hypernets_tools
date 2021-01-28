@@ -1,6 +1,6 @@
 /**
- * \brief	Hypstar instrument Linux driver with Python support via Boost.Python
- *	Tested on 64bit Debian-based system with Python 3.8
+ * \brief	Hypstar instrument Linux driver with Python support
+ *	Tested on 64bit Debian-based system with Python 3.9
  *
  *	\usage	1. Instantiate Hypstar *hs = Hypstar::getInstance(port);
  *			2. Switch baudrate hs->setBaudRate(B_6000000)
