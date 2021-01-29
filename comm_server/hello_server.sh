@@ -26,7 +26,9 @@ sleep 30
 ipServer=$(awk -F "= " '/credentials/ {print $2}' config_hypernets.ini)
 remoteDir=$(awk -F "= " '/remote_dir/ {print $2}' config_hypernets.ini)
 
+
 # Make Logs
+mkdir -p LOGS
 journalctl -eu hypernets-sequence -n 1500 --no-pager > LOGS/hypernets-sequence.log
 journalctl -eu hypernets-hello -n 150 --no-pager > LOGS/hypernets-hello.log
 
@@ -38,7 +40,7 @@ ssh -t $ipServer 'touch ~/system_is_up' > /dev/null 2>&1
 source comm_server/bidirectional_sync.sh
 
 bidirectional_sync "config_hypernets.ini" \
-	"$ipServer" "~/config_hypernets.ini"
+	"$ipServer" "~/config_hypernets.ini.$USER"
 
 # Send data
 rsync -rt --exclude "CUR*" "DATA" "$ipServer:$remoteDir"
