@@ -1,22 +1,24 @@
-# from shutil import move
-
 from datetime import datetime
-from struct import unpack
 
-from hypernets.binary.libhypstar import Hypstar, radiometer, entrance
-from hypernets.binary.libhypstar import s_img_data
+from .libhypstar.python.hypstar_wrapper import Hypstar, HypstarLogLevel
 
 from argparse import ArgumentParser
 
+from .libhypstar.python.data_structs.hardware_info import HypstarSupportedBaudRates
+from .libhypstar.python.data_structs.spectrum_raw import RadiometerType, RadiometerEntranceType
 
-def set_tec(TEC=0):
+# serial_port = '/dev/ttyUSB0'
+
+
+def set_tec(serial_port, TEC=0):
     try:
+        hs = Hypstar(serial_port)
         if TEC == -100:
             print("Disabling Cooling...")
+            hs.shutdown_SWIR_module_thermal_control()
         else:
             print(f"Setting TEC to {TEC} °C...")
-        hs = Hypstar("/dev/ttyUSB5")
-        hs.setTECSetpoint(TEC)
+            hs.set_SWIR_module_temperature(TEC)
         print('DONE')
 
     except Exception as e:
@@ -24,15 +26,15 @@ def set_tec(TEC=0):
         return e
 
 
-def unset_tec():
-    set_tec(-100)
+def unset_tec(serial_port):
+    set_tec(serial_port, -100)
 
 
 def make_datetime_name(extension=".jpg"):
     return datetime.utcnow().strftime("%Y%m%dT%H%M%S") + extension
 
 
-def take_picture(path_to_file=None, params=None, return_stream=False):
+def take_picture(serial_port, path_to_file=None, params=None, return_stream=False):
 
     # Note : 'params = None' for now, only 5MP is working
 
@@ -42,10 +44,10 @@ def take_picture(path_to_file=None, params=None, return_stream=False):
         path_to_file = path.join("DATA", path_to_file)
 
     try:
-        hs = Hypstar("/dev/ttyUSB5")
-        im_data = s_img_data()
-        hs.acquireDefaultJpeg(True, False, im_data)
-        stream = im_data.jpeg_to_bytes()
+        hs = Hypstar(serial_port)
+        hs.capture_JPEG_image(flip=True)
+        hs.set_baud_rate(HypstarSupportedBaudRates.B_6000000)
+        stream = hs.download_JPEG_image()
         with open(path_to_file, 'wb') as f:
             f.write(stream)
         print(f"Saved to {path_to_file}.")
@@ -58,17 +60,17 @@ def take_picture(path_to_file=None, params=None, return_stream=False):
         return e
 
 
-def take_spectra(path_to_file, mode, action, it_vnir, it_swir, cap_count, # noqa 901
+def take_spectra(serial_port, path_to_file, mode, action, it_vnir, it_swir, cap_count, # noqa 901
                  gui=False, return_cap_list=False, set_time=True):
 
-    rad = {'vis': radiometer.VNIR, 'swi': radiometer.SWIR,
-           'bot': radiometer.BOTH}[mode]
+    rad = {'vis': RadiometerType.VIS_NIR, 'swi': RadiometerType.SWIR,
+           'bot': RadiometerType.BOTH}[mode]
 
-    ent = {'rad': entrance.RADIANCE, 'irr': entrance.IRRADIANCE,
-           'bla': entrance.DARK}[action]
+    ent = {'rad': RadiometerEntranceType.RADIANCE, 'irr': RadiometerEntranceType.IRRADIANCE,
+           'bla': RadiometerEntranceType.DARK}[action]
 
-    if rad in [radiometer.SWIR, radiometer.BOTH]:
-        set_tec()
+    if rad in [RadiometerType.SWIR, RadiometerType.BOTH]:
+        set_tec(serial_port)
 
     print(f"--> [{rad} {ent} {it_vnir} {it_swir}] x {cap_count}")
 
@@ -78,16 +80,20 @@ def take_spectra(path_to_file, mode, action, it_vnir, it_swir, cap_count, # noqa
         path_to_file = path.join("DATA", path_to_file)
 
     try:
-        hs = Hypstar('/dev/ttyUSB5')
+        hs = Hypstar(serial_port)
+        hs.set_log_level(HypstarLogLevel.DEBUG)
         if set_time:
-            hs.setTime(int(datetime.now().timestamp()))
+            hs.set_time_s(int(datetime.now().timestamp()))
 
     except Exception as e:
         print(f"Error : {e}")
-        return e
+        # return e
+        raise e
 
     try:
-        cap_list = hs.acquireSpectra(rad, ent, it_vnir, it_swir, cap_count, 0)
+        capture_count = hs.capture_spectra(rad, ent, it_vnir, it_swir, cap_count, 0)
+        slot_list = hs.get_last_capture_spectra_memory_slots(capture_count)
+        cap_list = hs.download_spectra(slot_list)
 
         if len(cap_list) == 0:
             return Exception("Cap list length is zero")
@@ -99,15 +105,16 @@ def take_spectra(path_to_file, mode, action, it_vnir, it_swir, cap_count, # noqa
         # Concatenation
         spectra = b''
         for n, spectrum in enumerate(cap_list):
-            spectrum_data = spectrum.getRawData()
+            spectrum_data = spectrum.getBytes()
             spectra += spectrum_data
-            print(f"Spectrum #{n} added")
             # Read ITs :
-            if it_vnir == 0 and spectrum.radiometer == radiometer.VNIR:
-                it_vnir, = unpack('<H', spectrum_data[11:13])
+            if it_vnir == 0 and spectrum.spectrum_header.spectrum_config.vnir:
+                it_vnir = spectrum.spectrum_header.integration_time_ms
                 # print(f"AIT update : {spectrum.radiometer}->{it_vnir} ms")
-            elif it_swir == 0 and spectrum.radiometer == radiometer.SWIR:
-                it_swir, = unpack('<H', spectrum_data[11:13])
+            # elif it_swir == 0 and spectrum.radiometer == Radiometer.SWIR:
+            elif it_swir == 0 and spectrum.spectrum_header.spectrum_config.swir:
+                # it_swir, = unpack('<H', spectrum_data[11:13])
+                it_swir = spectrum.spectrum_header.integration_time_ms
                 # print(f"AIT update : {spectrum.radiometer}->{it_swir} ms")
 
         # Save
