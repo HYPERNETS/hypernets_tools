@@ -1,0 +1,14 @@
+[Unit]
+Description=Hypernets Sequence Service
+Wants=network-online.target
+After=network-online.target
+SuccessAction=poweroff
+
+[Service]
+User=
+ExecStart=
+WorkingDirectory=
+EnvironmentFile=/etc/environment
+
+[Install]
+WantedBy=multi-user.target

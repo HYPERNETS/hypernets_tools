@@ -1,0 +1,3 @@
+[submodule "hypernets/scripts/libhypstar"]
+	path = hypernets/scripts/libhypstar
+	url = https://github.com/stiebrs/hypernets_tools.git
