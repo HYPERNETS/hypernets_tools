@@ -26,13 +26,6 @@ class HypstarLogLevel(IntEnum):
 		return int(obj)
 
 
-class HypstarObjectHolder(Structure):
-	_pack_ = 1
-	_fields_ = [
-		('hs_instance', c_void_p)
-	]
-
-
 class Hypstar:
 	handle = None
 	lib = None
@@ -43,7 +36,8 @@ class Hypstar:
 		port = create_string_buffer(bytes(port, 'ascii'))
 		self.define_argument_types()
 		self.handle = self.lib.hypstar_init(port)
-		print("\n{}".format(hex(self.handle)))
+		if not self.handle:
+			raise IOError("Could not retrieve instrument instance!")
 		self.get_hw_info()
 
 	def __del__(self):

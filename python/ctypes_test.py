@@ -13,8 +13,12 @@ serial_port = '/dev/ttyUSB0'
 class CtypeTests(unittest.TestCase):
 
 	@classmethod
-	def setUp(self):
-		self.radiometer = Hypstar(serial_port)
+	def setUp(cls):
+		try:
+			cls.radiometer = Hypstar(serial_port)
+		except IOError as e:
+			assert str(e) == "Could not retrieve instrument instance!"
+			cls.skipTest(cls, reason="No instrument")
 
 	def test_hw_info(self):
 		self.radiometer.set_log_level(HypstarLogLevel.DEBUG)

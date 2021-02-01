@@ -1357,7 +1357,14 @@ hypstar_t* hypstar_init(const char *port)
 {
 	hypstar_t *hs_wrapper;
 	Hypstar *obj;
-	obj = Hypstar::getInstance(port);
+	try
+	{
+		obj = Hypstar::getInstance(port);
+	}
+	catch (eHypstar& e)
+	{
+		return NULL;
+	}
 
 	/* Try getting instance. Duplicate port checks are done within class itself
 	 * If returned instance is already in some wrapper, return that wrapper
