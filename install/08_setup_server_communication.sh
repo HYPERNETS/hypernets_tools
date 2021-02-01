@@ -52,7 +52,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
 	systemctl enable hypernets-hello
 	systemctl start hypernets-hello
-	journalctl --no-pager -u hypernets-hello
+	journalctl --follow -u hypernets-hello
 else
 	echo "Exit"
 	exit 1
