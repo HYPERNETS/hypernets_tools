@@ -29,8 +29,13 @@ echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then 
 	echo
 	user="$SUDO_USER"
-	sudo -u $user ssh-keygen -t rsa
-	sudo -u $user ssh-copy-id -i /home/$user/.ssh/id_rsa $credentials
+	read -p "Copy ssh-id ? \n (NPL server : yes / RBINS server : no)" -rn1
+	echo
+
+	if [[ $REPLY =~ ^[Yy]$ ]]; then 
+		sudo -u $user ssh-keygen -t rsa
+		sudo -u $user ssh-copy-id -i /home/$user/.ssh/id_rsa $credentials
+	fi
 
 	path_to_service=$(echo "$PWD/comm_server/hello_server.sh" | sed 's/\//\\\//g')
 	path_to_h_tools=$(echo "$PWD" | sed 's/\//\\\//g')
