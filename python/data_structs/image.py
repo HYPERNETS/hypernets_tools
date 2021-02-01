@@ -5,6 +5,7 @@ MAX_IMG_W = 2592
 MAX_IMG_H = 1944
 IMG_SIZE_MAX = MAX_IMG_W * MAX_IMG_H
 
+
 class HypstarImage(Structure):
 	_pack_ = 1
 	_fields_ = [

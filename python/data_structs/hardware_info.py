@@ -19,6 +19,7 @@ class HypstarSupportedBaudRates(IntEnum):
 	def from_param(cls, obj):
 		return int(obj)
 
+
 class BootedPacketStruct(Structure):
 	_pack_ = 1
 	_fields_ = [

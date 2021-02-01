@@ -1,7 +1,7 @@
 from _ctypes import Structure
 from ctypes import c_uint16
 
-from data_structs.spectrum_raw import OpticalConfiguration
+from .spectrum_raw import OpticalConfiguration
 
 
 class HypstarAutoITStatus(Structure):

@@ -2,12 +2,12 @@ import struct
 from ctypes import *
 from enum import IntEnum
 
-from data_structs.hardware_info import BootedPacketStruct, HypstarSupportedBaudRates
-from data_structs.calibration_coefficients import CalibrationCoefficients, ExtendedCalibrationCoefficients
-from data_structs.environment_log import EnvironmentLogEntry
-from data_structs.image import HypstarImage
-from data_structs.spectrum_raw import RadiometerEntranceType, RadiometerType, HypstarSpectrum
-from data_structs.varia import HypstarAutoITStatus
+from .data_structs.hardware_info import BootedPacketStruct, HypstarSupportedBaudRates
+from .data_structs.calibration_coefficients import CalibrationCoefficients, ExtendedCalibrationCoefficients
+from .data_structs.environment_log import EnvironmentLogEntry
+from .data_structs.image import HypstarImage
+from .data_structs.spectrum_raw import RadiometerEntranceType, RadiometerType, HypstarSpectrum
+from .data_structs.varia import HypstarAutoITStatus
 
 
 class HypstarLogLevel(IntEnum):

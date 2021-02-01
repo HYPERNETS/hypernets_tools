@@ -3,9 +3,9 @@ import unittest
 
 from PIL import Image
 
-from data_structs.hardware_info import HypstarSupportedBaudRates
-from data_structs.spectrum_raw import RadiometerType, RadiometerEntranceType
-from hypstar_wrapper import Hypstar, HypstarLogLevel
+from .data_structs.hardware_info import HypstarSupportedBaudRates
+from .data_structs.spectrum_raw import RadiometerType, RadiometerEntranceType
+from .hypstar_wrapper import Hypstar, HypstarLogLevel
 
 serial_port = '/dev/ttyUSB0'
 
