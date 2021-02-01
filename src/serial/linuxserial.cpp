@@ -1,5 +1,4 @@
-/* linuxserial.cpp                  (C) Joel Kuusk, 2003-2014
- *
+/* 
  * Communication with serial port
  */
 
