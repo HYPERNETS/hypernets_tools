@@ -1,0 +1,8 @@
+Version 0.2:
+	* changes:
+		- renamed functions and structures to be self-explanatory;
+		- driver now does not read calibration coefficients on each instantiation, only when getCalibrationCoefficients() is called. This improves startup time;
+		- refactored out direct calls and packet handling from functions. Now low-level serial has single(ish) point of entry;
+        - removed boost dependencies;
+        - singleton approach for instantiation to avoid serial hardware congestion;
+        - added unsafe functions (all the flash write - firmware, calibration)
