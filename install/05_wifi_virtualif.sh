@@ -1,5 +1,9 @@
 #!/usr/bin/bash
 
+# USE WITH CAUTION : 
+# see : https://github.com/HYPERNETS/hypernets_tools/pull/2#issuecomment-759553325
+
+
 set -o nounset
 set -euo pipefail
 
