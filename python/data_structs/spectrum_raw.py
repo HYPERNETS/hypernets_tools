@@ -112,3 +112,8 @@ class HypstarSpectrum(Structure):
 
 	def convert_to_spectrum_class(self):
 		return Spectrum.parse_raw(bytes(self))
+
+	# Due to C/CTypes limitation, SWIR spectrum contains 2048 pixels instead of 256 with most of them 0, so we cut out unnecessary data when packing
+	def getBytes(self):
+		whole = bytes(self)
+		return whole[:self.spectrum_header.dataset_total_length-4] + whole[len(whole)-4:]
