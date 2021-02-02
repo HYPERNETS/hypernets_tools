@@ -52,40 +52,9 @@ def metadata_header(now, protocol_file):
     """\
     [Metadata]
     Datetime=%s
-    PI=Hypernets Virtual Oceane
-    PyxisVersion=VIRTUAL_V001
-    SN=HYPERNETS_VIRT001
+    PI=Hypernets Virtual
     SiteName=Villefranche-sur-mer
-    Latitude=43.69886
-    Longitude=7.30720
-    ProtocolFileName=%s
-    CC=BEGIN
-    \tmapping_vis_a:+1.6499700E+02
-    \tmapping_vis_b:+4.3321091E-01
-    \tmapping_vis_c:+3.7714483E-05
-    \tmapping_vis_d:+6.6769395E-10
-    \tmapping_vis_e:-4.0577247E-12
-    \tmapping_vis_f:+0.0000000E+00
-    \tcorr_vis_a   :+9.9536401E-01
-    \tcorr_vis_b   :+3.1313983E-07
-    \tcorr_vis_c   :+7.1082480E-11
-    \tcorr_vis_d   :-1.0422697E-14
-    \tcorr_vis_e   :+5.2968177E-19
-    \tcorr_vis_f   :-1.3406498E-23
-    \tcorr_vis_g   :+1.6566800E-28
-    \tcorr_vis_h   :-8.0092009E-34
-    \tmapping_swir_a:00 08 05 28 00 08 00 00 00 00 00 00 00 00
-    \tmapping_swir_b:00 00 00 00 00 00 00 00 41 56 01 08 0B 28
-    \tmapping_swir_c:00 08 00 00 00 00 51 58 01 08 19 28 00 08
-    \tmapping_swir_d:FFFFFF81 FFFFFF81 01 08 FFFFFF81 FFFFFF81 01 08 FFFFFF81
-    \tFFFFFF81 01 08 FFFFFF81 FFFFFF81
-    \tmapping_swir_e:01 08 FFFFFF81 FFFFFF81 01 08 FFFFFF81 FFFFFF81 01 08
-    \tFFFFFF81 FFFFFF81 01 08
-    \tmapping_swir_f:54 0D 56 08 69 3F 52 00 7F 00 00 00 00 00
-    \tRef_acc_data_0:3412
-    \tRef_acc_data_1:2134
-    \tRef_acc_data_2:16233
-    CC_=END\n
+    ProtocolFileName=%s\n
     """ % (now.strftime("%Y%m%dT%H%M%S"), protocol_file))
 
 
