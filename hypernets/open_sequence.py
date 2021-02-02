@@ -82,10 +82,11 @@ def hypstar_python(line, block_position, output_dir="DATA"):
     return output_name
 
 
-def run_sequence_file(sequence_file, driver=True): # FIXME : # noqa C901
+def run_sequence_file(sequence_file, driver=True, DATA_DIR="DATA"): # FIXME : # noqa C901
     with open(sequence_file, mode='r') as sequence:
 
-        DATA_DIR = "DATA"  # XXX Add option
+        if not path.exists(DATA_DIR):
+            mkdir(DATA_DIR)
 
         # start = datetime.now()
         start = datetime.utcnow()

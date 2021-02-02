@@ -32,5 +32,6 @@ credentials = user@server
 remote_dir = ~/DATA
 
 [pantilt]
+# Tilt offset should be positif and < 70
 offset_pan = 0
-offset_tilt = -30
+offset_tilt = +60

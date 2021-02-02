@@ -37,8 +37,10 @@ def take_picture(path_to_file=None, params=None, return_stream=False):
     # Note : 'params = None' for now, only 5MP is working
 
     if path_to_file is None:
-        from os import path
+        from os import path, mkdir
         path_to_file = make_datetime_name()
+        if not path.exists("DATA"):
+            mkdir("DATA")
         path_to_file = path.join("DATA", path_to_file)
 
     try:
@@ -73,7 +75,9 @@ def take_spectra(path_to_file, mode, action, it_vnir, it_swir, cap_count, # noqa
     print(f"--> [{rad} {ent} {it_vnir} {it_swir}] x {cap_count}")
 
     if path_to_file is None:
-        from os import path
+        from os import path, mkdir
+        if not path.exists("DATA"):
+            mkdir("DATA")
         path_to_file = make_datetime_name(extension=".spe")
         path_to_file = path.join("DATA", path_to_file)
 
