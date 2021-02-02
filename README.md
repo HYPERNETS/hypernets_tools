@@ -35,6 +35,14 @@ sudo make install
 ```
 This will download source code for the libhypstar, compile it and copy resulting binary to /usr/lib/
 
+Updating libhypstar with latest from the github:
+```sh
+cd hypernets_tools/hypernets/scripts/libhypstar
+git checkout main
+git pull
+make lib
+sudo make install
+```
 
 ## New set of commands :
 

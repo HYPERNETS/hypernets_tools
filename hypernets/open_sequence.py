@@ -73,15 +73,17 @@ def hypstar_python(instrument_instance, line, block_position, output_dir="DATA")
     return output_name
 
 
-def check_if_swir_requested(sequence_file):
+def check_if_swir_or_park_requested(sequence_file):
     # skip header
     sequence_file.readline()
     swir_strings = ['swi', 'bot']
+    park = False
     for line in sequence_file:
         for s in swir_strings:
             if s in line:
-                return True
-    return False
+                return True, False
+        park = park | (line.split(',')[4] == 'non')
+    return False, park
 
 
 def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_loglevel, driver=True, instrument_standalone=False): # FIXME : # noqa C901
@@ -93,15 +95,24 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_
         # start = datetime.now()
         start = datetime.utcnow()
 
-        # initialize instrument once
-        try:
-            instrument_instance = Hypstar(instrument_port)
-            instrument_instance.set_log_level(instrument_loglevel)
-            instrument_instance.set_baud_rate(HypstarSupportedBaudRates(instrument_br))
-        except Exception as e:
-            print(e)
-            # if instrument does not respond, there's no point in doing anything, so we exit with ABORTED signal so that shell script can catch exception
-            sys.exit(6)  # SIGABRT
+
+        # we should check if any of the lines want to use SWIR and enable TEC
+        swir, park = check_if_swir_or_park_requested(sequence)
+        print("SWIR:{}, park:{}".format(swir, park))
+        # unwind file for processing
+        sequence.seek(0)
+
+        # nothing of this is needed for parking sequence
+        if not park:
+            # initialize instrument once
+            try:
+                instrument_instance = Hypstar(instrument_port)
+                instrument_instance.set_log_level(instrument_loglevel)
+                instrument_instance.set_baud_rate(HypstarSupportedBaudRates(instrument_br))
+            except Exception as e:
+                print(e)
+                # if instrument does not respond, there's no point in doing anything, so we exit with ABORTED signal so that shell script can catch exception
+                sys.exit(6)  # SIGABRT
 
         seq_name = create_seq_name(now=start, prefix="CUR")
         mkdir(path.join(DATA_DIR, seq_name))
@@ -128,16 +139,12 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_
 
         mdfile = open(path.join(DATA_DIR, seq_name, "metadata.txt"), "w")
 
-        # we should check if any of the lines want to use SWIR and enable TEC
-        swir = check_if_swir_requested(sequence)
-        # unwind file for processing
-        sequence.seek(0)
-
-        # Enabling SWIR TEC for the whole sequence is a tradeoff between current consumption and execution time
-        # Although it would seem that disabling TEC while rotating saves power,
-        # one has to remember, that during initial thermal regulation TEC consumes 5x more current + does it for longer.
-        if swir:
-            set_tec(instrument_instance)
+        if not park:
+            # Enabling SWIR TEC for the whole sequence is a tradeoff between current consumption and execution time
+            # Although it would seem that disabling TEC while rotating saves power,
+            # one has to remember, that during initial thermal regulation TEC consumes 5x more current + does it for longer.
+            if swir:
+                set_tec(instrument_instance)
 
         sequence_reader = reader(sequence)
 
@@ -209,11 +216,12 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_
                     # elif hypstar:
                     #     output_name = send_to_hypstar(line, block_position)
                     # ---------------------------------------------------------
-            output_name = hypstar_python(instrument_instance, line, block_position, output_dir=path.
-                                         join(DATA_DIR, seq_name, "RADIOMETER"))  # noqa
+            if not park:
+                output_name = hypstar_python(instrument_instance, line, block_position, output_dir=path.
+                                             join(DATA_DIR, seq_name, "RADIOMETER"))  # noqa
 
-            now_str = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
-            mdfile.write(f"{output_name}={now_str}\n")
+                now_str = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
+                mdfile.write(f"{output_name}={now_str}\n")
 
         mdfile.close()
 
