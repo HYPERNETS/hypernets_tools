@@ -20,6 +20,9 @@
 set -o nounset                              # Treat unset variables as an error
 set -euo pipefail                           # Bash Strict Mode	
 
+
+echo "Sleep 30 sec"
+
 sleep 30
 
 # Read config file :
