@@ -20,13 +20,26 @@ set -euo pipefail                           # Bash Strict Mode
 startSequence=$(awk -F "[ =]+" '/start_sequence/ {print $2}' config_hypernets.ini)
 bypassYocto=$(awk -F "[ =]+" '/bypass_yocto/ {print $2}' config_hypernets.ini)
 hypstarPort=$(awk -F "[ =]+" '/hypstar_port/ {print $2}' config_hypernets.ini)
+baudrate=$(awk -F "[ =]+" '/baudrate/ {print $2}' config_hypernets.ini)
+loglevel=$(awk -F "[ =]+" '/loglevel/ {print $2}' config_hypernets.ini)
 
+extra_args=""
 if [[ "$startSequence" == "no" ]] ; then
 	echo "Start sequence = no"
 	exit 1
 fi
 
-extra_args="-p $hypstarPort"
+if [[ -n $hypstarPort ]] ; then
+	extra_args="$extra_args -p $hypstarPort"
+fi
+
+if [[ -n $baudrate ]] ; then
+	extra_args="$extra_args -b $baudrate"
+fi
+
+if [[ -n $loglevel ]] ; then
+	extra_args="$extra_args -l $loglevel"
+fi
 
 # Ensure Yocto is online
 if [[ "$bypassYocto" == "no" ]] ; then

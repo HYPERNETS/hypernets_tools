@@ -13,6 +13,7 @@ import sys
 from hypernets.virtual.read_protocol import create_seq_name, create_spectra_name, create_block_position_name
 from hypernets.scripts.call_radiometer import take_picture, take_spectra, set_tec, unset_tec
 from hypernets.scripts.libhypstar.python.hypstar_wrapper import Hypstar, HypstarLogLevel
+from hypernets.scripts.libhypstar.python.data_structs.hardware_info import HypstarSupportedBaudRates
 
 last_it_vnir = 0
 last_it_swir = 0
@@ -76,7 +77,6 @@ def check_if_swir_requested(sequence_file):
     # skip header
     sequence_file.readline()
     swir_strings = ['swi', 'bot']
-    swir = False
     for line in sequence_file:
         for s in swir_strings:
             if s in line:
@@ -84,7 +84,7 @@ def check_if_swir_requested(sequence_file):
     return False
 
 
-def run_sequence_file(sequence_file, instrument_port, driver=True, instrument_standalone=False): # FIXME : # noqa C901
+def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_loglevel, driver=True, instrument_standalone=False): # FIXME : # noqa C901
     seq_error = False
     with open(sequence_file, mode='r') as sequence:
 
@@ -96,8 +96,10 @@ def run_sequence_file(sequence_file, instrument_port, driver=True, instrument_st
         # initialize instrument once
         try:
             instrument_instance = Hypstar(instrument_port)
-            instrument_instance.set_log_level(HypstarLogLevel.DEBUG)
-        except:
+            instrument_instance.set_log_level(instrument_loglevel)
+            instrument_instance.set_baud_rate(HypstarSupportedBaudRates(instrument_br))
+        except Exception as e:
+            print(e)
             # if instrument does not respond, there's no point in doing anything, so we exit with ABORTED signal so that shell script can catch exception
             sys.exit(6)  # SIGABRT
 
@@ -241,6 +243,15 @@ if __name__ == '__main__':
     parser.add_argument("-p", "--port", type=str,
                         help="Serial port used for communications with instrument",
                         default="/dev/radiometer0")
+
+    parser.add_argument("-l", "--loglevel", type=str,
+                        help="Verbosity of the instrument driver log",
+                        choices=[HypstarLogLevel.ERROR.name, HypstarLogLevel.INFO.name, HypstarLogLevel.DEBUG.name, HypstarLogLevel.TRACE.name],
+                        default="ERROR")
+
+    parser.add_argument("-b", "--baudrate", type=int,
+                        help="Serial port baud rate used for communications with instrument",
+                        default=115200)
     # driver.add_argument("-y", "--hypstar", action='store_true',
     #                     help="Use libhypstar driver")
 
@@ -250,4 +261,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # run_sequence_file(args.file, hypstar=args.hypstar)
-    run_sequence_file(args.file, driver=None, instrument_standalone=args.noyocto, instrument_port=args.port)
+    run_sequence_file(args.file, driver=None, instrument_standalone=args.noyocto, instrument_port=args.port, instrument_br=args.baudrate, instrument_loglevel=HypstarLogLevel[args.loglevel.upper()])
