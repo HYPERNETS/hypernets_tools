@@ -5,6 +5,8 @@
 keep_pc = on
 start_sequence = no
 sequence_file = hypernets/resources/sequences_samples/your_sequence.csv
+bypass_yocto = no
+hypstar_port = /dev/radiometer0
 
 webcam_sky = credentials@ip_cam_sky
 webcam_site = credentials@ip_cam_site

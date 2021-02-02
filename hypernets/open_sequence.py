@@ -10,22 +10,16 @@ from datetime import datetime
 from os import mkdir, replace, path
 
 import sys
-from hypernets.virtual.read_protocol import create_seq_name
-from hypernets.virtual.read_protocol import create_spectra_name
-from hypernets.virtual.read_protocol import create_block_position_name
-
-from hypernets.scripts.call_radiometer import take_picture, take_spectra
-from hypernets.scripts.call_radiometer import unset_tec
-
+from hypernets.virtual.read_protocol import create_seq_name, create_spectra_name, create_block_position_name
+from hypernets.scripts.call_radiometer import take_picture, take_spectra, set_tec, unset_tec
+from hypernets.scripts.libhypstar.python.hypstar_wrapper import Hypstar, HypstarLogLevel
 
 last_it_vnir = 0
 last_it_swir = 0
-swir = False
 
+def hypstar_python(instrument_instance, line, block_position, output_dir="DATA"):
 
-def hypstar_python(line, block_position, serial_port, output_dir="DATA"):
-
-    global last_it_vnir, last_it_swir, swir
+    global last_it_vnir, last_it_swir
 
     _, _, _, mode, action, it_vnir, cap_count, total_time = line
 
@@ -36,7 +30,7 @@ def hypstar_python(line, block_position, serial_port, output_dir="DATA"):
         output_name = 'NA_' + block_position
 
     elif action == 'pic':
-        if take_picture(serial_port, path.join(output_dir, block_position + ".jpg")):
+        if take_picture(instrument_instance, path.join(output_dir, block_position + ".jpg")):
             output_name = block_position + ".jpg"
         else:
             output_name = "ERR_" + block_position + ".jpg"
@@ -59,7 +53,7 @@ def hypstar_python(line, block_position, serial_port, output_dir="DATA"):
         # FIXME : replace by error code..
         try:
             it_vnir, it_swir =\
-                take_spectra(serial_port, path.join(output_dir, output_name),
+                take_spectra(instrument_instance, path.join(output_dir, output_name),
                              mode, action, it_vnir, it_swir, cap_count)
 
             # Update global vars for IT saving
@@ -68,7 +62,6 @@ def hypstar_python(line, block_position, serial_port, output_dir="DATA"):
                 print(f"Last AIT-VNIR is now : {last_it_vnir}")
 
             if mode == 'swi' or mode == 'bot':
-                swir = True
                 last_it_swir = it_swir
                 print(f"Last AIT-SWIR is now : {last_it_swir}")
 
@@ -79,6 +72,18 @@ def hypstar_python(line, block_position, serial_port, output_dir="DATA"):
     return output_name
 
 
+def check_if_swir_requested(sequence_file):
+    # skip header
+    sequence_file.readline()
+    swir_strings = ['swi', 'bot']
+    swir = False
+    for line in sequence_file:
+        for s in swir_strings:
+            if s in line:
+                return True
+    return False
+
+
 def run_sequence_file(sequence_file, instrument_port, driver=True, instrument_standalone=False): # FIXME : # noqa C901
     seq_error = False
     with open(sequence_file, mode='r') as sequence:
@@ -87,6 +92,14 @@ def run_sequence_file(sequence_file, instrument_port, driver=True, instrument_st
 
         # start = datetime.now()
         start = datetime.utcnow()
+
+        # initialize instrument once
+        try:
+            instrument_instance = Hypstar(instrument_port)
+            instrument_instance.set_log_level(HypstarLogLevel.DEBUG)
+        except:
+            # if instrument does not respond, there's no point in doing anything, so we exit with ABORTED signal so that shell script can catch exception
+            sys.exit(6)  # SIGABRT
 
         seq_name = create_seq_name(now=start, prefix="CUR")
         mkdir(path.join(DATA_DIR, seq_name))
@@ -103,15 +116,27 @@ def run_sequence_file(sequence_file, instrument_port, driver=True, instrument_st
             from hypernets.scripts.pan_tilt import move_to
             from hypernets.scripts.spa.spa_hypernets import spa_from_datetime, spa_from_gps
             with open(path.join(DATA_DIR, seq_name, "meteo.csv"), "w") as meteo:
-               try:
-                   meteo_data = get_meteo()
-                   meteo_data = "; ".join([str(val) + unit for val, unit in meteo_data])  # noqa
-                   meteo.write(meteo_data)
+                try:
+                    meteo_data = get_meteo()
+                    meteo_data = "; ".join([str(val) + unit for val, unit in meteo_data])  # noqa
+                    meteo.write(meteo_data)
 
-               except Exception as e:
-                   meteo_data.write(e)
+                except Exception as e:
+                    meteo_data.write(e)
 
         mdfile = open(path.join(DATA_DIR, seq_name, "metadata.txt"), "w")
+
+        # we should check if any of the lines want to use SWIR and enable TEC
+        swir = check_if_swir_requested(sequence)
+        # unwind file for processing
+        sequence.seek(0)
+
+        # Enabling SWIR TEC for the whole sequence is a tradeoff between current consumption and execution time
+        # Although it would seem that disabling TEC while rotating saves power,
+        # one has to remember, that during initial thermal regulation TEC consumes 5x more current + does it for longer.
+        if swir:
+            set_tec(instrument_instance)
+
         sequence_reader = reader(sequence)
 
         next(sequence_reader)  # skip header
@@ -136,70 +161,65 @@ def run_sequence_file(sequence_file, instrument_port, driver=True, instrument_st
 
             if not instrument_standalone:
                 if ref == "sun":
-                   try:
-                       azimuth_sun, zenith_sun = spa_from_gps()
-                   except Exception as e:
-                       print(f"Error : {e}")
-                       azimuth_sun, zenith_sun = spa_from_datetime()
+                    try:
+                        azimuth_sun, zenith_sun = spa_from_gps()
+                    except Exception as e:
+                        print(f"Error : {e}")
+                        azimuth_sun, zenith_sun = spa_from_datetime()
 
-                   print(f"--> Sun Position  (azimuth : {azimuth_sun:.2f}, "
-                         f"zenith : {zenith_sun:.2f})")
+                    print(f"--> Sun Position  (azimuth : {azimuth_sun:.2f}, "
+                          f"zenith : {zenith_sun:.2f})")
 
-                   if pan == -1 and tilt == -1:
-                       print("--> Special position : point to the sun")
-                       pan = azimuth_sun
-                       tilt = 180 - zenith_sun
+                    if pan == -1 and tilt == -1:
+                        print("--> Special position : point to the sun")
+                        pan = azimuth_sun
+                        tilt = 180 - zenith_sun
 
-                   else:
-                       if azimuth_sun <= 180:
-                           print(" -- Morning : +90 (=clockwise)")
-                           pan = azimuth_sun + pan  # clockwise
-                       else:
-                           print(" -- Afternoon : -90 (=counter-clockwise)")
-                           pan = azimuth_sun - pan  # clockwise
+                    else:
+                        if azimuth_sun <= 180:
+                            print(" -- Morning : +90 (=clockwise)")
+                            pan = azimuth_sun + pan  # clockwise
+                        else:
+                            print(" -- Afternoon : -90 (=counter-clockwise)")
+                            pan = azimuth_sun - pan  # clockwise
 
-                   print(f"--> Converted Position (pan : {pan:.2f} / {ref} ; "
+                    print(f"--> Converted Position (pan : {pan:.2f} / {ref} ; "
                           f"tilt :{tilt:.2f})")
 
                 mdfile.write(f"pt_abs={pan:.2f}; {tilt:.2f}\n")
 
                 try:
                     pan_real, tilt_real = move_to(None, pan, tilt, verbose=False,
-                                                     wait=True)
+                                                  wait=True)
 
                     pan_real = float(pan_real) / 100
                     tilt_real = float(tilt_real) / 100
 
                 except TypeError:
-                   pan_real, tilt_real = -999, -999
-                   print(f"--> final pan : {pan_real} ; final tilt : {tilt_real}")
-                   mdfile.write(f"pt_ref={pan_real:.2f}; {tilt_real:.2f}\n")
+                    pan_real, tilt_real = -999, -999
+                    print(f"--> final pan : {pan_real} ; final tilt : {tilt_real}")
+                    mdfile.write(f"pt_ref={pan_real:.2f}; {tilt_real:.2f}\n")
 
-                   # ---------------------------------------------------------
-                   # if args.phystar:
-                   #     output_name = send_to_phystar(line, block_position)
-                   #
-                   # elif hypstar:
-                   #     output_name = send_to_hypstar(line, block_position)
-                   # ---------------------------------------------------------
-            output_name = hypstar_python(line, block_position, serial_port=instrument_port, output_dir=path.
+                    # ---------------------------------------------------------
+                    # if args.phystar:
+                    #     output_name = send_to_phystar(line, block_position)
+                    #
+                    # elif hypstar:
+                    #     output_name = send_to_hypstar(line, block_position)
+                    # ---------------------------------------------------------
+            output_name = hypstar_python(instrument_instance, line, block_position, output_dir=path.
                                          join(DATA_DIR, seq_name, "RADIOMETER"))  # noqa
 
             now_str = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
             mdfile.write(f"{output_name}={now_str}\n")
 
-            if output_name.startswith("ERR_"):
-                # if instrument does not respond, there's no point in doing anything, so we exit with ABORTED signal so that shell script can catch exception
-                sys.exit(6)  # SIGABRT
-
         mdfile.close()
 
         replace(path.join(DATA_DIR, seq_name),
-            path.join(DATA_DIR, create_seq_name(now=start)))
+                path.join(DATA_DIR, create_seq_name(now=start)))
 
-
-    if swir:
-        unset_tec(instrument_port)
+        if swir:
+            unset_tec(instrument_instance)
 
 
 if __name__ == '__main__':
@@ -230,5 +250,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # run_sequence_file(args.file, hypstar=args.hypstar)
-    print("Port = {}".format(args.port))
     run_sequence_file(args.file, driver=None, instrument_standalone=args.noyocto, instrument_port=args.port)
