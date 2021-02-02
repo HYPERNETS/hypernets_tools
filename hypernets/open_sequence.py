@@ -18,7 +18,7 @@ from hypernets.scripts.pan_tilt import move_to
 from hypernets.scripts.spa.spa_hypernets import spa_from_datetime, spa_from_gps
 
 from hypernets.scripts.call_radiometer import take_picture, take_spectra
-from hypernets.scripts.call_radiometer import unset_tec
+from hypernets.scripts.call_radiometer import unset_tec, get_serials
 
 
 last_it_vnir = 0
@@ -109,6 +109,12 @@ def run_sequence_file(sequence_file, driver=True, DATA_DIR="DATA"): # FIXME : # 
 
             except Exception as e:
                 meteo_data.write(e)
+
+        instrument, visible, swir = get_serials()
+        print(f"SN : * instrument -> {instrument}")
+        print(f"     * visible    -> {visible}")
+        if swir != 0:
+            print(f"     * swir       -> {visible}")
 
         mdfile = open(path.join(DATA_DIR, seq_name, "metadata.txt"), "w")
         sequence_reader = reader(sequence)

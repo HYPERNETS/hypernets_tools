@@ -9,6 +9,23 @@ from hypernets.binary.libhypstar import s_img_data
 from argparse import ArgumentParser
 
 
+def get_serials():
+    try:
+        print("Getting SN")
+        hs = Hypstar("/dev/ttyUSB5")
+        if not hs.getHWinfo():
+            return
+
+        instrument = hs.hw_info.instrument_sn
+        visible = hs.hw_info.vis_sn
+        swir = hs.hw_info.swir_sn
+        return instrument, visible, swir
+
+    except Exception as e:
+        print(f"Error : {e}")
+        return e
+
+
 def set_tec(TEC=0):
     try:
         if TEC == -100:
