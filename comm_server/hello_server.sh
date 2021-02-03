@@ -22,7 +22,6 @@ set -euo pipefail                           # Bash Strict Mode
 
 
 echo "Sleep 30 sec"
-
 sleep 30
 
 # Read config file :
