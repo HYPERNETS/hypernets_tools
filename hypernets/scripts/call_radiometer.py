@@ -74,6 +74,9 @@ def take_spectra(instrument_instance, path_to_file, mode, action, it_vnir, it_sw
         path_to_file = path.join("DATA", path_to_file)
 
     try:
+        # get latest environmental log and print it to output log
+        env_log = instrument_instance.get_env_log()
+        print(env_log.get_csv_line(), flush=True)
         capture_count = instrument_instance.capture_spectra(rad, ent, it_vnir, it_swir, cap_count, 0)
         slot_list = instrument_instance.get_last_capture_spectra_memory_slots(capture_count)
         cap_list = instrument_instance.download_spectra(slot_list)

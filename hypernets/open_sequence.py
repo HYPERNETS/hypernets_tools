@@ -14,6 +14,7 @@ from hypernets.virtual.read_protocol import create_seq_name, create_spectra_name
 from hypernets.scripts.call_radiometer import take_picture, take_spectra, set_tec, unset_tec
 from hypernets.scripts.libhypstar.python.hypstar_wrapper import Hypstar, HypstarLogLevel
 from hypernets.scripts.libhypstar.python.data_structs.hardware_info import HypstarSupportedBaudRates
+from hypernets.scripts.libhypstar.python.data_structs.environment_log import EnvironmentLogEntry, get_csv_header
 
 last_it_vnir = 0
 last_it_swir = 0
@@ -87,7 +88,6 @@ def check_if_swir_or_park_requested(sequence_file):
 
 
 def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_loglevel, driver=True, instrument_standalone=False): # FIXME : # noqa C901
-    seq_error = False
     with open(sequence_file, mode='r') as sequence:
 
         DATA_DIR = "DATA"  # XXX Add option
@@ -139,11 +139,12 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_
                 try:
                     meteo_data = get_meteo()
                     meteo_data = "; ".join([str(val) + unit for val, unit in meteo_data])  # noqa
-                    meteo.write(meteo_data)
+                    meteo.write(f"{meteo_data}\n")
 
                 except Exception as e:
                     meteo_data.write(e)
 
+        print(get_csv_header(), flush=True)
         mdfile = open(path.join(DATA_DIR, seq_name, "metadata.txt"), "w")
 
         if not park:
