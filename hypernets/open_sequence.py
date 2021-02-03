@@ -109,6 +109,13 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_
                 instrument_instance = Hypstar(instrument_port)
                 instrument_instance.set_log_level(instrument_loglevel)
                 instrument_instance.set_baud_rate(HypstarSupportedBaudRates(instrument_br))
+                instrument_instance.get_hw_info()
+                # due to the bug in PSU HW revision 3 12V regulator might not start up properly and optical multiplexer is not available
+                # since this prevents any spectra acquisition, instrument is unusable and there's no point in continuing
+                # instrument power cycling is the only workaround and that's done in run_sequence bash script so we signal it that it's all bad
+                if not instrument_instance.hw_info.optical_multiplexer_available:
+                    sys.exit(6)  # SIGABORT
+
             except Exception as e:
                 print(e)
                 # if instrument does not respond, there's no point in doing anything, so we exit with ABORTED signal so that shell script can catch exception
