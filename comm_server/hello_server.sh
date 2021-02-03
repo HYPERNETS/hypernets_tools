@@ -28,6 +28,11 @@ sleep 30
 ipServer=$(awk -F "= " '/credentials/ {print $2}' config_hypernets.ini)
 remoteDir=$(awk -F "= " '/remote_dir/ {print $2}' config_hypernets.ini)
 
+# Trim strings : 
+shopt -s extglob
+ipServer=${ipServer%%*( )}
+remoteDir=${remoteDir%%*( )}
+shopt -u extglob
 
 # Make Logs
 mkdir -p LOGS
