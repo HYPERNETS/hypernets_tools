@@ -46,16 +46,7 @@ from os import mkdir, chdir, listdir, path
 from shutil import copy, copyfileobj
 from random import random, shuffle, choice
 
-
-def metadata_header(now, protocol_file):
-    return ( # noqa
-    """\
-    [Metadata]
-    Datetime=%s
-    PI=Hypernets Virtual
-    SiteName=Villefranche-sur-mer
-    ProtocolFileName=%s\n
-    """ % (now.strftime("%Y%m%dT%H%M%S"), protocol_file))
+from hypernets.virtual.create_metadata import metadata_header
 
 
 def create_seq_name(now, prefix="SEQ", fmt="%Y%m%dT%H%M%S"):
