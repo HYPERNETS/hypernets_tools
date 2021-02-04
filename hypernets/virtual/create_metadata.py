@@ -24,7 +24,6 @@ def parse_config_metadata(now, protocol_file, serial_instrument):
     # To parse :
     # * principal_investigator
     # *
-
     if not read_config_file():
         return metadata_header_base()
 
@@ -45,12 +44,11 @@ def read_config_file(config_file="config_hypernets.ini"):
     except KeyError:
         # FIXME need refactoring
         print(f"Warning : no 'metadata' section in {config_file}.")
-        return # metadata_header()
+        return  # metadata_header()
 
     return True
 
 
 if __name__ == '__main__':
-
     # TODO : from argparse import ArgumentParser
     print(parse_config_metadata())
