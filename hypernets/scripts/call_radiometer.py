@@ -43,7 +43,9 @@ def take_picture(instrument_instance, path_to_file=None, params=None, return_str
         path_to_file = path.join("DATA", path_to_file)
 
     try:
-        instrument_instance.capture_JPEG_image(flip=True)
+        packet_count = instrument_instance.capture_JPEG_image(flip=True)
+        if not packet_count:
+            return False
         stream = instrument_instance.download_JPEG_image()
         with open(path_to_file, 'wb') as f:
             f.write(stream)
