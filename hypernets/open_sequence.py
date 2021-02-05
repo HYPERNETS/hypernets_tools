@@ -12,12 +12,13 @@ from os import mkdir, replace, path
 import sys
 from hypernets.virtual.read_protocol import create_seq_name, create_spectra_name, create_block_position_name
 from hypernets.scripts.call_radiometer import take_picture, take_spectra, set_tec, unset_tec
-from hypernets.scripts.libhypstar.python.hypstar_wrapper import Hypstar, HypstarLogLevel
+from hypernets.scripts.libhypstar.python.hypstar_wrapper import Hypstar, HypstarLogLevel, wait_for_instrument
 from hypernets.scripts.libhypstar.python.data_structs.hardware_info import HypstarSupportedBaudRates
 from hypernets.scripts.libhypstar.python.data_structs.environment_log import EnvironmentLogEntry, get_csv_header
 
 last_it_vnir = 0
 last_it_swir = 0
+
 
 def hypstar_python(instrument_instance, line, block_position, output_dir="DATA"):
 
@@ -95,7 +96,6 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_
         # start = datetime.now()
         start = datetime.utcnow()
 
-
         # we should check if any of the lines want to use SWIR and enable TEC
         swir, park = check_if_swir_or_park_requested(sequence)
         print("SWIR:{}, park:{}".format(swir, park))
@@ -104,6 +104,12 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_
 
         # nothing of this is needed for parking sequence
         if not park:
+            # wait for instrument to boot on given port. 30s taken from the run_service.sh
+            boot_timeout = 30
+            if not instrument_standalone and not wait_for_instrument(instrument_port, boot_timeout):
+                print("Did not get instrument BOOTED packet in {}s".format(boot_timeout))
+                sys.exit(6)  # SIGABORT
+
             # initialize instrument once
             try:
                 instrument_instance = Hypstar(instrument_port)
