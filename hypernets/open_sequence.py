@@ -120,6 +120,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_
                 # since this prevents any spectra acquisition, instrument is unusable and there's no point in continuing
                 # instrument power cycling is the only workaround and that's done in run_sequence bash script so we signal it that it's all bad
                 if not instrument_instance.hw_info.optical_multiplexer_available:
+                    print("ABORTING due to missing multiplexer (hardware bug)".format(boot_timeout))
                     sys.exit(6)  # SIGABORT
 
             except Exception as e:
