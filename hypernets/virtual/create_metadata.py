@@ -1,12 +1,13 @@
 
-from configparser import ConfigParser
+from configparser import ConfigParser, ExtendedInterpolation
+from configparser import MissingSectionHeaderError
 
 
 def metadata_header():
     pass
 
 
-def metadata_header_base(protocol_file, now=None,
+def metadata_header_base(protocol_file="placeholder.csv", now=None,
                          PI="Hypernets Virtual",
                          site_name="Virtual Site"):
     if now is None:
@@ -20,7 +21,30 @@ def metadata_header_base(protocol_file, now=None,
             f"protocol_filename={protocol_file}\n")
 
 
-def parse_config_metadata(now, protocol_file, serial_instrument):
+def read_config_file(config_file="config_hypernets.ini"):
+
+    config = ConfigParser(interpolation=ExtendedInterpolation())
+
+    try:
+        config.read(config_file)
+    except MissingSectionHeaderError as e:
+        print(f"Warning : {config_file} : {e} ")
+
+    try:
+        metadata_section = config["metadata"]
+        # print(dir(metadata_section))
+        print(list(metadata_section.keys()))
+        print(list(metadata_section.values()))
+        # parse_config_metadata(metadata_section)
+    except KeyError:
+        # FIXME need refactoring
+        print(f"Warning : no 'metadata' section in {config_file}.")
+        return False  # TODO : return default config instead
+
+    return True
+
+
+def parse_config_metadata():
     # To parse :
     # * principal_investigator
     # *
@@ -28,27 +52,6 @@ def parse_config_metadata(now, protocol_file, serial_instrument):
         return metadata_header_base()
 
 
-def read_config_file(config_file="config_hypernets.ini"):
-    """
-    Not implemented yet
-    """
-
-    # try:
-    config = ConfigParser()
-    config.read(config_file)
-
-    try:
-        metadata_section = config["metadata"]
-        parse_config_metadata(metadata_section)
-
-    except KeyError:
-        # FIXME need refactoring
-        print(f"Warning : no 'metadata' section in {config_file}.")
-        return  # metadata_header()
-
-    return True
-
-
 if __name__ == '__main__':
     # TODO : from argparse import ArgumentParser
-    print(parse_config_metadata())
+    parse_config_metadata()
