@@ -104,15 +104,25 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_
 
         # nothing of this is needed for parking sequence
         if not park:
-            # wait for instrument to boot on given port. 30s taken from the run_service.sh
-            boot_timeout = 30
-            if not instrument_standalone and not wait_for_instrument(instrument_port, boot_timeout):
-                print("Did not get instrument BOOTED packet in {}s".format(boot_timeout))
-                sys.exit(6)  # SIGABORT
+            instrument_instance = None
+            # sometimes relay is not actually off, should test for that
+            try:
+                instrument_instance = Hypstar(instrument_port)
+            except IOError as e:
+                # wait for instrument to boot on given port. 30s taken from the run_service.sh
+                boot_timeout = 15
+                if not wait_for_instrument(instrument_port, boot_timeout):
+                    # just in case instrument sent BOOTED packet while we were switching baudrates, let's test if it's there
+                    try:
+                        instrument_instance = Hypstar(instrument_port)
+                    except IOError as e:
+                        print("[ERROR] Did not get instrument BOOTED packet in {}s".format(boot_timeout))
+                        sys.exit(27)
 
             # initialize instrument once
             try:
-                instrument_instance = Hypstar(instrument_port)
+                if not instrument_instance:
+                    instrument_instance = Hypstar(instrument_port)
                 instrument_instance.set_log_level(instrument_loglevel)
                 instrument_instance.set_baud_rate(HypstarSupportedBaudRates(instrument_br))
                 instrument_instance.get_hw_info()
@@ -120,8 +130,8 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_
                 # since this prevents any spectra acquisition, instrument is unusable and there's no point in continuing
                 # instrument power cycling is the only workaround and that's done in run_sequence bash script so we signal it that it's all bad
                 if not instrument_instance.hw_info.optical_multiplexer_available:
-                    print("ABORTING due to missing multiplexer (hardware bug)".format(boot_timeout))
-                    sys.exit(6)  # SIGABORT
+                    print("[ERROR] MUX+SWIR+TEC hardware not available")
+                    sys.exit(27)  # SIGABORT
 
             except Exception as e:
                 print(e)

@@ -55,8 +55,6 @@ if [[ "$bypassYocto" == "no" ]] ; then
 	python -m hypernets.scripts.relay_command -n3 -son
 	python -m hypernets.scripts.relay_command -n6 -son
 
-	echo "Waiting for instrument to boot"
-	sleep 30  # Time for waking up
 else
 	echo "Bypassing Yocto"
     extra_args="$extra_args --noyocto"
