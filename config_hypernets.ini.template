@@ -35,3 +35,10 @@ remote_dir = ~/DATA
 # Tilt offset should be positif and < 70
 offset_pan = 0
 offset_tilt = +60
+[metadata]
+principal_investigator = Investigator Name
+datetime = {datetime}
+site_name = A Site Name
+latitude = ${GPS:latitude}
+longitude = ${GPS:longitude}
+protocol_file_name = ${general:sequence_file}

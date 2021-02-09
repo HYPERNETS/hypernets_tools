@@ -1,10 +1,19 @@
 
+from hypernets import __version__
+from datetime import datetime
 from configparser import ConfigParser, ExtendedInterpolation
 from configparser import MissingSectionHeaderError
 
+# TODO : Dump data from pickle for lat:lon
 
-def metadata_header():
-    pass
+
+def special_value(value):
+    if value == "{datetime}":
+        return datetime.utcnow().strftime("%Y%m%dT%H%M%S")
+    elif value == "{v_hypernets_tools}":
+        return __version__
+    else:
+        return "N/A"
 
 
 def metadata_header_base(protocol_file="placeholder.csv", now=None,
@@ -15,43 +24,38 @@ def metadata_header_base(protocol_file="placeholder.csv", now=None,
         now = datetime.utcnow()
 
     return ("[Metadata]\n"
-            f"creation_datetime={now.strftime('%Y%m%dT%H%M%S')}\n"
-            f"principal investigator={PI}\n"
-            f"site_name={site_name}\n"
-            f"protocol_filename={protocol_file}\n")
+            f"datetime = {now.strftime('%Y%m%dT%H%M%S')}\n"
+            f"principal_investigator = {PI}\n"
+            f"site_name = {site_name}\n"
+            f"protocol_filename = {protocol_file}\n")
 
 
-def read_config_file(config_file="config_hypernets.ini"):
+def parse_config_metadata(config_file="config_hypernets.ini"):
 
     config = ConfigParser(interpolation=ExtendedInterpolation())
 
     try:
         config.read(config_file)
-    except MissingSectionHeaderError as e:
-        print(f"Warning : {config_file} : {e} ")
-
-    try:
         metadata_section = config["metadata"]
-        # print(dir(metadata_section))
-        print(list(metadata_section.keys()))
-        print(list(metadata_section.values()))
-        # parse_config_metadata(metadata_section)
-    except KeyError:
-        # FIXME need refactoring
-        print(f"Warning : no 'metadata' section in {config_file}.")
-        return False  # TODO : return default config instead
 
-    return True
+    except (MissingSectionHeaderError, KeyError) as e:
+        print(f"Warning : {config_file} not found or no section {e}")
+        str_metadata = metadata_header_base()
+        return str_metadata
+
+    str_metadata = ""
+    for field in metadata_section.keys():
+        if '{' and '}' in metadata_section[field]:
+            special = special_value(metadata_section[field])
+            str_metadata += f"{field} = {special}\n"
+        else:
+            str_metadata += f"{field} = {metadata_section[field]}\n"
+    return str_metadata
 
 
-def parse_config_metadata():
-    # To parse :
-    # * principal_investigator
-    # *
-    if not read_config_file():
-        return metadata_header_base()
+def create_metadata():
+    pass
 
 
 if __name__ == '__main__':
-    # TODO : from argparse import ArgumentParser
-    parse_config_metadata()
+    print(parse_config_metadata())
