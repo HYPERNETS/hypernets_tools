@@ -1,13 +1,21 @@
 from datetime import datetime
 
-from .libhypstar.python.hypstar_wrapper import Hypstar, HypstarLogLevel
-
 from argparse import ArgumentParser
 
-from .libhypstar.python.data_structs.hardware_info import HypstarSupportedBaudRates
 from .libhypstar.python.data_structs.spectrum_raw import RadiometerType, RadiometerEntranceType
 
-# serial_port = '/dev/ttyUSB0'
+
+def get_serials(instrument_instance):
+    try:
+        print("Getting SN")
+        instrument = instrument_instance.hw_info.instrument_serial_number
+        visible = instrument_instance.hw_info.vis_serial_number
+        swir = instrument_instance.hw_info.swir_serial_number
+        return instrument, visible, swir
+
+    except Exception as e:
+        print(f"Error : {e}")
+        return e
 
 
 def set_tec(instrument_instance, TEC=0):
@@ -38,8 +46,10 @@ def take_picture(instrument_instance, path_to_file=None, params=None, return_str
     # Note : 'params = None' for now, only 5MP is working
 
     if path_to_file is None:
-        from os import path
+        from os import path, mkdir
         path_to_file = make_datetime_name()
+        if not path.exists("DATA"):
+            mkdir("DATA")
         path_to_file = path.join("DATA", path_to_file)
 
     try:
@@ -71,7 +81,9 @@ def take_spectra(instrument_instance, path_to_file, mode, action, it_vnir, it_sw
     print(f"--> [{rad} {ent} {it_vnir} {it_swir}] x {cap_count}")
 
     if path_to_file is None:
-        from os import path
+        from os import path, mkdir
+        if not path.exists("DATA"):
+            mkdir("DATA")
         path_to_file = make_datetime_name(extension=".spe")
         path_to_file = path.join("DATA", path_to_file)
 

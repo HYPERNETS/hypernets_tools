@@ -14,7 +14,7 @@ from hypernets.reader.spectrum import Spectrum
 
 from datetime import datetime
 
-from os import path
+from os import path, mkdir
 
 
 class FrameRadiometer(LabelFrame):
@@ -113,13 +113,16 @@ class FrameRadiometer(LabelFrame):
                 .grid(column=col, row=row, padx=padx, pady=pady, sticky=sticky)
         # --------------------------------------------------------------------
 
-    def general_callback(self):
+    def general_callback(self, output_dir="DATA"):
+
         mode, action, vnir, swir, cap_count, total, reso = \
             [v.get() for v in self.radiometer_var]
 
         print(mode, action, vnir, swir, cap_count, total, reso)
 
-        output_dir = "DATA"
+        if not path.exists(output_dir):
+            mkdir(output_dir)
+
         output_name = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
 
         if action == "Picture":

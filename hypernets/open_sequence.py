@@ -11,7 +11,7 @@ from os import mkdir, replace, path
 
 import sys
 from hypernets.virtual.read_protocol import create_seq_name, create_spectra_name, create_block_position_name
-from hypernets.scripts.call_radiometer import take_picture, take_spectra, set_tec, unset_tec
+from hypernets.scripts.call_radiometer import take_picture, take_spectra, set_tec, unset_tec, get_serials
 from hypernets.scripts.libhypstar.python.hypstar_wrapper import Hypstar, HypstarLogLevel, wait_for_instrument
 from hypernets.scripts.libhypstar.python.data_structs.hardware_info import HypstarSupportedBaudRates
 from hypernets.scripts.libhypstar.python.data_structs.environment_log import EnvironmentLogEntry, get_csv_header
@@ -88,10 +88,11 @@ def check_if_swir_or_park_requested(sequence_file):
     return False, park
 
 
-def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_loglevel, driver=True, instrument_standalone=False): # FIXME : # noqa C901
+def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_loglevel, driver=True, instrument_standalone=False, DATA_DIR="DATA"): # FIXME : # noqa C901
     with open(sequence_file, mode='r') as sequence:
 
-        DATA_DIR = "DATA"  # XXX Add option
+        if not path.exists(DATA_DIR):
+            mkdir(DATA_DIR)
 
         # start = datetime.now()
         start = datetime.utcnow()
@@ -160,6 +161,12 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_
 
                 except Exception as e:
                     meteo_data.write(e)
+
+        instrument, visible, swir = get_serials(instrument_instance)
+        print(f"SN : * instrument -> {instrument}")
+        print(f"     * visible    -> {visible}")
+        if swir != 0:
+            print(f"     * swir       -> {visible}")
 
         print(get_csv_header(), flush=True)
         mdfile = open(path.join(DATA_DIR, seq_name, "metadata.txt"), "w")

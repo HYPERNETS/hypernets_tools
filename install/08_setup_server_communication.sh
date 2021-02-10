@@ -48,8 +48,6 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 	sed -i '/ExecStart=$/s/$/'$path_to_service'/' $service_file
 	sed -i '/WorkingDirectory=$/s/$/'$path_to_h_tools'\//' $service_file
 
-	mkdir -p "LOGS/"
-
 	systemctl enable hypernets-hello
 	systemctl start hypernets-hello
 	journalctl --follow -u hypernets-hello
