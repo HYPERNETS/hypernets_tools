@@ -166,7 +166,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_
         print(f"SN : * instrument -> {instrument}")
         print(f"     * visible    -> {visible}")
         if swir != 0:
-            print(f"     * swir       -> {visible}")
+            print(f"     * swir       -> {swir}")
 
         print(get_csv_header(), flush=True)
         mdfile = open(path.join(DATA_DIR, seq_name, "metadata.txt"), "w")
