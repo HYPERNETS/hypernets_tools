@@ -14,16 +14,34 @@ cd hypernets_tools
 cp config_hypernets.ini.template config_hypernets.ini
 mousepad config_hypernets.ini
 ```
+If you are using Joel's script for binding instrument to /dev/radiometerX, you should be good, otherwise you should change 
+in config_hypernets.ini the *hypstar_port* parameter to /dev/ttyUSBx (normally ttyUSB0).
+
+By default instrument uses baudrate of 115200. Setting instrument baud rate to higher value will reduce acquisition time, 
+but instrument becomes more sensitive to electronic noise. CRC errors are reported if noise is detected on communications line.
+Driver will retry command 5 times before failing. Generally we would suggest trying higher baud rates while observing
+if there are no CRC errors reported in log file. Frequent CRC errors should not be a problem unless same packet fails 5 times in a row.
+Then we would suggest reducing baud rate until such failures stop. Top-end baud rate use requires shielded cabling.
 
 
-## Prerequisite : 
-### Installing Boost v1.71 (~1h)
-You will first have to install *libboost-python* dependency, it's pretty 
-straightforward but a bit long (internet connection needed) :
-
+Libhypstar driver is now bundled with installation, but needs to be activated and installed:
 ```sh
-cd install  
-sudo bash 02_install_boost.sh
+cd hypernets_tools
+git submodule init
+git submodule update
+cd hypernets/scripts/libhypstar
+make lib
+sudo make install
+```
+This will download source code for the libhypstar, compile it and copy resulting binary to /usr/lib/
+
+Updating libhypstar with latest from the github:
+```sh
+cd hypernets_tools/hypernets/scripts/libhypstar
+git checkout main
+git pull
+make lib
+sudo make install
 ```
 
 ## New set of commands :

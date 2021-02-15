@@ -5,6 +5,12 @@
 keep_pc = on
 start_sequence = no
 sequence_file = hypernets/resources/sequences_samples/your_sequence.csv
+bypass_yocto = no
+hypstar_port = /dev/radiometer0
+# supported rates are: 115200, 460800, 921600, 3000000, 6000000, 8000000
+baudrate = 3000000
+# supported levels are: ERROR (only errors are reported on stderr); INFO (stdout + stderr); DEBUG (driver command execution printout to stdout); TRACE (low level communication bytes are printed to stdout)
+loglevel = ERROR
 
 webcam_sky = credentials@ip_cam_sky
 webcam_site = credentials@ip_cam_site

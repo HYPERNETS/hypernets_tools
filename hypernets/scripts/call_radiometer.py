@@ -1,24 +1,16 @@
-# from shutil import move
-
 from datetime import datetime
-from struct import unpack
-
-from hypernets.binary.libhypstar import Hypstar, radiometer, entrance
-from hypernets.binary.libhypstar import s_img_data
 
 from argparse import ArgumentParser
 
+from .libhypstar.python.data_structs.spectrum_raw import RadiometerType, RadiometerEntranceType
 
-def get_serials():
+
+def get_serials(instrument_instance):
     try:
         print("Getting SN")
-        hs = Hypstar("/dev/ttyUSB5")
-        if not hs.getHWinfo():
-            return
-
-        instrument = hs.hw_info.instrument_sn
-        visible = hs.hw_info.vis_sn
-        swir = hs.hw_info.swir_sn
+        instrument = instrument_instance.hw_info.instrument_serial_number
+        visible = instrument_instance.hw_info.vis_serial_number
+        swir = instrument_instance.hw_info.swir_serial_number
         return instrument, visible, swir
 
     except Exception as e:
@@ -26,14 +18,14 @@ def get_serials():
         return e
 
 
-def set_tec(TEC=0):
+def set_tec(instrument_instance, TEC=0):
     try:
         if TEC == -100:
             print("Disabling Cooling...")
+            instrument_instance.shutdown_SWIR_module_thermal_control()
         else:
             print(f"Setting TEC to {TEC} °C...")
-        hs = Hypstar("/dev/ttyUSB5")
-        hs.setTECSetpoint(TEC)
+            instrument_instance.set_SWIR_module_temperature(TEC)
         print('DONE')
 
     except Exception as e:
@@ -41,15 +33,15 @@ def set_tec(TEC=0):
         return e
 
 
-def unset_tec():
-    set_tec(-100)
+def unset_tec(instrument_instance):
+    set_tec(instrument_instance, -100)
 
 
 def make_datetime_name(extension=".jpg"):
     return datetime.utcnow().strftime("%Y%m%dT%H%M%S") + extension
 
 
-def take_picture(path_to_file=None, params=None, return_stream=False):
+def take_picture(instrument_instance, path_to_file=None, params=None, return_stream=False):
 
     # Note : 'params = None' for now, only 5MP is working
 
@@ -61,10 +53,10 @@ def take_picture(path_to_file=None, params=None, return_stream=False):
         path_to_file = path.join("DATA", path_to_file)
 
     try:
-        hs = Hypstar("/dev/ttyUSB5")
-        im_data = s_img_data()
-        hs.acquireDefaultJpeg(True, False, im_data)
-        stream = im_data.jpeg_to_bytes()
+        packet_count = instrument_instance.capture_JPEG_image(flip=True)
+        if not packet_count:
+            return False
+        stream = instrument_instance.download_JPEG_image()
         with open(path_to_file, 'wb') as f:
             f.write(stream)
         print(f"Saved to {path_to_file}.")
@@ -77,17 +69,14 @@ def take_picture(path_to_file=None, params=None, return_stream=False):
         return e
 
 
-def take_spectra(path_to_file, mode, action, it_vnir, it_swir, cap_count, # noqa 901
+def take_spectra(instrument_instance, path_to_file, mode, action, it_vnir, it_swir, cap_count, # noqa 901
                  gui=False, return_cap_list=False, set_time=True):
 
-    rad = {'vis': radiometer.VNIR, 'swi': radiometer.SWIR,
-           'bot': radiometer.BOTH}[mode]
+    rad = {'vis': RadiometerType.VIS_NIR, 'swi': RadiometerType.SWIR,
+           'bot': RadiometerType.BOTH}[mode]
 
-    ent = {'rad': entrance.RADIANCE, 'irr': entrance.IRRADIANCE,
-           'bla': entrance.DARK}[action]
-
-    if rad in [radiometer.SWIR, radiometer.BOTH]:
-        set_tec()
+    ent = {'rad': RadiometerEntranceType.RADIANCE, 'irr': RadiometerEntranceType.IRRADIANCE,
+           'bla': RadiometerEntranceType.DARK}[action]
 
     print(f"--> [{rad} {ent} {it_vnir} {it_swir}] x {cap_count}")
 
@@ -99,16 +88,12 @@ def take_spectra(path_to_file, mode, action, it_vnir, it_swir, cap_count, # noqa
         path_to_file = path.join("DATA", path_to_file)
 
     try:
-        hs = Hypstar('/dev/ttyUSB5')
-        if set_time:
-            hs.setTime(int(datetime.now().timestamp()))
-
-    except Exception as e:
-        print(f"Error : {e}")
-        return e
-
-    try:
-        cap_list = hs.acquireSpectra(rad, ent, it_vnir, it_swir, cap_count, 0)
+        # get latest environmental log and print it to output log
+        env_log = instrument_instance.get_env_log()
+        print(env_log.get_csv_line(), flush=True)
+        capture_count = instrument_instance.capture_spectra(rad, ent, it_vnir, it_swir, cap_count, 0)
+        slot_list = instrument_instance.get_last_capture_spectra_memory_slots(capture_count)
+        cap_list = instrument_instance.download_spectra(slot_list)
 
         if len(cap_list) == 0:
             return Exception("Cap list length is zero")
@@ -120,15 +105,16 @@ def take_spectra(path_to_file, mode, action, it_vnir, it_swir, cap_count, # noqa
         # Concatenation
         spectra = b''
         for n, spectrum in enumerate(cap_list):
-            spectrum_data = spectrum.getRawData()
+            spectrum_data = spectrum.getBytes()
             spectra += spectrum_data
-            print(f"Spectrum #{n} added")
             # Read ITs :
-            if it_vnir == 0 and spectrum.radiometer == radiometer.VNIR:
-                it_vnir, = unpack('<H', spectrum_data[11:13])
+            if it_vnir == 0 and spectrum.spectrum_header.spectrum_config.vnir:
+                it_vnir = spectrum.spectrum_header.integration_time_ms
                 # print(f"AIT update : {spectrum.radiometer}->{it_vnir} ms")
-            elif it_swir == 0 and spectrum.radiometer == radiometer.SWIR:
-                it_swir, = unpack('<H', spectrum_data[11:13])
+            # elif it_swir == 0 and spectrum.radiometer == Radiometer.SWIR:
+            elif it_swir == 0 and spectrum.spectrum_header.spectrum_config.swir:
+                # it_swir, = unpack('<H', spectrum_data[11:13])
+                it_swir = spectrum.spectrum_header.integration_time_ms
                 # print(f"AIT update : {spectrum.radiometer}->{it_swir} ms")
 
         # Save

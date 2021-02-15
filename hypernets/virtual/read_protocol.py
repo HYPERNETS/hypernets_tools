@@ -46,7 +46,7 @@ from os import mkdir, chdir, listdir, path
 from shutil import copy, copyfileobj
 from random import random, shuffle, choice
 
-from hypernets.virtual.create_metadata import metadata_header
+from hypernets.virtual.create_metadata import metadata_header_base
 
 
 def create_seq_name(now, prefix="SEQ", fmt="%Y%m%dT%H%M%S"):
@@ -216,7 +216,7 @@ def read_protocol_file(protocol_file):
     chdir(seq_name)
 
     mdfile = open("metadata.txt", "w")
-    mdfile.write(dedent(metadata_header(now, protocol_file)))
+    mdfile.write(dedent(metadata_header_base(now, protocol_file)))
 
     with open(path.basename(protocol_file)) as protocol:
         protocol_reader = csv.reader(protocol)
