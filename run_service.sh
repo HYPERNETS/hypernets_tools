@@ -17,11 +17,12 @@ set -o nounset                              # Treat unset variables as an error
 set -euo pipefail                           # Bash Strict Mode
 
 
-startSequence=$(awk -F "[ =]+" '/start_sequence/ {print $2}' config_hypernets.ini)
-bypassYocto=$(awk -F "[ =]+" '/bypass_yocto/ {print $2}' config_hypernets.ini)
-hypstarPort=$(awk -F "[ =]+" '/hypstar_port/ {print $2}' config_hypernets.ini)
-baudrate=$(awk -F "[ =]+" '/baudrate/ {print $2}' config_hypernets.ini)
-loglevel=$(awk -F "[ =]+" '/loglevel/ {print $2}' config_hypernets.ini)
+# Only first entry is returned with exit [FIXME : better ?]
+startSequence=$(awk -F "[ =]+" '/start_sequence/ {print $2 ; exit}' config_hypernets.ini)
+bypassYocto=$(awk -F "[ =]+" '/bypass_yocto/ {print $2 ; exit}' config_hypernets.ini)
+hypstarPort=$(awk -F "[ =]+" '/hypstar_port/ {print $2 ; exit}' config_hypernets.ini)
+baudrate=$(awk -F "[ =]+" '/baudrate/ {print $2 ; exit}' config_hypernets.ini)
+loglevel=$(awk -F "[ =]+" '/loglevel/ {print $2 ; exit}' config_hypernets.ini)
 
 extra_args=""
 if [[ "$startSequence" == "no" ]] ; then
@@ -43,7 +44,7 @@ fi
 
 # Ensure Yocto is online
 if [[ "$bypassYocto" == "no" ]] ; then
-	yoctopuceIP=$(awk -F "[ =]+" '/yoctopuce_ip/ {print $2}' config_hypernets.ini)
+	yoctopuceIP=$(awk -F "[ =]+" '/yoctopuce_ip/ {print $2; exit}' config_hypernets.ini)
 	echo "Waiting for yoctopuce..."
 	while ! timeout 2 ping -c 1 -n $yoctopuceIP &>/dev/null
 	do
@@ -60,7 +61,7 @@ else
     extra_args="$extra_args --noyocto"
 fi
 
-sequence_file=$(awk -F "[ =]+" '/sequence_file/ {print $2}' config_hypernets.ini)
+sequence_file=$(awk -F "[ =]+" '/sequence_file/ {print $2; exit}' config_hypernets.ini)
 
 # sequence_file="hypernets/resources/sequences_samples/sequence_picture_sun.csv"
 echo $sequence_file
@@ -72,7 +73,7 @@ shutdown_sequence() {
 	    python -m hypernets.scripts.relay_command -n6 -soff
     fi
 
-    keepPc=$(awk -F "[ =]+" '/keep_pc/ {print $2}' config_hypernets.ini)
+    keepPc=$(awk -F "[ =]+" '/keep_pc/ {print $2; exit}' config_hypernets.ini)
 
     if [[ "$keepPc" == "off" ]]; then
 	    echo "Option : Keep PC OFF"
