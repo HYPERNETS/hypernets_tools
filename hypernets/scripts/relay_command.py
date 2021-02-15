@@ -129,7 +129,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.get:
-        get_state_relay(args.id_relay)
+        get_state_relay(args.id_relay, verbose=True)
 
     elif args.set:
         set_state_relay(args.id_relay, args.set, args.force)
