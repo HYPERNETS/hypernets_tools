@@ -11,8 +11,8 @@
         ],
         "name": "spa_py",
         "sources": [
-            "spa_py.pyx",
-            "spa.c"
+            "/home/r2d2005/hypernets_tools/hypernets/scripts/spa/spa_py.pyx",
+            "/home/r2d2005/hypernets_tools/hypernets/scripts/spa/spa.c"
         ]
     },
     "module_name": "spa_py"
