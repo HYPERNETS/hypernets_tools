@@ -2,7 +2,10 @@ from datetime import datetime
 
 from argparse import ArgumentParser
 
-from .libhypstar.python.data_structs.spectrum_raw import RadiometerType, RadiometerEntranceType
+from .libhypstar.python.data_structs.spectrum_raw import RadiometerType,\
+    RadiometerEntranceType
+
+from .libhypstar.python.hypstar_wrapper import Hypstar
 
 
 def get_serials(instrument_instance):
@@ -86,6 +89,20 @@ def take_spectra(instrument_instance, path_to_file, mode, action, it_vnir, it_sw
             mkdir("DATA")
         path_to_file = make_datetime_name(extension=".spe")
         path_to_file = path.join("DATA", path_to_file)
+
+    if instrument_instance is None:
+        # FIXME :GUI mode : quickfix
+        from configparser import ConfigParser
+        config = ConfigParser()
+        config.read("config_hypernets.ini")
+        instrument_port = "/dev/radiometer0"
+        try:
+            instrument_port = config["general"]["hypstar_port"]
+        except KeyError as e:
+            print(f"Error : {e}")
+            print(f"Use default port {instrument_instance}")
+
+        instrument_instance = Hypstar(instrument_port)
 
     try:
         # get latest environmental log and print it to output log
