@@ -55,6 +55,8 @@ if [[ "$bypassYocto" == "no" ]] ; then
 	python -m hypernets.scripts.relay_command -n2 -son
 	python -m hypernets.scripts.relay_command -n3 -son
 	python -m hypernets.scripts.relay_command -n6 -son
+	echo "Sleeping 30s... (old firmware issue)"
+	sleep 30
 
 else
 	echo "Bypassing Yocto"
@@ -100,6 +102,3 @@ exit_actions() {
 trap "exit_actions" EXIT
 
 python3 -m hypernets.open_sequence -df $sequence_file $extra_args
-
-
-

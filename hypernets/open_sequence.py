@@ -111,7 +111,8 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_
                 instrument_instance = Hypstar(instrument_port)
             except IOError as e:
                 # wait for instrument to boot on given port. 30s taken from the run_service.sh
-                boot_timeout = 15
+                # boot_timeout = 15
+                boot_timeout = 30
                 if not wait_for_instrument(instrument_port, boot_timeout):
                     # just in case instrument sent BOOTED packet while we were switching baudrates, let's test if it's there
                     try:
