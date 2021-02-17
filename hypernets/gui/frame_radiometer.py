@@ -145,7 +145,7 @@ class FrameRadiometer(LabelFrame):
             action = {"Radiance": "rad", "Irradiance": "irr",
                       "Dark": "bla"}[action]
 
-            output = take_spectra(path.join(output_dir, output_name),
+            output = take_spectra(None, path.join(output_dir, output_name),
                                   mode, action, vnir, swir, cap_count,
                                   gui=True)
 
