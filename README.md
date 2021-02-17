@@ -14,7 +14,7 @@ cd hypernets_tools
 cp config_hypernets.ini.template config_hypernets.ini
 mousepad config_hypernets.ini
 ```
-If you are using Joel's script for binding instrument to /dev/radiometerX, you should be good, otherwise you should change 
+If you are using Joel's script (04_configure_ports.sh) for binding instrument to /dev/radiometerX, you should be good, otherwise you should change 
 in config_hypernets.ini the *hypstar_port* parameter to /dev/ttyUSBx (normally ttyUSB0).
 
 By default instrument uses baudrate of 115200. Setting instrument baud rate to higher value will reduce acquisition time, 
