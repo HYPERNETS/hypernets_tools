@@ -21,6 +21,30 @@ def get_serials(instrument_instance):
         return e
 
 
+def instanciation():
+    # FIXME :GUI mode : quickfix
+    from configparser import ConfigParser
+    config = ConfigParser()
+    config.read("config_hypernets.ini")
+    instrument_port = "/dev/radiometer0"
+
+    try:
+        instrument_port = config["general"]["hypstar_port"]
+    except KeyError as e:
+        print(f"Error : {e}")
+        print(f"Use default port {instrument_port}")
+
+    instrument_instance = Hypstar(instrument_port)
+    return instrument_instance
+
+
+def get_hw_info(instrument_instance):
+    if instrument_instance is None:
+        instrument_instance = instanciation()
+    instrument_instance.get_hw_info()  # XXX not sure + catch excpt
+    return str(instrument_instance.hw_info)
+
+
 def set_tec(instrument_instance, TEC=0):
     try:
         if TEC == -100:
@@ -44,7 +68,8 @@ def make_datetime_name(extension=".jpg"):
     return datetime.utcnow().strftime("%Y%m%dT%H%M%S") + extension
 
 
-def take_picture(instrument_instance, path_to_file=None, params=None, return_stream=False):
+def take_picture(instrument_instance, path_to_file=None, params=None,
+                 return_stream=False):
 
     # Note : 'params = None' for now, only 5MP is working
 
@@ -54,6 +79,9 @@ def take_picture(instrument_instance, path_to_file=None, params=None, return_str
         if not path.exists("DATA"):
             mkdir("DATA")
         path_to_file = path.join("DATA", path_to_file)
+
+    if instrument_instance is None:
+        instrument_instance = instanciation()
 
     try:
         packet_count = instrument_instance.capture_JPEG_image(flip=True)
@@ -78,7 +106,8 @@ def take_spectra(instrument_instance, path_to_file, mode, action, it_vnir, it_sw
     rad = {'vis': RadiometerType.VIS_NIR, 'swi': RadiometerType.SWIR,
            'bot': RadiometerType.BOTH}[mode]
 
-    ent = {'rad': RadiometerEntranceType.RADIANCE, 'irr': RadiometerEntranceType.IRRADIANCE,
+    ent = {'rad': RadiometerEntranceType.RADIANCE,
+           'irr': RadiometerEntranceType.IRRADIANCE,
            'bla': RadiometerEntranceType.DARK}[action]
 
     print(f"--> [{rad} {ent} {it_vnir} {it_swir}] x {cap_count}")
@@ -91,25 +120,16 @@ def take_spectra(instrument_instance, path_to_file, mode, action, it_vnir, it_sw
         path_to_file = path.join("DATA", path_to_file)
 
     if instrument_instance is None:
-        # FIXME :GUI mode : quickfix
-        from configparser import ConfigParser
-        config = ConfigParser()
-        config.read("config_hypernets.ini")
-        instrument_port = "/dev/radiometer0"
-        try:
-            instrument_port = config["general"]["hypstar_port"]
-        except KeyError as e:
-            print(f"Error : {e}")
-            print(f"Use default port {instrument_instance}")
-
-        instrument_instance = Hypstar(instrument_port)
+        instrument_instance = instanciation()
 
     try:
         # get latest environmental log and print it to output log
         env_log = instrument_instance.get_env_log()
         print(env_log.get_csv_line(), flush=True)
-        capture_count = instrument_instance.capture_spectra(rad, ent, it_vnir, it_swir, cap_count, 0)
-        slot_list = instrument_instance.get_last_capture_spectra_memory_slots(capture_count)
+        capture_count = instrument_instance.capture_spectra(rad, ent, it_vnir,
+                                                            it_swir, cap_count, 0) # noqa
+        slot_list = instrument_instance.get_last_capture_spectra_memory_slots(
+            capture_count)
         cap_list = instrument_instance.download_spectra(slot_list)
 
         if len(cap_list) == 0:
@@ -129,7 +149,7 @@ def take_spectra(instrument_instance, path_to_file, mode, action, it_vnir, it_sw
                 it_vnir = spectrum.spectrum_header.integration_time_ms
                 # print(f"AIT update : {spectrum.radiometer}->{it_vnir} ms")
             # elif it_swir == 0 and spectrum.radiometer == Radiometer.SWIR:
-            elif it_swir == 0 and spectrum.spectrum_header.spectrum_config.swir:
+            elif it_swir == 0 and spectrum.spectrum_header.spectrum_config.swir: # noqa
                 # it_swir, = unpack('<H', spectrum_data[11:13])
                 it_swir = spectrum.spectrum_header.integration_time_ms
                 # print(f"AIT update : {spectrum.radiometer}->{it_swir} ms")
@@ -154,7 +174,6 @@ def take_spectra(instrument_instance, path_to_file, mode, action, it_vnir, it_sw
 def _cli_extra_parser(args):
     if args.picture:
         take_picture(path_to_file=args.output)
-
     else:
         if args.radiometer == 'vnir':
             mode = "vis"

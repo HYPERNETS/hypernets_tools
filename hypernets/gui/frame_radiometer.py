@@ -9,7 +9,9 @@ from tkinter.ttk import Combobox
 
 from tkinter.messagebox import showerror, showinfo
 
-from hypernets.scripts.call_radiometer import take_spectra, take_picture
+from hypernets.scripts.call_radiometer import take_spectra, take_picture,\
+    get_hw_info
+
 from hypernets.reader.spectrum import Spectrum
 
 from datetime import datetime
@@ -76,6 +78,11 @@ class FrameRadiometer(LabelFrame):
         # --------------------------------------------------------------------
         run = Button(self, text="Acquisition", command=self.general_callback)
         # --------------------------------------------------------------------
+        get_hw_b = Button(self, text="Get Hardware Infos",
+                             command=self.get_instrument_hw_info)
+        # --------------------------------------------------------------------
+
+        # --------------------------------------------------------------------
         # Init Values
         # --------------------------------------------------------------------
         mode.current(0)
@@ -92,8 +99,8 @@ class FrameRadiometer(LabelFrame):
         repeat.grid(sticky=E,     column=1, row=4)
         IT_total.grid(sticky=E,   column=1, row=5)
         resolution.grid(sticky=E, column=1, row=6)
-        run.grid(sticky=W+E+S+N,  column=0, row=7,  columnspan=2,
-                 padx=2, pady=2)
+        run.grid(sticky=W+E+S+N,  column=1, row=7, padx=2, pady=2)
+        get_hw_b.grid(sticky=W+E+S+N,  column=0, row=7, padx=2, pady=2)
         # --------------------------------------------------------------------
         # Some labels :
         # --------------------------------------------------------------------
@@ -127,7 +134,7 @@ class FrameRadiometer(LabelFrame):
 
         if action == "Picture":
             output_name += ".jpg"
-            take_picture(path.join(output_dir, output_name))
+            take_picture(None, path.join(output_dir, output_name))
 
         elif mode in ['VNIR', 'SWIR', 'BOTH'] and \
                 action in ['Irradiance', 'Radiance', 'Dark']:
@@ -221,6 +228,9 @@ class FrameRadiometer(LabelFrame):
             f"Z: {spec.mean_Z} \u00b1 {spec.std_Z}"
         )
         self.str_timestamp.set(f"{spec.timestamp} ms")
+
+    def get_instrument_hw_info(self):
+        showinfo("Hardware Infos", get_hw_info(None))
 
 
 if __name__ == '__main__':
