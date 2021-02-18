@@ -26,6 +26,7 @@ class FrameRadiometer(LabelFrame):
 
         self.configure_items_radiometer()
         self.configure_items_output()
+        self.last_spectra_path = None
 
     def configure_items_radiometer(self):
         self.radiometer_var = [StringVar(self) for _ in range(7)]
@@ -79,7 +80,7 @@ class FrameRadiometer(LabelFrame):
         run = Button(self, text="Acquisition", command=self.general_callback)
         # --------------------------------------------------------------------
         get_hw_b = Button(self, text="Get Hardware Infos",
-                             command=self.get_instrument_hw_info)
+                          command=self.get_instrument_hw_info)
         # --------------------------------------------------------------------
 
         # --------------------------------------------------------------------
@@ -162,9 +163,10 @@ class FrameRadiometer(LabelFrame):
             elif isinstance(output, tuple):
                 print(f"Integration Times : VNIR : {output[0]} ms")
                 print(f"                  : SWIR : {output[1]} ms")
-                last_spectra_path = output[2]
-                self.update_output(last_spectra_path)
-                showinfo("End Acquisition", f"Saved to : {last_spectra_path}")
+                self.last_spectra_path = output[2]
+                self.update_output()
+                showinfo("End Acquisition", "Saved to : "
+                         f"{self.last_spectra_path}")
 
     def configure_items_output(self):
         output_frame = LabelFrame(self, text="Output")
@@ -206,12 +208,12 @@ class FrameRadiometer(LabelFrame):
 
         show_graph.grid(sticky=W, column=0, row=6, columnspan=2)
 
-    def update_output(self, last_spectra_path):
-        if last_spectra_path is None:
+    def update_output(self):
+        if self.last_spectra_path is None:
             showerror("Error", "Please take an acquisition")
             return
 
-        fd = open(last_spectra_path, "rb")
+        fd = open(self.last_spectra_path, "rb")
         spec = Spectrum(fd.read())
 
         self.str_lenght.set(
