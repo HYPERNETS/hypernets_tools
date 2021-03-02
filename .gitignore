@@ -3,3 +3,4 @@ DATA/
 LOGS/
 config_hypernets.ini
 .ipynb_checkpoints/
+hypernets/scripts/libhypstar/
