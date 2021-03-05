@@ -104,7 +104,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_
         sequence.seek(0)
 
         # nothing of this is needed for parking sequence
-        if not park:
+        if True or not park: # quickfix
             instrument_instance = None
             # sometimes relay is not actually off, should test for that
             try:
