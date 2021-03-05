@@ -16,8 +16,8 @@ if [[ ${PWD##*/} != "hypernets_tools" ]]; then
 fi
 
 
-credentials=$(awk -F "= " '/credentials/ {print $2}' config_hypernets.ini)
-remoteDir=$(awk -F "= " '/remote_dir/ {print $2}' config_hypernets.ini)
+credentials=$(awk -F "= " '/credentials/ {print $2; exit}' config_hypernets.ini)
+remoteDir=$(awk -F "= " '/remote_dir/ {print $2; exit}' config_hypernets.ini)
 
 echo "Read from config_hypernets.ini : "
 echo " * Server credentials : $credentials"
