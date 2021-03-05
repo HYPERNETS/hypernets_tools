@@ -249,7 +249,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_
                     # elif hypstar:
                     #     output_name = send_to_hypstar(line, block_position)
                     # ---------------------------------------------------------
-            if not park:
+            if True or not park: # quickfix
                 output_name = hypstar_python(instrument_instance, line, block_position, output_dir=path.
                                              join(DATA_DIR, seq_name, "RADIOMETER"))  # noqa
 
