@@ -56,3 +56,4 @@ azimuth,move(abs/nor/sun),zenith,mode(vis,swi,bot,non),action(irr/rad/bot/bla/ca
 263.0, nor, 180.0, bot, irr, 512, 10, 0
 263.0, nor, 180.0, bot, bla, 512, 3, 0
 263.0, nor, 180.0, non, pic, 0, 1, 0
+000.0, abs, 000.0, non, non, 0, 0, 0
