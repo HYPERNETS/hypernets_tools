@@ -27,11 +27,17 @@ sleep 30
 # Read config file :
 ipServer=$(awk -F "= " '/credentials/ {print $2}' config_hypernets.ini)
 remoteDir=$(awk -F "= " '/remote_dir/ {print $2}' config_hypernets.ini)
+sshPort=$(awk -F "= " '/ssh_port/ {print $2; exit}' config_hypernets.ini)
+
+if [ -z $sshPort ]; then
+	sshPort="22"
+fi
 
 # Trim strings : 
 shopt -s extglob
 ipServer=${ipServer%%*( )}
 remoteDir=${remoteDir%%*( )}
+sshPort=${sshPort%%*( )}
 shopt -u extglob
 
 # Make Logs
@@ -41,21 +47,22 @@ journalctl -eu hypernets-hello -n 150 --no-pager > LOGS/hypernets-hello.log
 
 
 # Update the datetime flag on the server
-ssh -t $ipServer 'touch ~/system_is_up' > /dev/null 2>&1 
+ssh -p $sshPort -t $ipServer 'touch ~/system_is_up' > /dev/null 2>&1 
 
 # Sync Config Files
 source comm_server/bidirectional_sync.sh
 
 bidirectional_sync "config_hypernets.ini" \
-	"$ipServer" "~/config_hypernets.ini.$USER"
+	"$ipServer" "~/config_hypernets.ini.$USER" "$sshPort"
+
 
 # Send data
-rsync -rt --exclude "CUR*" "DATA" "$ipServer:$remoteDir"
-rsync -rt "LOGS" "$ipServer:$remoteDir"
+rsync -e "ssh -p $sshPort" -rt --exclude "CUR*" "DATA" "$ipServer:$remoteDir"
+rsync -e "ssh -p $sshPort" -rt "LOGS" "$ipServer:$remoteDir"
 
 # Sync the whole config folder from remote to local :
 # rsync -rt "$ipServer:~/config/" "/opt/pyxis/config/"
 
 # Set up the reverse ssh
 source comm_server/reverse_ssh.sh
-reverse_ssh $ipServer
+reverse_ssh $ipServer $sshPort

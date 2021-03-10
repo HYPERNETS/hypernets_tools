@@ -18,13 +18,18 @@ fi
 
 credentials=$(awk -F "= " '/credentials/ {print $2; exit}' config_hypernets.ini)
 remoteDir=$(awk -F "= " '/remote_dir/ {print $2; exit}' config_hypernets.ini)
+sshPort=$(awk -F "= " '/ssh_port/ {print $2; exit}' config_hypernets.ini)
+
+if [ -z $sshPort ]; then
+	sshPort="22"
+fi
 
 echo "Read from config_hypernets.ini : "
 echo " * Server credentials : $credentials"
-echo " * Remote directory : $remoteDir"
+echo " * Remote directory   : $remoteDir"
+echo " * SSH port           : $sshPort"
 read -p "   Confirm (y/n) ?" -rn1
 echo
-
 
 if [[ $REPLY =~ ^[Yy]$ ]]; then 
 	echo
@@ -34,7 +39,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
 	if [[ $REPLY =~ ^[Yy]$ ]]; then 
 		sudo -u $user ssh-keygen -t rsa
-		sudo -u $user ssh-copy-id -i /home/$user/.ssh/id_rsa $credentials
+		sudo -u $user ssh-copy-id -i /home/$user/.ssh/id_rsa \
+			-p $sshPort $credentials
 	fi
 
 	path_to_service=$(echo "$PWD/comm_server/hello_server.sh" | sed 's/\//\\\//g')
@@ -51,6 +57,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 	systemctl enable hypernets-hello
 	systemctl start hypernets-hello
 	journalctl --follow -u hypernets-hello
+
 else
 	echo "Exit"
 	exit 1

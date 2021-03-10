@@ -36,6 +36,7 @@ time_zone = 0
 [network]
 credentials = user@server
 remote_dir = ~/DATA
+ssh_port = 22
 
 [pantilt]
 # Tilt offset should be positif and < 70
