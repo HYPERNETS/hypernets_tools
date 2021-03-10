@@ -22,7 +22,7 @@ set -euo pipefail                           # Bash Strict Mode
 
 
 echo "Sleep 30 sec"
-# sleep 30
+sleep 30
 
 # Read config file :
 ipServer=$(awk -F "= " '/credentials/ {print $2}' config_hypernets.ini)
