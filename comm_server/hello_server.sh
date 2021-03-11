@@ -55,6 +55,7 @@ source comm_server/bidirectional_sync.sh
 bidirectional_sync "config_hypernets.ini" \
 	"$ipServer" "$remoteDir/config_hypernets.ini.$USER" "$sshPort"
 
+git pull
 
 # Send data
 echo "Syncing Data..."

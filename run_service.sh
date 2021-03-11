@@ -99,5 +99,4 @@ exit_actions() {
 }
 
 trap "exit_actions" EXIT
-
 python3 -m hypernets.open_sequence -df $sequence_file $extra_args
