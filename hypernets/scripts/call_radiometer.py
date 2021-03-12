@@ -81,7 +81,10 @@ def take_picture(instrument_instance, path_to_file=None, params=None,
         path_to_file = path.join("DATA", path_to_file)
 
     if instrument_instance is None:
-        instrument_instance = instanciation()
+        try:
+            instrument_instance = instanciation()
+        except Exception as e:
+            return e
 
     try:
         packet_count = instrument_instance.capture_JPEG_image(flip=True)
