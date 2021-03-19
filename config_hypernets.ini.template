@@ -37,11 +37,13 @@ time_zone = 0
 credentials = user@server
 remote_dir = ~/DATA
 ssh_port = 22
+remote_ssh_port = 20213
 
 [pantilt]
 # Tilt offset should be positif and < 70
 offset_pan = 0
 offset_tilt = +60
+
 [metadata]
 principal_investigator = Investigator Name
 datetime = {datetime}
