@@ -24,6 +24,7 @@ set -euo pipefail                           # Bash Strict Mode
 echo "Sleep 30 sec"
 sleep 30
 
+# FIXME func instead
 # Read config file :
 ipServer=$(awk -F "= " '/credentials/ {print $2}' config_hypernets.ini)
 remoteDir=$(awk -F "= " '/remote_dir/ {print $2}' config_hypernets.ini)
@@ -63,5 +64,5 @@ echo "Syncing Logs..."
 rsync -e "ssh -p $sshPort" -rt "LOGS" "$ipServer:$remoteDir"
 
 # Set up the reverse ssh
-source comm_server/reverse_ssh.sh
-reverse_ssh $ipServer $sshPort "$remoteDir/ssh_ports"
+# source comm_server/reverse_ssh.sh
+# reverse_ssh $ipServer $sshPort "$remoteDir/ssh_ports"

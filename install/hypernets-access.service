@@ -1,0 +1,15 @@
+[Unit]
+Description=Hypernets Reverse SSH
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=
+ExecStart=
+WorkingDirectory=
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
