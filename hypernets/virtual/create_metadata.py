@@ -43,7 +43,7 @@ def parse_config_metadata(config_file="config_hypernets.ini"):
         str_metadata = metadata_header_base()
         return str_metadata
 
-    str_metadata = ""
+    str_metadata = "[Metadata]\n"
     for field in metadata_section.keys():
         if '{' and '}' in metadata_section[field]:
             special = special_value(metadata_section[field])

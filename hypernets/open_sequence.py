@@ -11,6 +11,8 @@ from os import mkdir, replace, path
 
 import sys
 from hypernets.virtual.read_protocol import create_seq_name, create_spectra_name, create_block_position_name
+from hypernets.virtual.create_metadata import parse_config_metadata
+
 from hypernets.scripts.call_radiometer import take_picture, take_spectra, set_tec, unset_tec, get_serials
 from hypernets.scripts.libhypstar.python.hypstar_wrapper import Hypstar, HypstarLogLevel, wait_for_instrument
 from hypernets.scripts.libhypstar.python.data_structs.hardware_info import HypstarSupportedBaudRates
@@ -171,7 +173,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_
 
         print(get_csv_header(), flush=True)
         mdfile = open(path.join(DATA_DIR, seq_name, "metadata.txt"), "w")
-
+        mdfile.write(parse_config_metadata())
         if not park:
             # Enabling SWIR TEC for the whole sequence is a tradeoff between current consumption and execution time
             # Although it would seem that disabling TEC while rotating saves power,
