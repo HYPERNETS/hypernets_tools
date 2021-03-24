@@ -35,7 +35,7 @@ time_zone = 0
 
 [network]
 credentials = user@server
-remote_dir = ~/DATA
+remote_dir = ~
 ssh_port = 22
 remote_ssh_port = 20213
 
