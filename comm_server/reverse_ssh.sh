@@ -45,5 +45,5 @@ ipServer=${ipServer%%*( )}
 sshPort=${sshPort%%*( )}
 remoteSSHPort=${remoteSSHPort%%*( )}
 shopt -u extglob
-echo "$ipServer:$sshPort -> $remoteSSHPort"
+echo "[-> $sshPort:]$ipServer:$remoteSSHPort"
 reverse_ssh $ipServer $sshPort $remoteSSHPort
