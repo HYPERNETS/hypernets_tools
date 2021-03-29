@@ -52,8 +52,7 @@ if [[ "$bypassYocto" == "no" ]] ; then
 	done
 	echo "Ok !"
 
-	python -m hypernets.scripts.relay_command -n2 -son
-	python -m hypernets.scripts.relay_command -n3 -son
+	python -m hypernets.scripts.relay_command -son -n2 -n3
 	echo "Sleeping 30s... (old firmware issue)"
 	sleep 30
 
@@ -69,9 +68,7 @@ echo $sequence_file
 
 shutdown_sequence() {
     if [[ "$bypassYocto" == "no" ]] ; then
-	    python -m hypernets.scripts.relay_command -n2 -soff
-	    python -m hypernets.scripts.relay_command -n3 -soff
-	    python -m hypernets.scripts.relay_command -n6 -soff
+	    python -m hypernets.scripts.relay_command -soff -n2 -n3
     fi
 
     keepPc=$(awk -F "[ =]+" '/keep_pc/ {print $2; exit}' config_hypernets.ini)

@@ -35,31 +35,32 @@ def get_state_relay(id_relay, verbose=False):
 
 
 def set_state_relay(id_relay, state, force=False):
+    print(id_relay)
     config = init()
     yocto_prefix = config["yoctopuce"]["yocto_prefix1"]
 
-    if id_relay == -1:
-        print("Not implemented")
-        return
-
-    elif id_relay == 1 and state in ["off", "reset"] and not force:
+    if 1 in id_relay and state in ["off", "reset"] and not force:
         print("""Warning : if your rugged pc is connected throught this
           relay, this action could switch it off. (use --force [-f]
           to enable this functionality)""")
         return
 
-    relay = YRelay.FindRelay(yocto_prefix + '.relay' + str(id_relay))
-
     if state == "on":
-        relay.set_state(YRelay.STATE_B)
+        for i in id_relay:
+            relay = YRelay.FindRelay(yocto_prefix + '.relay' + str(i))
+            relay.set_state(YRelay.STATE_B)
 
     elif state == "off":
-        relay.set_state(YRelay.STATE_A)
+        for i in id_relay:
+            relay = YRelay.FindRelay(yocto_prefix + '.relay' + str(i))
+            relay.set_state(YRelay.STATE_A)
 
     elif state == "reset":
-        relay.set_state(YRelay.STATE_A)
-        sleep(1)
-        relay.set_state(YRelay.STATE_B)
+        for i in id_relay:
+            relay = YRelay.FindRelay(yocto_prefix + '.relay' + str(i))
+            relay.set_state(YRelay.STATE_A)
+            sleep(1)
+            relay.set_state(YRelay.STATE_B)
 
     YAPI.FreeAPI()
 
@@ -67,10 +68,6 @@ def set_state_relay(id_relay, state, force=False):
 def set_at_power_on(id_relay, state, force=False):
     config = init()
     yocto_prefix = config["yoctopuce"]["yocto_prefix1"]
-
-    if id_relay == -1:
-        print("Not implemented")
-        return
 
     relay = YRelay.FindRelay(yocto_prefix + '.relay' + str(id_relay))
 
@@ -117,11 +114,11 @@ if __name__ == '__main__':
                       metavar="{on, off, unchanged}",
                       choices=["on", "off", "unchanged"])
 
-    parser.add_argument("-n", "--id-relay", type=int,
-                        help="ID number of the relay (-1 stands for 'all')",
+    parser.add_argument("-n", "--id-relay", type=int, action='append',
+                        help="ID number of the relay",
                         required=True,
-                        metavar="{-1,1..6}",
-                        choices=[-1] + list(range(1, 7, 1)))
+                        metavar="{1..6}",
+                        choices=list(range(1, 7, 1)))
 
     parser.add_argument("-f", "--force", action="store_true",
                         help="force relay #1 to switch off")
