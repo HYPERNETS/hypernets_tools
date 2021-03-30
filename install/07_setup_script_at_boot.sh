@@ -22,4 +22,4 @@ echo $user
 echo $path_to_service
 echo $path_to_h_tools
 
-# systemctl enable hypernets.servivc
+# systemctl enable hypernets.service
