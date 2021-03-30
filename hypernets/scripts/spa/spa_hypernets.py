@@ -18,15 +18,10 @@ def spa_from_datetime(now=datetime.utcnow(), verbose=False):
     if verbose:
         print(f"Latitude from config : {latitude}")
         print(f"Longitude from config : {longitude}")
-    # now = datetime.now()
-    # time_zone = int(config["SPA"]["time_zone"])
-
-    # TODO : make a choice with alternative :
-    time_zone = 0
 
     spa = spa_calc(year=now.year, month=now.month, day=now.day,
                    hour=now.hour, minute=now.minute, second=now.second,
-                   time_zone=time_zone,
+                   time_zone=0,
                    longitude=longitude,
                    latitude=latitude,
                    elevation=elevation,
