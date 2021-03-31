@@ -69,6 +69,7 @@ def set_at_power_on(id_relay, state, force=False):
     config = init()
     yocto_prefix = config["yoctopuce"]["yocto_prefix1"]
 
+    id_relay = id_relay[0]
     relay = YRelay.FindRelay(yocto_prefix + '.relay' + str(id_relay))
 
     if state == "on":
