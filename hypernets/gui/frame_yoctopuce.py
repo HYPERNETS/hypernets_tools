@@ -68,10 +68,10 @@ class FrameYoctopuce(LabelFrame):
 
     def callback(self, i):
         if self.relays_states[i-1] is True:
-            set_state_relay(i, "off")
+            set_state_relay([i], "off")
 
         elif self.relays_states[i-1] is False:
-            set_state_relay(i, "on")
+            set_state_relay([i], "on")
 
         self.connection()
 
