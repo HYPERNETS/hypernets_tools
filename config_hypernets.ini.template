@@ -49,7 +49,7 @@ offset_tilt = +60
 [metadata]
 principal_investigator = Investigator Name
 datetime = {datetime}
-site_name = A Site Name
+site_id = A Site ID
 latitude = ${GPS:latitude}
 longitude = ${GPS:longitude}
 protocol_file_name = ${general:sequence_file}
