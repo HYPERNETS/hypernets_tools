@@ -30,6 +30,6 @@ sed -i "s/# c.NotebookApp.allow_origin = ''/c.NotebookApp.allow_origin = '*'/g"\
 # jupyter notebook --no-browser
 
 python -m pip install voila
+
 # Try : 
-voila --no-browser installation_on_site.ipynb
-# TODO : allow config file to start installation at startup time 
+# voila --no-browser installation_on_site.ipynb
