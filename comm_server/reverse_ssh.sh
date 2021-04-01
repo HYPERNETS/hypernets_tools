@@ -19,7 +19,7 @@ reverse_ssh(){
 	sshPort="$2"
 	remoteSSHPort="$3"
 
-    ssh -p $sshPort -vvv -g -N -T -o "ServerAliveInterval 10" -o "ExitOnForwardFailure yes" \
+    ssh -p $sshPort -v -g -N -T -o "ServerAliveInterval 10" -o "ExitOnForwardFailure yes" \
 	-R$remoteSSHPort:127.0.0.1:22 $ipServer 
 	# ssh -p $sshPort -o "ExitOnForwardFailure yes" -f -N -R0:127.0.0.1:22 $ipServer > /tmp/ssh_last 2>&1
 	# ssh -p $sshPort $ipServer "cat >> $pathToPortFile" < /tmp/ssh_last 
