@@ -90,7 +90,10 @@ def check_if_swir_or_park_requested(sequence_file):
     return False, park
 
 
-def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_loglevel, driver=True, instrument_standalone=False, DATA_DIR="DATA"): # FIXME : # noqa C901
+def run_sequence_file(sequence_file, instrument_port, instrument_br, 
+        instrument_loglevel, driver=True, instrument_standalone=False, 
+        DATA_DIR="DATA"): # FIXME : # noqa C901
+
     with open(sequence_file, mode='r') as sequence:
 
         if not path.exists(DATA_DIR):
@@ -116,7 +119,8 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_
                 # boot_timeout = 15
                 boot_timeout = 30
                 if not wait_for_instrument(instrument_port, boot_timeout):
-                    # just in case instrument sent BOOTED packet while we were switching baudrates, let's test if it's there
+                    # just in case instrument sent BOOTED packet while we were 
+                    # switching baudrates, let's test if it's there
                     try:
                         instrument_instance = Hypstar(instrument_port)
                     except IOError as e:
@@ -130,16 +134,21 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_
                 instrument_instance.set_log_level(instrument_loglevel)
                 instrument_instance.set_baud_rate(HypstarSupportedBaudRates(instrument_br))
                 instrument_instance.get_hw_info()
-                # due to the bug in PSU HW revision 3 12V regulator might not start up properly and optical multiplexer is not available
-                # since this prevents any spectra acquisition, instrument is unusable and there's no point in continuing
-                # instrument power cycling is the only workaround and that's done in run_sequence bash script so we signal it that it's all bad
+                # due to the bug in PSU HW revision 3 12V regulator might not 
+                # start up properly and optical multiplexer is not available
+                # since this prevents any spectra acquisition, instrument is 
+                # unusable and there's no point in continuing
+                # instrument power cycling is the only workaround and that's 
+                # done in run_sequence bash script so we signal it that it's all bad
                 if not instrument_instance.hw_info.optical_multiplexer_available:
                     print("[ERROR] MUX+SWIR+TEC hardware not available")
                     sys.exit(27)  # SIGABORT
 
             except Exception as e:
                 print(e)
-                # if instrument does not respond, there's no point in doing anything, so we exit with ABORTED signal so that shell script can catch exception
+                # if instrument does not respond, there's no point in doing 
+                # anything, so we exit with ABORTED signal so that shell script 
+                # can catch exception
                 sys.exit(6)  # SIGABRT
 
         seq_name = create_seq_name(now=start, prefix="CUR")
@@ -175,9 +184,11 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_
         mdfile = open(path.join(DATA_DIR, seq_name, "metadata.txt"), "w")
         mdfile.write(parse_config_metadata())
         if not park:
-            # Enabling SWIR TEC for the whole sequence is a tradeoff between current consumption and execution time
-            # Although it would seem that disabling TEC while rotating saves power,
-            # one has to remember, that during initial thermal regulation TEC consumes 5x more current + does it for longer.
+            # Enabling SWIR TEC for the whole sequence is a tradeoff between 
+            # current consumption and execution time
+            # Although it would seem that disabling TEC while rotating saves 
+            # power, one has to remember, that during initial thermal regulation 
+            # TEC consumes 5x more current + does it for longer.
             if swir:
                 set_tec(instrument_instance)
 
