@@ -187,7 +187,7 @@ def _cli_extra_parser(args):
         else:
             action = args.entrance
 
-        take_spectra(args.output, mode, action,
+        take_spectra(None, args.output, mode, action,
                      args.it_vnir, args.it_swir, args.count)
 
 
