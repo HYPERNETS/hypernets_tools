@@ -38,6 +38,12 @@ def instanciation():
     return instrument_instance
 
 
+def get_env_log(instrument_instance):
+    if instrument_instance is None:
+        instrument_instance = instanciation()
+    log = instrument_instance.get_env_log()  # XXX not sure + catch excpt
+    return str(log)
+
 def get_hw_info(instrument_instance):
     if instrument_instance is None:
         instrument_instance = instanciation()
@@ -46,6 +52,8 @@ def get_hw_info(instrument_instance):
 
 
 def set_tec(instrument_instance, TEC=0):
+    if instrument_instance is None:
+        instrument_instance = instanciation()
     try:
         if TEC == -100:
             print("Disabling Cooling...")
@@ -61,6 +69,8 @@ def set_tec(instrument_instance, TEC=0):
 
 
 def unset_tec(instrument_instance):
+    if instrument_instance is None:
+        instrument_instance = instanciation()
     set_tec(instrument_instance, -100)
 
 

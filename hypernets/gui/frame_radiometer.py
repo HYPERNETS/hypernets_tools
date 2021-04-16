@@ -10,7 +10,7 @@ from tkinter.ttk import Combobox
 from tkinter.messagebox import showerror, showinfo
 
 from hypernets.scripts.call_radiometer import take_spectra, take_picture,\
-    get_hw_info
+    get_hw_info, get_env_log, set_tec, unset_tec
 
 from hypernets.reader.spectrum import Spectrum
 
@@ -82,6 +82,15 @@ class FrameRadiometer(LabelFrame):
         get_hw_b = Button(self, text="Get Hardware Infos",
                           command=self.get_instrument_hw_info)
         # --------------------------------------------------------------------
+        get_env_b = Button(self, text="Get Environmental Log",
+                           command=self.get_instrument_env_log)
+
+        # --------------------------------------------------------------------
+        set_tec_b = Button(self, text="Set Thermal Control",
+                           command=self.set_swir_temperature)
+
+        unset_tec_b = Button(self, text="Unset Thermal Control",
+                             command=self.unset_swir_temperature)
 
         # --------------------------------------------------------------------
         # Init Values
@@ -93,15 +102,19 @@ class FrameRadiometer(LabelFrame):
         IT_total.current(0)
         resolution.current(0)
         # --------------------------------------------------------------------
-        mode.grid(sticky=E,       column=1, row=0)
-        action.grid(sticky=E,     column=1, row=1)
-        IT_vnir.grid(sticky=E,    column=1, row=2)
-        IT_swir.grid(sticky=E,    column=1, row=3)
-        repeat.grid(sticky=E,     column=1, row=4)
-        IT_total.grid(sticky=E,   column=1, row=5)
-        resolution.grid(sticky=E, column=1, row=6)
-        run.grid(sticky=W+E+S+N,  column=1, row=7, padx=2, pady=2)
-        get_hw_b.grid(sticky=W+E+S+N,  column=0, row=7, padx=2, pady=2)
+        mode.grid(sticky=E,              column=1, row=0)
+        action.grid(sticky=E,            column=1, row=1)
+        IT_vnir.grid(sticky=E,           column=1, row=2)
+        IT_swir.grid(sticky=E,           column=1, row=3)
+        repeat.grid(sticky=E,            column=1, row=4)
+        IT_total.grid(sticky=E,          column=1, row=5)
+        resolution.grid(sticky=E,        column=1, row=6)
+        run.grid(sticky=W+E+S+N,         column=1, row=7, padx=2, pady=2)
+        get_hw_b.grid(sticky=W+E+S+N,    column=0, row=7, padx=2, pady=2)
+        get_env_b.grid(sticky=W+E+S+N,   column=0, row=8, padx=2, pady=2)
+        set_tec_b.grid(sticky=W+E+S+N,   column=0, row=9, padx=2, pady=2)
+        unset_tec_b.grid(sticky=W+E+S+N, column=1, row=9, padx=2, pady=2)
+
         # --------------------------------------------------------------------
         # Some labels :
         # --------------------------------------------------------------------
@@ -170,7 +183,7 @@ class FrameRadiometer(LabelFrame):
 
     def configure_items_output(self):
         output_frame = LabelFrame(self, text="Output")
-        output_frame.grid(sticky=W+E+S+N,  column=0, row=8,  columnspan=2)
+        output_frame.grid(sticky=W+E+S+N,  column=0, row=10,  columnspan=2)
         show_graph = Button(output_frame, text="Show graph !",
                             command=self.update_output)
         # ---------------------------------------------------------------------
@@ -206,7 +219,7 @@ class FrameRadiometer(LabelFrame):
                 .grid(column=col, row=row, padx=padx, pady=pady, sticky=sticky)
         # ---------------------------------------------------------------------
 
-        show_graph.grid(sticky=W, column=0, row=6, columnspan=2)
+        show_graph.grid(sticky=W, column=0, row=10, columnspan=2)
 
     def update_output(self):
         if self.last_spectra_path is None:
@@ -234,6 +247,28 @@ class FrameRadiometer(LabelFrame):
 
     def get_instrument_hw_info(self):
         showinfo("Hardware Infos", get_hw_info(None))
+
+
+    def get_instrument_env_log(self):
+        # print(get_env_log(None))
+        showinfo("Environmental Logs", get_env_log(None))
+
+    def set_swir_temperature(self):
+        TEC=0
+        output = set_tec(None, TEC)
+        print(type(output))
+        if isinstance(output, Exception):
+            showerror("Error", str(output))
+        else:
+            showinfo("Thermal Control", f"Thermal Control setted to {TEC}.")
+
+    def unset_swir_temperature(self):
+        output = unset_tec(None)
+        print(type(output))
+        if isinstance(output, Exception):
+            showerror("Error", str(output))
+        else:
+            showinfo("Thermal Control", f"Thermal Control unsetted.")
 
 
 if __name__ == '__main__':
