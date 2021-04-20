@@ -37,7 +37,7 @@ function usage(){
 
 function take_picture(){
 	mkdir -p "$OUTPUT_DIR"
-	DATE=$(date +"%Y%m%dT%H%M%S") 
+	DATE=$(date -u +"%Y%m%dT%H%M%S") 
 	# touch $OUTPUT_DIR/$DATE.jpg
 	ffmpeg -y -i rtsp://"$CREDENTIALS$IP_ADDRESS":554 -vframes 1 \
 		"$OUTPUT_DIR/$DATE.jpg"
