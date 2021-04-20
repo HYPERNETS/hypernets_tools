@@ -54,6 +54,9 @@ if [[ "$bypassYocto" == "no" ]] ; then
 
 	python -m hypernets.scripts.relay_command -n2 -son
 	python -m hypernets.scripts.relay_command -n3 -son
+	sleep 1
+	python -m hypernets.scripts.relay_command -n5 -son
+	python -m hypernets.scripts.relay_command -n6 -son
 	echo "Sleeping 30s... (old firmware issue)"
 	sleep 30
 
@@ -71,6 +74,8 @@ shutdown_sequence() {
     if [[ "$bypassYocto" == "no" ]] ; then
 	    python -m hypernets.scripts.relay_command -n2 -soff
 	    python -m hypernets.scripts.relay_command -n3 -soff
+	    sleep 1
+	    python -m hypernets.scripts.relay_command -n5 -soff
 	    python -m hypernets.scripts.relay_command -n6 -soff
     fi
 
