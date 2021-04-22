@@ -2,33 +2,54 @@ from hypernets.reader.spectrum import Spectrum
 
 
 class Spectra(object):
-    def __init__(self, filename, line=None, plt=None):
+    def __init__(self, filename, figure=None, axes=None):
+
+        self.figure = figure
+        self.axes = axes
 
         self.index = 0
-        self.offset = 0
-        self.line = line
-        self.plt = plt
+        self.spectra_list = list()
 
+        # Open the file and create a list of Spectrum
         with open(filename, 'rb') as fd:
-            self.data = fd.read()
+            spectra_file = fd.read()
+
+        index = 0 
+        while index < len(spectra_file):
+            current_spectrum = Spectrum(spectra_file[index:])
+            self.spectra_list.append(current_spectrum)
+            index += current_spectrum.total
+
+        print(f"{len(self.spectra_list)} spectra readed.")
 
         self.update()
 
     def next_spectrum(self, event):
-        # TODO : boundary
-        self.index += 1
-        self.offset += self.current_spectrum.total
+        self.index = (self.index + 1) % len(self.spectra_list)
         self.update()
 
     def prev_spectrum(self, event):
-        # TODO : ensure positivity
-        self.index -= 1
-        self.offset -= self.current_spectrum.total  # different when spec BOTH
+        self.index = (self.index - 1) % len(self.spectra_list)
         self.update()
 
     def update(self):
-        self.current_spectrum = Spectrum(self.data[self.offset:])  # not optim
-        if self.line is not None and self.plt is not None:
-            self.line.set_xdata(range(len(self.current_spectrum.counts)))
-            self.line.set_ydata(self.current_spectrum.counts)
-            self.plt.draw()
+        self.current_spectrum = self.spectra_list[self.index]
+        print(self.current_spectrum)
+
+        if self.axes is not None:
+            self.axes.clear()
+            self.axes.plot(range(len(self.current_spectrum.counts)), 
+                           self.current_spectrum.counts)
+
+
+            spec_info = Spectrum.read_spectrum_info(self.current_spectrum.spec_type)
+
+            self.axes.set_title(f"Spectrum {self.index+1}/{len(self.spectra_list)}\n"
+                                f"{spec_info[0]} --> {spec_info[1]}")
+
+            # self.axes.set_xlabel("")
+            self.axes.set_ylabel("Raw Counts")
+        
+
+        if self.figure is not None:
+            self.figure.canvas.draw()

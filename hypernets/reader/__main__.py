@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 
 from argparse import ArgumentParser
+from struct import unpack
+
+
 
 if __name__ == '__main__':
 
@@ -15,14 +18,14 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    filename = args.filename
+    spectra = Spectra(args.filename)
 
-    fig, ax = plt.subplots()
+    spectrum = spectra.current_spectrum
+
+    figure, axes = plt.subplots()
     plt.subplots_adjust(bottom=0.2)
-    spectrum = Spectra(filename).current_spectrum
-    line, = plt.plot(range(len(spectrum.counts)), spectrum.counts)
 
-    callback = Spectra(filename, line=None, plt=plt)
+    callback = Spectra(args.filename, figure=figure, axes=axes)
 
     # Next Button
     axnext = plt.axes([0.81, 0.05, 0.1, 0.075])
@@ -30,7 +33,7 @@ if __name__ == '__main__':
     bnext.on_clicked(callback.next_spectrum)
 
     # Previous Button
-    axprev = plt.axes([0.15, 0.05, 0.1, 0.075])
+    axprev = plt.axes([0.12, 0.05, 0.1, 0.075])
     bprev = Button(axprev, 'Previous')
     bprev.on_clicked(callback.prev_spectrum)
 

@@ -19,8 +19,11 @@ class Spectrum(object):
                           ("mean Z", 'h', None),
                           ("std Z", 'h', None)]
 
+        self.str = ""
+
         # concat all formats together
         headerFormat = '<' + "".join(fmt for _, fmt, _ in self.headerDef)
+
         # compute size of the whole header
         headerSize = calcsize(headerFormat)
         header = unpack(headerFormat, data[:headerSize])
@@ -29,10 +32,10 @@ class Spectrum(object):
             post_process = definition[2]
             if post_process is not None:
                 value = post_process(value)
-            if verbose:
-                print(f"{definition[0]} : {value}")
+            self.str += f"{definition[0]} : {value}\n"
+
         if verbose:
-            print("-" * 80)
+            print(f"{self}" + "-" * 80)
 
         # Header expansion
         self.total, self.spec_type, self.timestamp, self.exposure_time,\
@@ -45,6 +48,9 @@ class Spectrum(object):
 
         self.crc = unpack('<I', data[headerSize+self.pixel_count*2:
                                      headerSize+self.pixel_count*2+4])
+
+    def __str__(self):
+        return self.str
 
     @staticmethod
     def read_spectrum_info(spec_type: int):
