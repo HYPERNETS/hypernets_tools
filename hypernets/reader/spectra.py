@@ -1,4 +1,22 @@
 from hypernets.reader.spectrum import Spectrum
+# import matplotlib.pyplot as plt
+from matplotlib.widgets import Button
+
+
+
+def show_interactive_plots(spectra, plt):
+
+    # Next Button
+    axnext = plt.axes([0.81, 0.05, 0.1, 0.075])
+    bnext = Button(axnext, 'Next')
+    bnext.on_clicked(spectra.next_spectrum)
+
+    # Previous Button
+    axprev = plt.axes([0.12, 0.05, 0.1, 0.075])
+    bprev = Button(axprev, 'Previous')
+    bprev.on_clicked(spectra.prev_spectrum)
+
+    plt.show()
 
 
 class Spectra(object):
@@ -49,7 +67,6 @@ class Spectra(object):
 
             # self.axes.set_xlabel("")
             self.axes.set_ylabel("Raw Counts")
-        
 
         if self.figure is not None:
             self.figure.canvas.draw()

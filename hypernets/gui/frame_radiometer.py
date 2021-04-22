@@ -2,10 +2,10 @@
 # coding: utf-8
 
 
-from tkinter import E, W, N, S
+from tkinter import E, W, N, S, HORIZONTAL
 from tkinter import Label, LabelFrame, Spinbox, StringVar
 from tkinter import Tk, Button
-from tkinter.ttk import Combobox
+from tkinter.ttk import Combobox, Separator
 
 from tkinter.messagebox import showerror, showinfo
 
@@ -13,6 +13,8 @@ from hypernets.scripts.call_radiometer import take_spectra, take_picture,\
     get_hw_info, get_env_log, set_tec, unset_tec
 
 from hypernets.reader.spectrum import Spectrum
+from hypernets.reader.spectra import Spectra, show_interactive_plots
+import matplotlib.pyplot as plt
 
 from datetime import datetime
 
@@ -27,6 +29,7 @@ class FrameRadiometer(LabelFrame):
         self.configure_items_radiometer()
         self.configure_items_output()
         self.last_spectra_path = None
+        self.spectra = None
 
     def configure_items_radiometer(self):
         self.radiometer_var = [StringVar(self) for _ in range(7)]
@@ -177,29 +180,42 @@ class FrameRadiometer(LabelFrame):
                 print(f"Integration Times : VNIR : {output[0]} ms")
                 print(f"                  : SWIR : {output[1]} ms")
                 self.last_spectra_path = output[2]
-                self.update_output()
+                self.make_output()
                 showinfo("End Acquisition", "Saved to : "
                          f"{self.last_spectra_path}")
+
 
     def configure_items_output(self):
         output_frame = LabelFrame(self, text="Output")
         output_frame.grid(sticky=W+E+S+N,  column=0, row=10,  columnspan=2)
-        show_graph = Button(output_frame, text="Show graph !",
-                            command=self.update_output)
+
+        separator = Separator(output_frame, orient=HORIZONTAL)
+
+        show_graph = Button(output_frame, text="Show plot",
+                            command=self.show_plot)
+
+        prev_spec =  Button(output_frame, text="Prev Spectrum",
+                            command=self.prev_spec)
+
+        next_spec =  Button(output_frame, text="Next Spectrum",
+                            command=self.next_spec)
+
         # ---------------------------------------------------------------------
         # Labels
         for text, col, row, padx, pady, sticky in \
-                [("Length : ",       0, 0, 2, 2, E),
-                 ("Type : ",         0, 1, 2, 2, E),
-                 ("Exposure : ",     0, 2, 2, 2, E),
-                 ("Temperature : ",  0, 3, 2, 2, E),
-                 ("Acceleration : ", 0, 4, 2, 2, E),
-                 ("Timestamp : ",    0, 5, 2, 2, E)]:
+                [("Spectrum # : ",   0, 0, 2, 2, E),
+                 ("Length : ",       0, 1, 2, 2, E),
+                 ("Type : ",         0, 2, 2, 2, E),
+                 ("Exposure : ",     0, 3, 2, 2, E),
+                 ("Temperature : ",  0, 4, 2, 2, E),
+                 ("Acceleration : ", 0, 5, 2, 2, E),
+                 ("Timestamp : ",    0, 6, 2, 2, E)]:
 
             Label(output_frame, text=text)\
                 .grid(column=col, row=row, padx=padx, pady=pady, sticky=sticky)
         # ---------------------------------------------------------------------
         # Values
+        self.str_number = StringVar(self)
         self.str_lenght = StringVar(self)
         self.str_type = StringVar(self)
         self.str_expo = StringVar(self)
@@ -208,47 +224,81 @@ class FrameRadiometer(LabelFrame):
         self.str_timestamp = StringVar(self)
 
         for text, col, row, padx, pady, sticky in \
-                [(self.str_lenght,      1, 0, 2, 2, W),
-                 (self.str_type,        1, 1, 2, 2, W),
-                 (self.str_expo,        1, 2, 2, 2, W),
-                 (self.str_temperature, 1, 3, 2, 2, W),
-                 (self.str_accel,       1, 4, 2, 2, W),
-                 (self.str_timestamp,   1, 5, 2, 2, W)]:
+                [(self.str_number,      1, 0, 2, 2, W),
+                 (self.str_lenght,      1, 1, 2, 2, W),
+                 (self.str_type,        1, 2, 2, 2, W),
+                 (self.str_expo,        1, 3, 2, 2, W),
+                 (self.str_temperature, 1, 4, 2, 2, W),
+                 (self.str_accel,       1, 5, 2, 2, W),
+                 (self.str_timestamp,   1, 6, 2, 2, W)]:
 
             Label(output_frame, textvariable=text)\
                 .grid(column=col, row=row, padx=padx, pady=pady, sticky=sticky)
-        # ---------------------------------------------------------------------
 
+        # ---------------------------------------------------------------------
+        separator.grid(sticky=N,  column=0, row=7,  columnspan=4)
         show_graph.grid(sticky=W, column=0, row=10, columnspan=2)
+        prev_spec.grid(sticky=W,  column=1, row=10, columnspan=1)
+        next_spec.grid(sticky=W,  column=2, row=10, columnspan=1)
+
+    def prev_spec(self):
+        if self.spectra is None:
+            showerror("Error", "Please take an acquisition")
+            return
+        self.spectra.prev_spectrum(None)
+        self.update_output()
+
+    def next_spec(self):
+        if self.spectra is None:
+            showerror("Error", "Please take an acquisition")
+            return
+        self.spectra.next_spectrum(None)
+        self.update_output()
+
+    def show_plot(self):
+        if self.last_spectra_path is None:
+            return
+        # self.make_output()
+        show_interactive_plots(self.spectra, plt)
+
+    def make_output(self):
+        if self.last_spectra_path is None:
+            return
+        self.figure, self.axes = plt.subplots()
+        plt.subplots_adjust(bottom=0.2)
+        self.spectra = Spectra(self.last_spectra_path, figure=self.figure, axes=self.axes)
+        self.update_output()
 
     def update_output(self):
         if self.last_spectra_path is None:
             showerror("Error", "Please take an acquisition")
             return
 
-        fd = open(self.last_spectra_path, "rb")
-        spec = Spectrum(fd.read())
+        current_spectrum = self.spectra.current_spectrum
 
-        self.str_lenght.set(
-            f"{spec.total} bytes"
-            f" ; {spec.pixel_count} pixels")
+        self.str_number.set(f"{self.spectra.index + 1}/{len(self.spectra.spectra_list)}")
+
+        self.str_lenght.set(f"{current_spectrum.total} bytes"
+                f" ; {current_spectrum.pixel_count} pixels")
+
         # To m.s^-2
         def to_mss(x):
             return x * 19.6 / 32768.0
-        spec_type = Spectrum.read_spectrum_info(spec.spec_type)
+
+        spec_type = Spectrum.read_spectrum_info(current_spectrum.spec_type)
         self.str_type.set(f"{spec_type[0]} -> {spec_type[1]}")
-        self.str_expo.set(f"{spec.exposure_time} ms")
-        self.str_temperature.set(f"{spec.temperature}\u00b0C")
+        self.str_expo.set(f"{current_spectrum.exposure_time} ms")
+        self.str_temperature.set(f"{current_spectrum.temperature}\u00b0C")
         self.str_accel.set(
-            f"X: {to_mss(spec.mean_X):.2f} \u00b1 {to_mss(spec.std_Z):.2f} ; "
-            f"Y: {to_mss(spec.mean_Y):.2f} \u00b1 {to_mss(spec.std_Y):.2f} ; "
-            f"Z: {to_mss(spec.mean_Z):.2f} \u00b1 {to_mss(spec.std_Z):.2f}"
-        )
-        self.str_timestamp.set(f"{spec.timestamp} ms")
+            f"X: {to_mss(current_spectrum.mean_X):.2f} \u00b1 {to_mss(current_spectrum.std_Z):.2f}\n"
+            f"Y: {to_mss(current_spectrum.mean_Y):.2f} \u00b1 {to_mss(current_spectrum.std_Y):.2f}\n"
+            f"Z: {to_mss(current_spectrum.mean_Z):.2f} \u00b1 {to_mss(current_spectrum.std_Z):.2f}")
+
+        self.str_timestamp.set(f"{current_spectrum.timestamp} ms")
+
 
     def get_instrument_hw_info(self):
         showinfo("Hardware Infos", get_hw_info(None))
-
 
     def get_instrument_env_log(self):
         # print(get_env_log(None))
