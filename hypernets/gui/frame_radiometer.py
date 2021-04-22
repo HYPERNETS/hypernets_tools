@@ -232,16 +232,17 @@ class FrameRadiometer(LabelFrame):
         self.str_lenght.set(
             f"{spec.total} bytes"
             f" ; {spec.pixel_count} pixels")
-        def to_g(x):
+        # To m.s^-2
+        def to_mss(x):
             return x * 19.6 / 32768.0
         spec_type = Spectrum.read_spectrum_info(spec.spec_type)
         self.str_type.set(f"{spec_type[0]} -> {spec_type[1]}")
         self.str_expo.set(f"{spec.exposure_time} ms")
         self.str_temperature.set(f"{spec.temperature}\u00b0C")
         self.str_accel.set(
-            f"X: {to_g(spec.mean_X):.2f} \u00b1 {to_g(spec.std_Z):.2f} ; "
-            f"Y: {to_g(spec.mean_Y):.2f} \u00b1 {to_g(spec.std_Y):.2f} ; "
-            f"Z: {to_g(spec.mean_Z):.2f} \u00b1 {to_g(spec.std_Z):.2f}"
+            f"X: {to_mss(spec.mean_X):.2f} \u00b1 {to_mss(spec.std_Z):.2f} ; "
+            f"Y: {to_mss(spec.mean_Y):.2f} \u00b1 {to_mss(spec.std_Y):.2f} ; "
+            f"Z: {to_mss(spec.mean_Z):.2f} \u00b1 {to_mss(spec.std_Z):.2f}"
         )
         self.str_timestamp.set(f"{spec.timestamp} ms")
 
