@@ -259,7 +259,7 @@ class FrameRadiometer(LabelFrame):
         if self.last_spectra_path is None:
             return
         # self.make_output()
-        show_interactive_plots(self.spectra, plt)
+        show_interactive_plots(self.spectra)
 
     def make_output(self):
         if self.last_spectra_path is None:

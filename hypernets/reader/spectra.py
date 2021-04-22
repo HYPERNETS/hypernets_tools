@@ -1,10 +1,10 @@
 from hypernets.reader.spectrum import Spectrum
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 
 
 
-def show_interactive_plots(spectra, plt):
+def show_interactive_plots(spectra):
 
     # Next Button
     axnext = plt.axes([0.81, 0.05, 0.1, 0.075])
@@ -34,7 +34,7 @@ class Spectra(object):
 
         index = 0 
         while index < len(spectra_file):
-            current_spectrum = Spectrum(spectra_file[index:])
+            current_spectrum = Spectrum(spectra_file[index:], verbose=True)
             self.spectra_list.append(current_spectrum)
             index += current_spectrum.total
 
@@ -52,7 +52,7 @@ class Spectra(object):
 
     def update(self):
         self.current_spectrum = self.spectra_list[self.index]
-        print(self.current_spectrum)
+        # print(self.current_spectrum)
 
         if self.axes is not None:
             self.axes.clear()
