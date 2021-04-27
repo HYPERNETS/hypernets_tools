@@ -2,7 +2,7 @@ __pycache__/
 DATA/
 LOGS/
 config_hypernets.ini
-static_config.ini
-dynamic_config.ini
+config_dynamic.ini
+config_static.ini
 .ipynb_checkpoints/
 hypernets/scripts/libhypstar/

@@ -1,0 +1,29 @@
+
+[general]
+keep_pc = on
+start_sequence = no
+sequence_file = hypernets/resources/sequences_samples/your_sequence.csv
+
+[GPS] 
+# In case of no GPS signal
+latitude = 0.0
+longitude = 0.0
+
+# Options
+[SPA]
+elevation = 0.0
+
+[pantilt]
+# Tilt offset should be positif and < 70
+offset_pan = 0
+offset_tilt = +60
+
+
+[metadata]
+principal_investigator = Investigator Name
+datetime = {datetime}
+site_id = A Site ID
+hypstar_sn = 123456
+latitude = ${GPS:latitude}
+longitude = ${GPS:longitude}
+protocol_file_name = ${general:sequence_file}
