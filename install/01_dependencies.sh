@@ -25,6 +25,9 @@ sudo -u $user python -m pip install matplotlib
 # Get Access to  /dev/ttySx without 'sudo'
 sudo usermod -a -G uucp $USER
 
+# Init libhypstar module
+sudo -u $user git submodule init
+sudo -u $user git submodule update 
 
 cd hypernets/scripts/libhypstar/
 sudo -u $user make lib
