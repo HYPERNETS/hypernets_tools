@@ -17,4 +17,3 @@ systemctl enable ntpd.service
 
 systemctl start ntpdate.service
 systemctl start ntpd.service
-

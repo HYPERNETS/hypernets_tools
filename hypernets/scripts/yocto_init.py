@@ -4,7 +4,7 @@ from yoctopuce.yocto_api import YRefParam, YAPI
 from configparser import ConfigParser
 from sys import exit
 
-yoctopuce_config_file = "config_hypernets.ini"
+yoctopuce_config_file = "config_static.ini"
 
 def init():
     config = ConfigParser()

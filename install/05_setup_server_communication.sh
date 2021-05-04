@@ -15,16 +15,18 @@ if [[ ${PWD##*/} != "hypernets_tools" ]]; then
 	exit 1
 fi
 
+source utils/configparser.sh
 
-credentials=$(awk -F "= " '/credentials/ {print $2; exit}' config_hypernets.ini)
-remoteDir=$(awk -F "= " '/remote_dir/ {print $2; exit}' config_hypernets.ini)
-sshPort=$(awk -F "= " '/ssh_port/ {print $2; exit}' config_hypernets.ini)
+sshPort=$(parse_config "ssh_port" config_static.ini)
+remoteDir=$(parse_config "remote_dir" config_static.ini)
+credentials=$(parse_config "credentials" config_static.ini)
+
 
 if [ -z $sshPort ]; then
 	sshPort="22"
 fi
 
-echo "Read from config_hypernets.ini : "
+echo "Read from config_static.ini : "
 echo " * Server credentials : $credentials"
 echo " * Remote directory   : $remoteDir"
 echo " * SSH port           : $sshPort"
@@ -43,7 +45,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 			-p $sshPort $credentials
 	fi
 
-	path_to_service=$(echo "$PWD/comm_server/hello_server.sh" | sed 's/\//\\\//g')
+	path_to_service=$(echo "$PWD/utils/hello_server.sh" | sed 's/\//\\\//g')
 	path_to_h_tools=$(echo "$PWD" | sed 's/\//\\\//g')
 
 	service_file="/etc/systemd/system/hypernets-hello.service"

@@ -25,11 +25,12 @@ reverse_ssh(){
 	# ssh -p $sshPort $ipServer "cat >> $pathToPortFile" < /tmp/ssh_last 
 }
 
-#
 # Read config file :
-ipServer=$(awk -F "= " '/credentials/ {print $2; exit}' config_hypernets.ini)
-sshPort=$(awk -F "= " '/^ssh_port/ {print $2; exit}' config_hypernets.ini)
-remoteSSHPort=$(awk -F "= " '/remote_ssh_port/ {print $2; exit}' config_hypernets.ini)
+source utils/configparser.sh
+
+ipServer=$(parse_config "credentials" config_static.ini)
+sshPort=$(parse_config "ssh_port" config_static.ini)
+remoteSSHPort=$(parse_config "remote_ssh_port" config_static.ini)
 
 if [ -z $sshPort ]; then
 	sshPort="22"
@@ -39,11 +40,5 @@ if [ -z $remoteSSHPort ]; then
 	remoteSSHPort="20213"
 fi
 
-# Trim strings : 
-shopt -s extglob
-ipServer=${ipServer%%*( )}
-sshPort=${sshPort%%*( )}
-remoteSSHPort=${remoteSSHPort%%*( )}
-shopt -u extglob
 echo "[-> $sshPort:]$ipServer:$remoteSSHPort"
 reverse_ssh $ipServer $sshPort $remoteSSHPort

@@ -25,7 +25,7 @@ def instanciation():
     # FIXME :GUI mode : quickfix
     from configparser import ConfigParser
     config = ConfigParser()
-    config.read("config_hypernets.ini")
+    config.read("config_static.ini")
     instrument_port = "/dev/radiometer0"
 
     try:

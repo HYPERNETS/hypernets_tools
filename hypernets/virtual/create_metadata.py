@@ -30,7 +30,7 @@ def metadata_header_base(protocol_file="placeholder.csv", now=None,
             f"protocol_filename = {protocol_file}\n")
 
 
-def parse_config_metadata(config_file="config_hypernets.ini"):
+def parse_config_metadata(config_file="config_dynamic.ini"):
 
     config = ConfigParser(interpolation=ExtendedInterpolation())
 

@@ -16,9 +16,11 @@ if [[ ${PWD##*/} != "hypernets_tools" ]]; then
 fi
 
 
-credentials=$(awk -F "= " '/credentials/ {print $2; exit}' config_hypernets.ini)
-sshPort=$(awk -F "= " '/^ssh_port/ {print $2; exit}' config_hypernets.ini)
-remoteSSHPort=$(awk -F "= " '/remote_ssh_port/ {print $2; exit}' config_hypernets.ini)
+source utils/configparser.sh
+
+sshPort=$(parse_config "ssh_port" config_static.ini)
+credentials=$(parse_config "credentials" config_static.ini)
+remoteSSHPort=$(parse_config "remote_ssh_port" config_static.ini)
 
 if [ -z $remoteSSHPort ]; then
 	remoteSSHPort="20213"
@@ -28,7 +30,7 @@ if [ -z $sshPort ]; then
 	sshPort="22"
 fi
 
-echo "Read from config_hypernets.ini : "
+echo "Read from config_static.ini : "
 echo " * Server credentials : $credentials"
 echo " * SSH port           : $sshPort"
 echo " * Remote SSH port   : $remoteSSHPort"
@@ -38,7 +40,7 @@ echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then 
 	echo
 	user="$SUDO_USER"
-	path_to_service=$(echo "$PWD/comm_server/reverse_ssh.sh" | sed 's/\//\\\//g')
+	path_to_service=$(echo "$PWD/utils/reverse_ssh.sh" | sed 's/\//\\\//g')
 	path_to_h_tools=$(echo "$PWD" | sed 's/\//\\\//g')
 	service_file="/etc/systemd/system/hypernets-access.service"
 

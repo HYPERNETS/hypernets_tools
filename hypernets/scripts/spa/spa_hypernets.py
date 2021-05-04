@@ -5,7 +5,7 @@ from datetime import datetime
 def spa_from_datetime(now=datetime.utcnow(), verbose=False):
     from configparser import ConfigParser
     config = ConfigParser()
-    config.read("config_hypernets.ini")
+    config.read("config_dynamic.ini")
 
     try:
         elevation = float(config["SPA"]["elevation"])
@@ -51,7 +51,7 @@ def spa_from_gps():
 
 
 if __name__ == '__main__':
-    print("From datetime + fixed coords in config_hypenets.ini : ")
+    print("From datetime + fixed coords in config_dynamic.ini : ")
     azimuth_sun, zenith_sun = spa_from_datetime(verbose=True)
     print(f"Azimuth Sun  : {azimuth_sun} ; Zenith Sun : {zenith_sun}")
     print("From GPS")

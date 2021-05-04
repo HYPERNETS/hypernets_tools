@@ -17,12 +17,14 @@ set -o nounset                              # Treat unset variables as an error
 set -euo pipefail                           # Bash Strict Mode
 
 
-# Only first entry is returned with exit [FIXME : better ?]
-startSequence=$(awk -F "[ =]+" '/start_sequence/ {print $2 ; exit}' config_hypernets.ini)
-bypassYocto=$(awk -F "[ =]+" '/bypass_yocto/ {print $2 ; exit}' config_hypernets.ini)
-hypstarPort=$(awk -F "[ =]+" '/hypstar_port/ {print $2 ; exit}' config_hypernets.ini)
-baudrate=$(awk -F "[ =]+" '/baudrate/ {print $2 ; exit}' config_hypernets.ini)
-loglevel=$(awk -F "[ =]+" '/loglevel/ {print $2 ; exit}' config_hypernets.ini)
+source utils/configparser.sh
+
+baudrate=$(parse_config "baudrate" config_static.ini)
+hypstarPort=$(parse_config "'hypstar_port" config_static.ini)
+bypassYocto=$(parse_config "bypass_yocto" config_static.ini)
+loglevel=$(parse_config "loglevel" config_static.ini)
+
+startSequence=$(parse_config "start_sequence" config_dynamic.ini)
 
 extra_args=""
 if [[ "$startSequence" == "no" ]] ; then
@@ -44,7 +46,7 @@ fi
 
 # Ensure Yocto is online
 if [[ "$bypassYocto" == "no" ]] ; then
-	yoctopuceIP=$(awk -F "[ =]+" '/yoctopuce_ip/ {print $2; exit}' config_hypernets.ini)
+	yoctopuceIP=$(parse_config "yoctopuce_ip" config_static.ini)
 	echo "Waiting for yoctopuce..."
 	while ! timeout 2 ping -c 1 -n $yoctopuceIP &>/dev/null
 	do
@@ -61,9 +63,8 @@ else
     extra_args="$extra_args --noyocto"
 fi
 
-sequence_file=$(awk -F "[ =]+" '/sequence_file/ {print $2; exit}' config_hypernets.ini)
+sequence_file=$(parse_config "sequence_file" config_dynamic.ini)
 
-# sequence_file="hypernets/resources/sequences_samples/sequence_picture_sun.csv"
 echo $sequence_file
 
 shutdown_sequence() {
@@ -71,7 +72,7 @@ shutdown_sequence() {
 	    python -m hypernets.scripts.relay_command -soff -n2 -n3
     fi
 
-    keepPc=$(awk -F "[ =]+" '/keep_pc/ {print $2; exit}' config_hypernets.ini)
+    keepPc=$(parse_config "keep_pc" config_dynamic.ini)
 
     if [[ "$keepPc" == "off" ]]; then
 	    echo "Option : Keep PC OFF"

@@ -105,7 +105,7 @@ def move_to(ser, pan, tilt, wait=False, verbose=False): # FIXME : C901 # noqa
 
     try:
         from configparser import ConfigParser
-        config_file = "config_hypernets.ini"
+        config_file = "config_dynamic.ini"
 
         config = ConfigParser()
         config.read(config_file)
