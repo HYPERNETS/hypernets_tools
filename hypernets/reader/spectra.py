@@ -32,7 +32,7 @@ class Spectra(object):
         with open(filename, 'rb') as fd:
             spectra_file = fd.read()
 
-        index = 0 
+        index = 0
         while index < len(spectra_file):
             current_spectrum = Spectrum(spectra_file[index:], verbose=True)
             self.spectra_list.append(current_spectrum)
@@ -56,7 +56,7 @@ class Spectra(object):
 
         if self.axes is not None:
             self.axes.clear()
-            self.axes.plot(range(len(self.current_spectrum.counts)), 
+            self.axes.plot(range(len(self.current_spectrum.counts)),
                            self.current_spectrum.counts)
 
 
