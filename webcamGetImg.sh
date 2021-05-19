@@ -30,6 +30,7 @@ function usage(){
 	printf "  -d, OUTPUT_DIR   Specify the output directory.\n"
 	printf "  -i, IP_ADDRESS   Specify the ip address of the camera.\n"
 	printf "  -c, USER:PASS    Specify credentials camera.\n"
+	printf "  -p, PREFIX       Prefix name of output images.\n"
 	printf "  -h, --help       Diplay this help message.\n"
 	printf " Note : default is current directory if not specified.\n"
 	exit 0
@@ -40,9 +41,9 @@ function take_picture(){
 	DATE=$(date -u +"%Y%m%dT%H%M%S") 
 	# touch $OUTPUT_DIR/$DATE.jpg
 	ffmpeg -y -i rtsp://"$CREDENTIALS$IP_ADDRESS":554 -vframes 1 \
-		"$OUTPUT_DIR/$DATE.jpg"
+		"$OUTPUT_DIR/$PREFIX""_$DATE.jpg"
 	if [ "$VERBOSE" -eq 1 ]; then
-		echo Output File is : "$OUTPUT_DIR/$DATE".jpg 
+		echo Output File is : "$OUTPUT_DIR/$PREFIX""_$DATE.jpg"
 	fi
 }
 
@@ -89,13 +90,14 @@ CREDENTIALS=""
 set +o nounset
 
 if [ -z "$1" ] ; then usage ; fi
-while getopts 'hvwd:i:c:' OPTION; do
+while getopts 'hvwd:i:p:c:' OPTION; do
 	case "$OPTION" in
 		v) VERBOSE=1;;
 		w) WAIT_UP=1 ;;
 		d) OUTPUT_DIR="$OPTARG" ;;
 		c) CREDENTIALS="$OPTARG" ;;
 		i) IP_ADDRESS="$OPTARG" ;;
+		p) PREFIX="$OPTARG" ;;
 		?|h) usage ;;
 	esac
 done
@@ -107,6 +109,7 @@ if [ "$VERBOSE" -eq 1 ] ; then
 	echo "IP_ADDRESS provided : $IP_ADDRESS"
 	echo "CREDENTIALS provided : $CREDENTIALS"
 	echo "WAIT_UP provided : $WAIT_UP"
+	echo "PREFIX provided : $PREFIX"
 fi
 
 # No IP : error
