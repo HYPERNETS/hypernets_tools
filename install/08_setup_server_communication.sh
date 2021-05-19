@@ -38,7 +38,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 	echo
 
 	if [[ $REPLY =~ ^[Yy]$ ]]; then 
-		sudo -u $user ssh-keygen -t rsa
+		# sudo -u $user ssh-keygen -t rsa
 		sudo -u $user ssh-copy-id -i /home/$user/.ssh/id_rsa \
 			-p $sshPort $credentials
 	fi
