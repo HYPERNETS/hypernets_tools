@@ -24,8 +24,8 @@ class HypstarHandler(Hypstar):
                  instrument_baudrate=115200,
                  instrument_loglevel="ERROR"):
 
-        self.last_it_swir = None
-        self.last_it_vnir = None
+        # self.last_it_swir = None
+        # self.last_it_vnir = None
 
         # TODO : move to open_sequence
         from configparser import ConfigParser
@@ -130,6 +130,12 @@ class HypstarHandler(Hypstar):
 
         print(f"--> [{rad} {ent} {it_vnir} {it_swir}] x {cap_count}")  # LOG
 
+        # if it_vnir == 0 and ent == RadiometerEntranceType.DARK:
+        #     it_vnir == self.last_it_vnir
+
+        # if it_swir == 0 and ent == RadiometerEntranceType.DARK:
+        #     it_swir == self.last_it_swir
+
         if path_to_file is None:
             from os import path, mkdir
             if not path.exists("DATA"):
@@ -141,8 +147,11 @@ class HypstarHandler(Hypstar):
             # get latest environmental log and print it to output log
             env_log = self.get_env_log()
             print(env_log.get_csv_line(), flush=True)
+
+            print("ITS : ", it_swir, it_vnir)
             capture_count = self.capture_spectra(rad, ent, it_vnir,
                                                  it_swir, cap_count, 0)
+
             slot_list = self.get_last_capture_spectra_memory_slots(
                 capture_count)
 
@@ -160,16 +169,16 @@ class HypstarHandler(Hypstar):
             for n, spectrum in enumerate(cap_list):
                 spectra += spectrum.getBytes()
 
-                # Read ITs :
-                if spectrum.spectrum_header.spectrum_config.vnir:
-                    self.last_it_vnir = \
-                        spectrum.spectrum_header.integration_time_ms
-                    # print(f"AIT update: {spectrum.radiometer}->{it_vnir} ms")
-                elif spectrum.spectrum_header.spectrum_config.swir:
-                    self.last_it_swir = \
-                        spectrum.spectrum_header.integration_time_ms
-                    # print(f"AIT update: {spectrum.radiometer}->{it_swir} ms")
-                    # XXX --> LOG me
+                # # Read ITs :
+                # if spectrum.spectrum_header.spectrum_config.vnir:
+                #     self.last_it_vnir = \
+                #         spectrum.spectrum_header.integration_time_ms
+                #     # print(f"AIT update: {spectrum.radiometer}->{it_vnir} ms")
+                # elif spectrum.spectrum_header.spectrum_config.swir:
+                #     self.last_it_swir = \
+                #         spectrum.spectrum_header.integration_time_ms
+                #     # print(f"AIT update: {spectrum.radiometer}->{it_swir} ms")
+                #     # XXX --> LOG me
 
             # Save
             with open(path_to_file, "wb") as f:
@@ -182,9 +191,11 @@ class HypstarHandler(Hypstar):
             return e
 
         if gui:
-            return self.last_it_vnir, self.last_it_swir, path_to_file
+            # return self.last_it_vnir, self.last_it_swir, path_to_file
+            return None, None, path_to_file
 
-        return it_vnir, it_swir
+        # return it_vnir, it_swir
+        return True
 
     @staticmethod
     def mode_action_to_radiance_entrance(mode, action):
