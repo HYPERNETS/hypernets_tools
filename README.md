@@ -29,7 +29,7 @@ Libhypstar driver is now bundled with installation, but needs to be activated an
 cd hypernets_tools
 git submodule init
 git submodule update
-cd hypernets/scripts/libhypstar
+cd hypernets/libhypstar
 make lib
 sudo make install
 ```
@@ -37,7 +37,7 @@ This will download source code for the libhypstar, compile it and copy resulting
 
 Updating libhypstar with latest from the github:
 ```sh
-cd hypernets_tools/hypernets/scripts/libhypstar
+cd hypernets_tools/hypernets/libhypstar
 git checkout main
 git pull
 make lib

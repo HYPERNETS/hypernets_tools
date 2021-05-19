@@ -13,12 +13,12 @@ from hypernets.virtual.read_protocol import create_seq_name,\
     create_spectra_name, create_block_position_name
 
 from hypernets.virtual.create_metadata import parse_config_metadata
-from hypernets.scripts.libhypstar.python.hypstar_wrapper import HypstarLogLevel
+
+from hypernets.libhypstar.python.hypstar_wrapper import HypstarLogLevel
+from hypernets.libhypstar.python.data_structs.environment_log import \
+    get_csv_header
 
 from hypernets.scripts.hypstar_handler import HypstarHandler
-
-from hypernets.scripts.libhypstar.python.data_structs.environment_log import \
-    get_csv_header
 
 
 def hypstar_python(instrument_instance, line, block_position, output_dir="DATA"): # noqa
