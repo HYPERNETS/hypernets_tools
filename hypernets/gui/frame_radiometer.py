@@ -9,8 +9,7 @@ from tkinter.ttk import Combobox, Separator
 
 from tkinter.messagebox import showerror, showinfo
 
-from hypernets.scripts.call_radiometer import take_spectra, take_picture,\
-    get_hw_info, get_env_log, set_tec, unset_tec
+from hypernets.scripts.hypstar_handler import HypstarHandler
 
 from hypernets.reader.spectrum import Spectrum
 from hypernets.reader.spectra import Spectra, show_interactive_plots
@@ -30,6 +29,7 @@ class FrameRadiometer(LabelFrame):
         self.configure_items_output()
         self.last_spectra_path = None
         self.spectra = None
+        self.hypstar = None
 
     def configure_items_radiometer(self):
         self.radiometer_var = [StringVar(self) for _ in range(7)]
@@ -82,11 +82,14 @@ class FrameRadiometer(LabelFrame):
         # --------------------------------------------------------------------
         run = Button(self, text="Acquisition", command=self.general_callback)
         # --------------------------------------------------------------------
-        get_hw_b = Button(self, text="Get Hardware Infos",
-                          command=self.get_instrument_hw_info)
+        # init_ins = Button(self, text="Hypstar Init",
+        #                   command=self.hypstar_instanciatiation)
         # --------------------------------------------------------------------
         get_env_b = Button(self, text="Get Environmental Log",
                            command=self.get_instrument_env_log)
+        # --------------------------------------------------------------------
+        get_hw_b = Button(self, text="Get Hardware Infos",
+                          command=self.get_instrument_hw_info)
 
         # --------------------------------------------------------------------
         set_tec_b = Button(self, text="Set Thermal Control",
@@ -113,8 +116,9 @@ class FrameRadiometer(LabelFrame):
         IT_total.grid(sticky=E,          column=1, row=5)
         resolution.grid(sticky=E,        column=1, row=6)
         run.grid(sticky=W+E+S+N,         column=1, row=7, padx=2, pady=2)
-        get_hw_b.grid(sticky=W+E+S+N,    column=0, row=7, padx=2, pady=2)
+        # init_ins.grid(sticky=W+E+S+N,    column=0, row=7, padx=2, pady=2)
         get_env_b.grid(sticky=W+E+S+N,   column=0, row=8, padx=2, pady=2)
+        get_hw_b.grid(sticky=W+E+S+N,    column=1, row=8, padx=2, pady=2)
         set_tec_b.grid(sticky=W+E+S+N,   column=0, row=9, padx=2, pady=2)
         unset_tec_b.grid(sticky=W+E+S+N, column=1, row=9, padx=2, pady=2)
 
@@ -147,11 +151,15 @@ class FrameRadiometer(LabelFrame):
         if not path.exists(output_dir):
             mkdir(output_dir)
 
+        # FIXME import from appropriated module ?
         output_name = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
+
+        if self.hypstar is None:
+            self.hypstar = HypstarHandler()
 
         if action == "Picture":
             output_name += ".jpg"
-            take_picture(None, path.join(output_dir, output_name))
+            self.hypstar.take_picture(None, path.join(output_dir, output_name))
 
         elif mode in ['VNIR', 'SWIR', 'BOTH'] and \
                 action in ['Irradiance', 'Radiance', 'Dark']:
@@ -169,7 +177,7 @@ class FrameRadiometer(LabelFrame):
             action = {"Radiance": "rad", "Irradiance": "irr",
                       "Dark": "bla"}[action]
 
-            output = take_spectra(None, path.join(output_dir, output_name),
+            output = self.hypstar.take_spectra(path.join(output_dir, output_name),  # noqa
                                   mode, action, vnir, swir, cap_count,
                                   gui=True)
 
@@ -184,7 +192,6 @@ class FrameRadiometer(LabelFrame):
                 showinfo("End Acquisition", "Saved to : "
                          f"{self.last_spectra_path}")
 
-
     def configure_items_output(self):
         output_frame = LabelFrame(self, text="Output")
         output_frame.grid(sticky=W+E+S+N,  column=0, row=10,  columnspan=2)
@@ -194,22 +201,22 @@ class FrameRadiometer(LabelFrame):
         show_graph = Button(output_frame, text="Show plot",
                             command=self.show_plot)
 
-        prev_spec =  Button(output_frame, text="Prev Spectrum",
-                            command=self.prev_spec)
+        prev_spec = Button(output_frame, text="Prev Spectrum",
+                           command=self.prev_spec)
 
-        next_spec =  Button(output_frame, text="Next Spectrum",
-                            command=self.next_spec)
+        next_spec = Button(output_frame, text="Next Spectrum",
+                           command=self.next_spec)
 
         # ---------------------------------------------------------------------
         # Labels
         for text, col, row, padx, pady, sticky in \
-                [("Spectrum # : ",   0, 0, 2, 2, E),
-                 ("Length : ",       0, 1, 2, 2, E),
-                 ("Type : ",         0, 2, 2, 2, E),
-                 ("Exposure : ",     0, 3, 2, 2, E),
-                 ("Temperature : ",  0, 4, 2, 2, E),
-                 ("Acceleration : ", 0, 5, 2, 2, E),
-                 ("Timestamp : ",    0, 6, 2, 2, E)]:
+                [("Spectrum # : ",            0, 0, 2, 2, E),
+                 ("Length : ",                0, 1, 2, 2, E),
+                 ("Type : ",                  0, 2, 2, 2, E),
+                 ("Exposure : ",              0, 3, 2, 2, E),
+                 ("Temperature : ",           0, 4, 2, 2, E),
+                 ("Acceleration : \n (m/s²)", 0, 5, 2, 2, E),
+                 ("Timestamp : ",             0, 6, 2, 2, E)]:
 
             Label(output_frame, text=text)\
                 .grid(column=col, row=row, padx=padx, pady=pady, sticky=sticky)
@@ -266,7 +273,8 @@ class FrameRadiometer(LabelFrame):
             return
         self.figure, self.axes = plt.subplots()
         plt.subplots_adjust(bottom=0.2)
-        self.spectra = Spectra(self.last_spectra_path, figure=self.figure, axes=self.axes)
+        self.spectra = Spectra(self.last_spectra_path, figure=self.figure,
+                               axes=self.axes)
         self.update_output()
 
     def update_output(self):
@@ -276,10 +284,10 @@ class FrameRadiometer(LabelFrame):
 
         current_spectrum = self.spectra.current_spectrum
 
-        self.str_number.set(f"{self.spectra.index + 1}/{len(self.spectra.spectra_list)}")
+        self.str_number.set(f"{self.spectra.index + 1}/{len(self.spectra.spectra_list)}")  # noqa
 
         self.str_lenght.set(f"{current_spectrum.total} bytes"
-                f" ; {current_spectrum.pixel_count} pixels")
+                            f" ; {current_spectrum.pixel_count} pixels")
 
         # To m.s^-2
         def to_mss(x):
@@ -290,36 +298,42 @@ class FrameRadiometer(LabelFrame):
         self.str_expo.set(f"{current_spectrum.exposure_time} ms")
         self.str_temperature.set(f"{current_spectrum.temperature}\u00b0C")
         self.str_accel.set(
-            f"X: {to_mss(current_spectrum.mean_X):.2f} \u00b1 {to_mss(current_spectrum.std_Z):.2f}\n"
-            f"Y: {to_mss(current_spectrum.mean_Y):.2f} \u00b1 {to_mss(current_spectrum.std_Y):.2f}\n"
-            f"Z: {to_mss(current_spectrum.mean_Z):.2f} \u00b1 {to_mss(current_spectrum.std_Z):.2f}")
+            f"X: {to_mss(current_spectrum.mean_X):.2f} \u00b1 {to_mss(current_spectrum.std_Z):.2f}\n" # noqa
+            f"Y: {to_mss(current_spectrum.mean_Y):.2f} \u00b1 {to_mss(current_spectrum.std_Y):.2f}\n" # noqa
+            f"Z: {to_mss(current_spectrum.mean_Z):.2f} \u00b1 {to_mss(current_spectrum.std_Z):.2f}") # noqa
 
         self.str_timestamp.set(f"{current_spectrum.timestamp} ms")
 
-
     def get_instrument_hw_info(self):
-        showinfo("Hardware Infos", get_hw_info(None))
+        if self.hypstar is None:
+            self.hypstar = HypstarHandler()
+        self.hypstar.get_hw_info()
+        showinfo("Hardware Infos", str(self.hypstar.hw_info))
 
     def get_instrument_env_log(self):
-        # print(get_env_log(None))
-        showinfo("Environmental Logs", get_env_log(None))
+        if self.hypstar is None:
+            self.hypstar = HypstarHandler()
+        showinfo("Environmental Logs", str(self.hypstar.get_env_log()))
 
     def set_swir_temperature(self):
-        TEC=0
-        output = set_tec(None, TEC)
-        print(type(output))
+        TEC = 0
+        if self.hypstar is None:
+            self.hypstar = HypstarHandler()
+        output = self.hypstar.set_SWIR_module_temperature(TEC)
+
         if isinstance(output, Exception):
             showerror("Error", str(output))
         else:
             showinfo("Thermal Control", f"Thermal Control setted to {TEC}.")
 
     def unset_swir_temperature(self):
-        output = unset_tec(None)
-        print(type(output))
+        if self.hypstar is None:
+            self.hypstar = HypstarHandler()
+        output = self.hypstar.shutdown_SWIR_module_thermal_control()
         if isinstance(output, Exception):
             showerror("Error", str(output))
         else:
-            showinfo("Thermal Control", f"Thermal Control unsetted.")
+            showinfo("Thermal Control", "Thermal Control unsetted.")
 
 
 if __name__ == '__main__':
