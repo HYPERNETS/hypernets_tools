@@ -4,3 +4,5 @@ LOGS/
 config_hypernets.ini
 .ipynb_checkpoints/
 hypernets/scripts/libhypstar/
+config_dynamic.ini
+config_static.ini
