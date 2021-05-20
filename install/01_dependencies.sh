@@ -29,7 +29,7 @@ sudo usermod -a -G uucp $USER
 sudo -u $user git submodule init
 sudo -u $user git submodule update 
 
-cd hypernets/libhypstar/
+cd hypernets/scripts/libhypstar/
 sudo -u $user make lib
 sudo make install
 cd -

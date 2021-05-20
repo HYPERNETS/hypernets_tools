@@ -14,9 +14,9 @@ from hypernets.virtual.read_protocol import create_seq_name, create_spectra_name
 from hypernets.virtual.create_metadata import parse_config_metadata
 
 from hypernets.scripts.call_radiometer import take_picture, take_spectra, set_tec, unset_tec, get_serials
-from hypernets.libhypstar.python.hypstar_wrapper import Hypstar, HypstarLogLevel, wait_for_instrument
-from hypernets.libhypstar.python.data_structs.hardware_info import HypstarSupportedBaudRates
-from hypernets.libhypstar.python.data_structs.environment_log import EnvironmentLogEntry, get_csv_header
+from hypernets.scripts.libhypstar.python.hypstar_wrapper import Hypstar, HypstarLogLevel, wait_for_instrument
+from hypernets.scripts.libhypstar.python.data_structs.hardware_info import HypstarSupportedBaudRates
+from hypernets.scripts.libhypstar.python.data_structs.environment_log import EnvironmentLogEntry, get_csv_header
 
 last_it_vnir = 0
 last_it_swir = 0
