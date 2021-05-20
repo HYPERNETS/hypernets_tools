@@ -26,7 +26,7 @@ sudo -u $user python -m pip install matplotlib
 sudo usermod -a -G uucp $USER
 
 
-cd hypernets/scripts/libhypstar/
+cd hypernets/libhypstar/
 sudo -u $user make lib
 sudo make install
 cd -

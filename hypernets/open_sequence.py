@@ -14,9 +14,9 @@ from hypernets.virtual.read_protocol import create_seq_name, create_spectra_name
 from hypernets.virtual.create_metadata import parse_config_metadata
 
 from hypernets.scripts.call_radiometer import take_picture, take_spectra, set_tec, unset_tec, get_serials
-from hypernets.scripts.libhypstar.python.hypstar_wrapper import Hypstar, HypstarLogLevel, wait_for_instrument
-from hypernets.scripts.libhypstar.python.data_structs.hardware_info import HypstarSupportedBaudRates
-from hypernets.scripts.libhypstar.python.data_structs.environment_log import EnvironmentLogEntry, get_csv_header
+from hypernets.libhypstar.python.hypstar_wrapper import Hypstar, HypstarLogLevel, wait_for_instrument
+from hypernets.libhypstar.python.data_structs.hardware_info import HypstarSupportedBaudRates
+from hypernets.libhypstar.python.data_structs.environment_log import EnvironmentLogEntry, get_csv_header
 
 last_it_vnir = 0
 last_it_swir = 0
@@ -90,8 +90,8 @@ def check_if_swir_or_park_requested(sequence_file):
     return False, park
 
 
-def run_sequence_file(sequence_file, instrument_port, instrument_br, 
-        instrument_loglevel, driver=True, instrument_standalone=False, 
+def run_sequence_file(sequence_file, instrument_port, instrument_br,
+        instrument_loglevel, driver=True, instrument_standalone=False,
         DATA_DIR="DATA"): # FIXME : # noqa C901
 
     with open(sequence_file, mode='r') as sequence:
@@ -119,7 +119,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br,
                 # boot_timeout = 15
                 boot_timeout = 30
                 if not wait_for_instrument(instrument_port, boot_timeout):
-                    # just in case instrument sent BOOTED packet while we were 
+                    # just in case instrument sent BOOTED packet while we were
                     # switching baudrates, let's test if it's there
                     try:
                         instrument_instance = Hypstar(instrument_port)
@@ -134,11 +134,11 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br,
                 instrument_instance.set_log_level(instrument_loglevel)
                 instrument_instance.set_baud_rate(HypstarSupportedBaudRates(instrument_br))
                 instrument_instance.get_hw_info()
-                # due to the bug in PSU HW revision 3 12V regulator might not 
+                # due to the bug in PSU HW revision 3 12V regulator might not
                 # start up properly and optical multiplexer is not available
-                # since this prevents any spectra acquisition, instrument is 
+                # since this prevents any spectra acquisition, instrument is
                 # unusable and there's no point in continuing
-                # instrument power cycling is the only workaround and that's 
+                # instrument power cycling is the only workaround and that's
                 # done in run_sequence bash script so we signal it that it's all bad
                 if not instrument_instance.hw_info.optical_multiplexer_available:
                     print("[ERROR] MUX+SWIR+TEC hardware not available")
@@ -146,8 +146,8 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br,
 
             except Exception as e:
                 print(e)
-                # if instrument does not respond, there's no point in doing 
-                # anything, so we exit with ABORTED signal so that shell script 
+                # if instrument does not respond, there's no point in doing
+                # anything, so we exit with ABORTED signal so that shell script
                 # can catch exception
                 sys.exit(6)  # SIGABRT
 
@@ -184,10 +184,10 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br,
         mdfile = open(path.join(DATA_DIR, seq_name, "metadata.txt"), "w")
         mdfile.write(parse_config_metadata())
         if not park:
-            # Enabling SWIR TEC for the whole sequence is a tradeoff between 
+            # Enabling SWIR TEC for the whole sequence is a tradeoff between
             # current consumption and execution time
-            # Although it would seem that disabling TEC while rotating saves 
-            # power, one has to remember, that during initial thermal regulation 
+            # Although it would seem that disabling TEC while rotating saves
+            # power, one has to remember, that during initial thermal regulation
             # TEC consumes 5x more current + does it for longer.
             if swir:
                 set_tec(instrument_instance)
