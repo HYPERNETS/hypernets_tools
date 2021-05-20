@@ -15,7 +15,7 @@ if [[ ${PWD##*/} != "hypernets_tools" ]]; then
 fi
 
 user="$SUDO_USER"
-path_to_service=$(echo "$PWD/run_service.sh" | sed 's/\//\\\//g')
+path_to_service=$(echo "$PWD/utils/run_service.sh" | sed 's/\//\\\//g')
 path_to_h_tools=$(echo "$PWD" | sed 's/\//\\\//g')
 service_file="/etc/systemd/system/hypernets-sequence.service"
 
