@@ -255,7 +255,6 @@ if __name__ == '__main__':
                         default=115200)
     # driver.add_argument("-y", "--hypstar", action='store_true',
     #                     help="Use libhypstar driver")
-
     # driver.add_argument("-p", "--phystar", action='store_true',
     #                     help="Use phystar driver")
 
