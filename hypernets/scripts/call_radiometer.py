@@ -2,10 +2,10 @@ from datetime import datetime
 
 from argparse import ArgumentParser
 
-from hypernets.libhypstar.python.data_structs.spectrum_raw import RadiometerType,\
+from hypernets.scripts.libhypstar.python.data_structs.spectrum_raw import RadiometerType,\
     RadiometerEntranceType
 
-from hypernets.libhypstar.python.hypstar_wrapper import Hypstar
+from hypernets.scripts.libhypstar.python.hypstar_wrapper import Hypstar
 
 
 def get_serials(instrument_instance):
