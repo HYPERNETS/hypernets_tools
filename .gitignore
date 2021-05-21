@@ -6,3 +6,4 @@ config_dynamic.ini
 config_static.ini
 .ipynb_checkpoints/
 hypernets/libhypstar/
+hypernets/scripts/libhypstar/
