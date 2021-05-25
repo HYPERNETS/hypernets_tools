@@ -14,8 +14,8 @@ from hypernets.virtual.read_protocol import create_seq_name,\
 
 from hypernets.virtual.create_metadata import parse_config_metadata
 
-from hypernets.libhypstar.python.hypstar_wrapper import HypstarLogLevel
-from hypernets.libhypstar.python.data_structs.environment_log import \
+from hypernets.scripts.libhypstar.python.hypstar_wrapper import HypstarLogLevel
+from hypernets.scripts.libhypstar.python.data_structs.environment_log import \
     get_csv_header
 
 from hypernets.scripts.hypstar_handler import HypstarHandler

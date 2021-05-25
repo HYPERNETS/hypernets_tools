@@ -2,12 +2,12 @@
 from datetime import datetime
 from argparse import ArgumentParser
 
-from hypernets.libhypstar.python.hypstar_wrapper import Hypstar, wait_for_instrument # noqa
+from hypernets.scripts.libhypstar.python.hypstar_wrapper import Hypstar, wait_for_instrument # noqa
 
-from hypernets.libhypstar.python.data_structs.spectrum_raw import \
+from hypernets.scripts.libhypstar.python.data_structs.spectrum_raw import \
     RadiometerType, RadiometerEntranceType
 
-from hypernets.libhypstar.python.data_structs.hardware_info import \
+from hypernets.scripts.libhypstar.python.data_structs.hardware_info import \
     HypstarSupportedBaudRates
 
 from sys import exit
