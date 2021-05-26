@@ -57,7 +57,7 @@ if [[ "$bypassYocto" == "no" ]] ; then
 	echo "Waiting for yoctopuce..."
 	while ! timeout 2 ping -c 1 -n $yoctopuceIP &>/dev/null
 	do
-		echo .	
+		echo -n '.'
 	done
 	echo "Ok !"
 
