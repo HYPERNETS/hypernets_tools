@@ -21,7 +21,8 @@ from hypernets.scripts.libhypstar.python.data_structs.environment_log import \
 from hypernets.scripts.hypstar_handler import HypstarHandler
 
 
-def hypstar_python(instrument_instance, line, block_position, output_dir="DATA"): # noqa
+def hypstar_python(instrument_instance, line, block_position,
+                   output_dir="DATA"):
 
     _, _, _, mode, action, it_vnir, cap_count, total_time = line
 
@@ -253,6 +254,7 @@ if __name__ == '__main__':
     parser.add_argument("-b", "--baudrate", type=int,
                         help="Serial port baud rate used for communications with instrument", # noqa
                         default=115200)
+
     # driver.add_argument("-y", "--hypstar", action='store_true',
     #                     help="Use libhypstar driver")
     # driver.add_argument("-p", "--phystar", action='store_true',

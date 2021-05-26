@@ -16,15 +16,15 @@ fi
 
 user="$SUDO_USER"
 
-sudo pacman -Sy python-pip tk make gcc
 
-sudo -u $user python -m pip uninstall serial
-sudo -u $user python -m pip install crcmod pyftdi yoctopuce pyserial
-sudo -u $user python -m pip install matplotlib
+# Init
+sudo -u $user git submodule init
+sudo -u $user git submodule update
 
-# Get Access to  /dev/ttySx without 'sudo'
-sudo usermod -a -G uucp $USER
-
-
-# Ensure relogin
-# reboot
+# Update and Install
+cd hypernets/scripts/libhypstar/
+sudo -u $user git checkout main
+sudo -u $user git pull
+sudo -u $user make lib
+sudo make install
+cd -
