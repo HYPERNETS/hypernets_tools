@@ -43,7 +43,7 @@ shopt -u extglob
 # Make Logs
 mkdir -p LOGS
 journalctl -eu hypernets-sequence --since="2days ago" --no-pager > LOGS/hypernets-sequence.log
-journalctl -eu hypernets-hello -n 150 --no-pager > LOGS/hypernets-hello.log
+journalctl -eu hypernets-hello --since="2days ago" --no-pager > LOGS/hypernets-hello.log
 
 # Update the datetime flag on the server
 echo "Touching $ipServer:$remoteDir/system_is_up"
