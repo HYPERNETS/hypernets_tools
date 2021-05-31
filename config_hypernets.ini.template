@@ -42,6 +42,8 @@ ssh_port = 22
 # Tilt offset should be positif and < 70
 offset_pan = 0
 offset_tilt = +60
+azimuth_switch = 180
+
 [metadata]
 principal_investigator = Investigator Name
 datetime = {datetime}

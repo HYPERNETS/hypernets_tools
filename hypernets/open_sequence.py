@@ -10,17 +10,20 @@ from datetime import datetime
 from os import mkdir, replace, path
 
 import sys
-from hypernets.virtual.read_protocol import create_seq_name, create_spectra_name, create_block_position_name
-from hypernets.scripts.call_radiometer import take_picture, take_spectra, set_tec, unset_tec, get_serials
-from hypernets.scripts.libhypstar.python.hypstar_wrapper import Hypstar, HypstarLogLevel, wait_for_instrument
-from hypernets.scripts.libhypstar.python.data_structs.hardware_info import HypstarSupportedBaudRates
-from hypernets.scripts.libhypstar.python.data_structs.environment_log import EnvironmentLogEntry, get_csv_header
+from hypernets.virtual.read_protocol import create_seq_name, create_spectra_name, create_block_position_name  # noqa
+from hypernets.scripts.call_radiometer import take_picture, take_spectra, set_tec, unset_tec, get_serials  # noqa
+from hypernets.scripts.libhypstar.python.hypstar_wrapper import Hypstar, HypstarLogLevel, wait_for_instrument  # noqa
+from hypernets.scripts.libhypstar.python.data_structs.hardware_info import HypstarSupportedBaudRates  # noqa
+from hypernets.scripts.libhypstar.python.data_structs.environment_log import EnvironmentLogEntry, get_csv_header  # noqa
+
+from configparser import ConfigParser
+
 
 last_it_vnir = 0
 last_it_swir = 0
 
 
-def hypstar_python(instrument_instance, line, block_position, output_dir="DATA"):
+def hypstar_python(instrument_instance, line, block_position, output_dir="DATA"): # noqa
 
     global last_it_vnir, last_it_swir
 
@@ -33,7 +36,7 @@ def hypstar_python(instrument_instance, line, block_position, output_dir="DATA")
         output_name = 'NA_' + block_position
 
     elif action == 'pic':
-        if take_picture(instrument_instance, path.join(output_dir, block_position + ".jpg")):
+        if take_picture(instrument_instance, path.join(output_dir, block_position + ".jpg")): # noqa
             output_name = block_position + ".jpg"
         else:
             output_name = "ERR_" + block_position + ".jpg"
@@ -56,7 +59,7 @@ def hypstar_python(instrument_instance, line, block_position, output_dir="DATA")
         # FIXME : replace by error code..
         try:
             it_vnir, it_swir =\
-                take_spectra(instrument_instance, path.join(output_dir, output_name),
+                take_spectra(instrument_instance, path.join(output_dir, output_name), #noqa
                              mode, action, it_vnir, it_swir, cap_count)
 
             # Update global vars for IT saving
@@ -89,6 +92,17 @@ def check_if_swir_or_park_requested(sequence_file):
 
 
 def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_loglevel, driver=True, instrument_standalone=False, DATA_DIR="DATA"): # FIXME : # noqa C901
+
+    azimuth_switch = 180  # default value
+
+    try:
+        config = ConfigParser()
+        config.read("config_hypernets.ini")
+        azimuth_switch = int(config["pantilt"]["azimuth_switch"])
+
+    except Exception as e:
+        print(f"Error : {e}")
+
     with open(sequence_file, mode='r') as sequence:
 
         if not path.exists(DATA_DIR):
@@ -104,21 +118,26 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_
         sequence.seek(0)
 
         # nothing of this is needed for parking sequence
-        if True or not park: # quickfix
+        if True or not park:  # quickfix
             instrument_instance = None
             # sometimes relay is not actually off, should test for that
             try:
                 instrument_instance = Hypstar(instrument_port)
+
             except IOError as e:
-                # wait for instrument to boot on given port. 30s taken from the run_service.sh
+                print(f"Error : {e}")
+                # wait for instrument to boot on given port. 30s taken from the
+                # run_service.sh
                 # boot_timeout = 15
                 boot_timeout = 30
                 if not wait_for_instrument(instrument_port, boot_timeout):
-                    # just in case instrument sent BOOTED packet while we were switching baudrates, let's test if it's there
+                    # just in case instrument sent BOOTED packet while we were
+                    # switching baudrates, let's test if it's there
                     try:
                         instrument_instance = Hypstar(instrument_port)
                     except IOError as e:
-                        print("[ERROR] Did not get instrument BOOTED packet in {}s".format(boot_timeout))
+                        print(f"Error : {e}")
+                        print("[ERROR] Did not get instrument BOOTED packet in {}s".format(boot_timeout)) # noqa
                         sys.exit(27)
 
             # initialize instrument once
@@ -218,12 +237,12 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_
                         tilt = 180 - zenith_sun
 
                     else:
-                        if azimuth_sun <= 180:
-                            print(" -- Morning : +90 (=clockwise)")
+                        if azimuth_sun <= azimuth_switch:
+                            print(f"{azimuth_sun} is less than the switch value ({azimuth_switch}) : +90 (=clockwise)")  # noqa
                             pan = azimuth_sun + pan  # clockwise
                         else:
-                            print(" -- Afternoon : -90 (=counter-clockwise)")
-                            pan = azimuth_sun - pan  # clockwise
+                            print(f"{azimuth_sun} is more than the switch value ({azimuth_switch}) : -90 (=counter-clockwise)")  # noqa
+                            pan = azimuth_sun - pan  # counter-clockwise
 
                     print(f"--> Converted Position (pan : {pan:.2f} / {ref} ; "
                           f"tilt :{tilt:.2f})")
@@ -249,7 +268,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, instrument_
                     # elif hypstar:
                     #     output_name = send_to_hypstar(line, block_position)
                     # ---------------------------------------------------------
-            if True or not park: # quickfix
+            if True or not park:  # quickfix
                 output_name = hypstar_python(instrument_instance, line, block_position, output_dir=path.
                                              join(DATA_DIR, seq_name, "RADIOMETER"))  # noqa
 
