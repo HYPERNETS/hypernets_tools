@@ -44,6 +44,7 @@ def get_env_log(instrument_instance):
     log = instrument_instance.get_env_log()  # XXX not sure + catch excpt
     return str(log)
 
+
 def get_hw_info(instrument_instance):
     if instrument_instance is None:
         instrument_instance = instanciation()
@@ -81,6 +82,8 @@ def make_datetime_name(extension=".jpg"):
 def take_picture(instrument_instance, path_to_file=None, params=None,
                  return_stream=False):
 
+    if instrument_instance is None:
+        instrument_instance = instanciation()
     # Note : 'params = None' for now, only 5MP is working
 
     if path_to_file is None:
@@ -183,7 +186,7 @@ def take_spectra(instrument_instance, path_to_file, mode, action, it_vnir, it_sw
 # FIXME : write more generic function (refactor with take_spectra)
 def _cli_extra_parser(args):
     if args.picture:
-        take_picture(path_to_file=args.output)
+        take_picture(None, path_to_file=args.output)
     else:
         if args.radiometer == 'vnir':
             mode = "vis"

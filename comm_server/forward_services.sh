@@ -10,9 +10,10 @@ fi
 
 
 ipServer=$(awk -F "= " '/credentials/ {print $2}' config_hypernets.ini)
+echo $ipServer
 
 #ssh -g -N -T -o "ServerAliveInterval 10" -o "ExitOnForwardFailure yes" \
 #	-R4444:10.42.0.184:4444 $ipServer
 #
-#ssh -g -N -T -o ServerAliveInterval 10 -o "ExitOnForwardFailure yes" \
-#	-R8888:127.0.0.1:8888 $ipServer
+ssh -v -g -N -T -o "ServerAliveInterval 10" -o "ExitOnForwardFailure yes" \
+	-R8888:127.0.0.1:8888 $ipServer
