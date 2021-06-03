@@ -19,9 +19,10 @@ def make_datetime_name(extension=".jpg"):  # todo : move to virtual
 
 
 class HypstarHandler(Hypstar):
-    def __init__(self, hypstar_port="/dev/radiometer0",
-                 instrument_baudrate=115200,
-                 instrument_loglevel="ERROR"):
+    def __init__(self, hypstar_port="/dev/radiometer0", # noqa : C901
+                 instrument_baudrate=3000000,
+                 instrument_loglevel="ERROR",
+                 wait_instrument=True):
 
         # self.last_it_swir = None
         # self.last_it_vnir = None
@@ -38,14 +39,8 @@ class HypstarHandler(Hypstar):
             print(f"Error : {e}")
             print(f"Use default port {hypstar_port}")
 
-        try:
-            super().__init__(hypstar_port)
-
-        except IOError as e:
-            print(f"Error : {e}")
-            # wait for instrument to boot on given port.
-            # 30s taken from the run_service.sh
-            boot_timeout = 30
+        if wait_instrument:
+            boot_timeout = 17
             if not wait_for_instrument(hypstar_port, boot_timeout):
                 # just in case instrument sent BOOTED packet while we were
                 # switching baudrates, let's test if it's there
@@ -56,32 +51,32 @@ class HypstarHandler(Hypstar):
                     print(f"Error : {e}")
                     print("[ERROR] Did not get instrument BOOTED packet in {}s".format(boot_timeout)) # noqa
                     exit(27)
+        try:
+            super().__init__(hypstar_port)
+            self.set_log_level(instrument_loglevel)
+            self.set_baud_rate(HypstarSupportedBaudRates(instrument_baudrate))
+            self.get_hw_info()
+            # due to the bug in PSU HW revision 3 12V regulator might not start
+            # up properly and optical multiplexer is not available since this
+            # prevents any spectra acquisition, instrument is unusable and
+            # there's no point in continuing instrument power cycling is the
+            # only workaround and that's done in run_sequence bash script so we
+            # signal it that it's all bad
+            if not self.hw_info.optical_multiplexer_available:
+                print("[ERROR] MUX+SWIR+TEC hardware not available")
+                exit(27)  # SIGABORT
 
-            # initialize instrument once
-            try:
-                if not self:  # XXX check !!
-                    super().__init__(hypstar_port)
-                self.set_log_level(instrument_loglevel)
-                self.set_baud_rate(HypstarSupportedBaudRates(instrument_baudrate)) # noqa
-                self.get_hw_info()
-                # due to the bug in PSU HW revision 3 12V regulator might not
-                # start up properly and optical multiplexer is not available
-                # since this prevents any spectra acquisition, instrument is
-                # unusable and there's no point in continuing
-                # instrument power cycling is the only workaround and that's
-                # done in run_sequence bash script so we signal it that it's
-                # all bad
-                if not self.hw_info.optical_multiplexer_available:
-                    print("[ERROR] MUX+SWIR+TEC hardware not available")
-                    exit(27)  # SIGABORT
+        except IOError as e:
+            print(f"Error : {e}")
 
-            except Exception as e:
-                print(e)
-                # if instrument does not respond, there's no point in doing
-                # anything, so we exit with ABORTED signal so that shell script
-                # can catch exception
-                exit(6)  # SIGABRT
+        except Exception as e:
+            print(e)
+            # if instrument does not respond, there's no point in doing
+            # anything, so we exit with ABORTED signal so that shell script can
+            # catch exception
+            exit(6)  # SIGABRT
 
+        print("Instanciation OK")
 
     def take_picture(self, params=None, path_to_file=None, return_stream=False): # noqa
         # Note : 'params = None' for now, only 5MP is working
@@ -123,7 +118,7 @@ class HypstarHandler(Hypstar):
 
 
     def take_spectra(self, path_to_file, mode, action, it_vnir, it_swir, cap_count, # noqa 901
-                     gui=False, return_cap_list=False, set_time=True):
+                     gui=False, set_time=True):
 
         rad, ent = HypstarHandler.mode_action_to_radiance_entrance(mode, action) # noqa
 
@@ -159,10 +154,6 @@ class HypstarHandler(Hypstar):
             if len(cap_list) == 0:
                 return Exception("Cap list length is zero")
 
-            # XXX : Very alpha version
-            if return_cap_list is True:
-                return cap_list
-
             # Concatenation
             spectra = b''
             for n, spectrum in enumerate(cap_list):
@@ -172,11 +163,11 @@ class HypstarHandler(Hypstar):
                 # if spectrum.spectrum_header.spectrum_config.vnir:
                 #     self.last_it_vnir = \
                 #         spectrum.spectrum_header.integration_time_ms
-                #     # print(f"AIT update: {spectrum.radiometer}->{it_vnir} ms")
+                #   # print(f"AIT update: {spectrum.radiometer}->{it_vnir} ms")
                 # elif spectrum.spectrum_header.spectrum_config.swir:
                 #     self.last_it_swir = \
                 #         spectrum.spectrum_header.integration_time_ms
-                #     # print(f"AIT update: {spectrum.radiometer}->{it_swir} ms")
+                #   # print(f"AIT update: {spectrum.radiometer}->{it_swir} ms")
                 #     # XXX --> LOG me
 
             # Save

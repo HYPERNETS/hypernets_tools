@@ -116,7 +116,11 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                 except Exception as e:
                     meteo_data.write(e)
 
-        instrument_instance = HypstarHandler()  # TODO : add params
+        # TODO : add params
+        instrument_instance = \
+            HypstarHandler(instrument_loglevel=instrument_loglevel,
+                           instrument_baudrate=instrument_br)
+        # Useless ?
         instrument, visible, swir = instrument_instance.get_serials()
         print(f"SN : * instrument -> {instrument}")
         print(f"     * visible    -> {visible}")
@@ -248,12 +252,14 @@ if __name__ == '__main__':
 
     parser.add_argument("-l", "--loglevel", type=str,
                         help="Verbosity of the instrument driver log",
-                        choices=[HypstarLogLevel.ERROR.name, HypstarLogLevel.INFO.name, HypstarLogLevel.DEBUG.name, HypstarLogLevel.TRACE.name], #noqa
-                        default="ERROR")
+                        choices=[HypstarLogLevel.ERROR.name,
+                                 HypstarLogLevel.INFO.name,
+                                 HypstarLogLevel.DEBUG.name,
+                                 HypstarLogLevel.TRACE.name], default="ERROR")
 
     parser.add_argument("-b", "--baudrate", type=int,
                         help="Serial port baud rate used for communications with instrument", # noqa
-                        default=115200)
+                        default=3000000)
 
     # driver.add_argument("-y", "--hypstar", action='store_true',
     #                     help="Use libhypstar driver")
@@ -263,4 +269,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # run_sequence_file(args.file, hypstar=args.hypstar)
-    run_sequence_file(args.file, driver=None, instrument_standalone=args.noyocto, instrument_port=args.port, instrument_br=args.baudrate, instrument_loglevel=HypstarLogLevel[args.loglevel.upper()]) # noqa
+
+    run_sequence_file(args.file, driver=None,
+                      instrument_standalone=args.noyocto,
+                      instrument_port=args.port, instrument_br=args.baudrate,
+                      instrument_loglevel=HypstarLogLevel[args.loglevel.upper()]) # noqa
