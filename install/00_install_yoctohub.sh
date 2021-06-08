@@ -1,4 +1,6 @@
 #!/usr/bin/bash
+# Usage: sudo ./00_install_yoctohub.sh S1
+# with $1 version number (from https://www.yoctopuce.com/EN/virtualhub.php)
 
 set -o nounset
 set -euo pipefail
@@ -9,18 +11,20 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 # TODO : Check last version before
-last_version_yocto="VirtualHub.linux.40924.zip"
+version=${1:-$(echo 40924)}
+last_version_yocto="VirtualHub.linux.$version.zip"
+echo "Version to be installed: $last_version_yocto"
 
 cd /tmp
 wget "http://www.yoctopuce.com/FR/downloads/$last_version_yocto"
-mkdir Yoctopuce
+mkdir -p Yoctopuce
 unzip $last_version_yocto -d Yoctopuce/
 
 # udev rules :
 sudo cp Yoctopuce/udev_conf/51-yoctopuce_all.rules /etc/udev/rules.d/
 
 # - 1: copy VitualHub binary to /usr/sbin
-cp Yoctopuce/64bits/VirtualHub /usr/sbin
+cp -f Yoctopuce/64bits/VirtualHub /usr/sbin
 
 # - 2: ensure that the /usr/sbin/Virtualhub
 chmod +x /usr/sbin/VirtualHub
@@ -29,7 +33,7 @@ rm -rf Yoctopuce "$last_version_yocto"
 
 echo
 echo "---------------------------------------------------------------"
-echo "Try to run the virtual hub with /usr/sbin/VirtualHub"
+echo "Restart PC and then try to run the virtual hub with /usr/sbin/VirtualHub"
 echo "and go to this webpage : 10.42.0.1:4444"
 
 # - BYPASS  Systemd installation
