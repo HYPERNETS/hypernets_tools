@@ -1,5 +1,5 @@
 #!/usr/bin/bash
-# Usage: sudo ./00_install_yoctohub.sh S1
+# Usage: sudo ./00_install_yoctohub.sh $1
 # with $1 version number (from https://www.yoctopuce.com/EN/virtualhub.php)
 
 set -o nounset
