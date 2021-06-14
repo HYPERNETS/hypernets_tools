@@ -229,6 +229,18 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         if swir and False:
             instrument_instance.shutdown_SWIR_module_thermal_control()
 
+        # ----------------------------------------------------
+        # TODO : move to open_sequence
+        # from configparser import ConfigParser
+        # config = ConfigParser()
+        # config.read("config_static.ini")
+        # # Move me
+        # try:
+        #     hypstar_port = config["hypstar"]["hypstar_port"]
+        # except KeyError as e:
+        #     print(f"Error : {e}")
+        #     print(f"Use default port {hypstar_port}")
+        # ----------------------------------------------------
 
 if __name__ == '__main__':
 

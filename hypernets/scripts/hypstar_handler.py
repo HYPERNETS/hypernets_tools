@@ -21,25 +21,13 @@ def make_datetime_name(extension=".jpg"):  # todo : move to virtual
 class HypstarHandler(Hypstar):
     def __init__(self, hypstar_port="/dev/radiometer0", # noqa : C901
                  instrument_baudrate=3000000,
-                 instrument_loglevel="ERROR",
-                 wait_instrument=True):
+                 instrument_loglevel=3,
+                 except_boot_packet=True):
 
         # self.last_it_swir = None
         # self.last_it_vnir = None
 
-        # TODO : move to open_sequence
-        from configparser import ConfigParser
-        config = ConfigParser()
-        config.read("config_static.ini")
-
-        try:
-            hypstar_port = config["hypstar"]["hypstar_port"]
-
-        except KeyError as e:
-            print(f"Error : {e}")
-            print(f"Use default port {hypstar_port}")
-
-        if wait_instrument:
+        if except_boot_packet is True:
             boot_timeout = 17
             if not wait_for_instrument(hypstar_port, boot_timeout):
                 # just in case instrument sent BOOTED packet while we were
@@ -51,8 +39,27 @@ class HypstarHandler(Hypstar):
                     print(f"Error : {e}")
                     print("[ERROR] Did not get instrument BOOTED packet in {}s".format(boot_timeout)) # noqa
                     exit(27)
+
+                except Exception as e:
+                    print(f"Error : {e}")
+
+            else:  # We got the boot packet
+                try:
+                    super().__init__(hypstar_port)
+
+                except Exception as e:
+                    print(f"Error : {e}")
+                    exit(6)
+
+        else:  # no boot packet if expected (gui mode)
+            try:
+                super().__init__(hypstar_port)
+
+            except Exception as e:
+                print(f"Error : {e}")
+                exit(6)
+
         try:
-            super().__init__(hypstar_port)
             self.set_log_level(instrument_loglevel)
             self.set_baud_rate(HypstarSupportedBaudRates(instrument_baudrate))
             self.get_hw_info()
@@ -68,6 +75,7 @@ class HypstarHandler(Hypstar):
 
         except IOError as e:
             print(f"Error : {e}")
+            exit(6)
 
         except Exception as e:
             print(e)
@@ -75,8 +83,6 @@ class HypstarHandler(Hypstar):
             # anything, so we exit with ABORTED signal so that shell script can
             # catch exception
             exit(6)  # SIGABRT
-
-        print("Instanciation OK")
 
     def take_picture(self, params=None, path_to_file=None, return_stream=False): # noqa
         # Note : 'params = None' for now, only 5MP is working
