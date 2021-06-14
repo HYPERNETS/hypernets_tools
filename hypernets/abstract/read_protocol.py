@@ -46,7 +46,7 @@ from os import mkdir, chdir, listdir, path
 from shutil import copy, copyfileobj
 from random import random, shuffle, choice
 
-from hypernets.virtual.create_metadata import metadata_header_base
+from hypernets.abstract.create_metadata import metadata_header_base
 
 
 def create_seq_name(now, prefix="SEQ", fmt="%Y%m%dT%H%M%S"):

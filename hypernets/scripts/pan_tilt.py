@@ -180,6 +180,13 @@ def move_to(ser, pan, tilt, wait=False, verbose=False): # FIXME : C901 # noqa
         return final_position
 
 
+def move_to_geometry(geometry, wait=False, verbose=False):
+    if geometry.reference == "Sun":
+        pass
+    # move_to(None, geometry.pan, geometry.tilt)
+    return 0, 0
+
+
 def open_serial():
     # TODO : Read config before!
     ser = Serial(port='/dev/ttyS3', baudrate=2400, bytesize=8,

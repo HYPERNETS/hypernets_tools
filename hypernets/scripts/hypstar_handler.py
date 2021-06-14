@@ -12,6 +12,8 @@ from hypernets.scripts.libhypstar.python.data_structs.hardware_info import \
 
 from sys import exit
 
+from hypernets.abstract.request import EntranceExt
+
 
 # TODO : move it to virtual
 def make_datetime_name(extension=".jpg"):  # todo : move to virtual
@@ -19,7 +21,7 @@ def make_datetime_name(extension=".jpg"):  # todo : move to virtual
 
 
 class HypstarHandler(Hypstar):
-    def __init__(self, hypstar_port="/dev/radiometer0", # noqa : C901
+    def __init__(self, instrument_port="/dev/radiometer0", # noqa : C901
                  instrument_baudrate=3000000,
                  instrument_loglevel=3,
                  except_boot_packet=True):
@@ -29,11 +31,11 @@ class HypstarHandler(Hypstar):
 
         if except_boot_packet is True:
             boot_timeout = 17
-            if not wait_for_instrument(hypstar_port, boot_timeout):
+            if not wait_for_instrument(instrument_port, boot_timeout):
                 # just in case instrument sent BOOTED packet while we were
                 # switching baudrates, let's test if it's there
                 try:
-                    super().__init__(hypstar_port)
+                    super().__init__(instrument_port)
 
                 except IOError as e:
                     print(f"Error : {e}")
@@ -45,7 +47,7 @@ class HypstarHandler(Hypstar):
 
             else:  # We got the boot packet
                 try:
-                    super().__init__(hypstar_port)
+                    super().__init__(instrument_port)
 
                 except Exception as e:
                     print(f"Error : {e}")
@@ -53,7 +55,7 @@ class HypstarHandler(Hypstar):
 
         else:  # no boot packet if expected (gui mode)
             try:
-                super().__init__(hypstar_port)
+                super().__init__(instrument_port)
 
             except Exception as e:
                 print(f"Error : {e}")
@@ -122,13 +124,7 @@ class HypstarHandler(Hypstar):
             print(f"Error : {e}")
             return e
 
-
-    def take_spectra(self, path_to_file, mode, action, it_vnir, it_swir, cap_count, # noqa 901
-                     gui=False, set_time=True):
-
-        rad, ent = HypstarHandler.mode_action_to_radiance_entrance(mode, action) # noqa
-
-        print(f"--> [{rad} {ent} {it_vnir} {it_swir}] x {cap_count}")  # LOG
+    def take_spectra(self, request, path_to_file=None, gui=False):
 
         # if it_vnir == 0 and ent == RadiometerEntranceType.DARK:
         #     it_vnir == self.last_it_vnir
@@ -148,9 +144,12 @@ class HypstarHandler(Hypstar):
             env_log = self.get_env_log()
             print(env_log.get_csv_line(), flush=True)
 
-            print("ITS : ", it_swir, it_vnir)
-            capture_count = self.capture_spectra(rad, ent, it_vnir,
-                                                 it_swir, cap_count, 0)
+            capture_count = self.capture_spectra(request.radiometer,
+                                                 request.entrance,
+                                                 request.it_vnir,
+                                                 request.it_swir,
+                                                 request.number_cap,
+                                                 request.total_measurement_time) # noqa
 
             slot_list = self.get_last_capture_spectra_memory_slots(
                 capture_count)
@@ -203,6 +202,13 @@ class HypstarHandler(Hypstar):
                'bla': RadiometerEntranceType.DARK}[action]
 
         return rad, ent
+
+    def take_request(self, request):
+        if request.entrance == EntranceExt.PICTURE:
+            self.take_picture()
+        else:
+            self.take_spectra(request, path_to_file=None)
+
 
 # FIXME : write more generic function (refactor with take_spectra)
 # def _cli_extra_parser(args):

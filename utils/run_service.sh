@@ -72,8 +72,6 @@ fi
 
 sequence_file=$(parse_config "sequence_file" config_dynamic.ini)
 
-echo $sequence_file
-
 shutdown_sequence() {
     if [[ "$bypassYocto" == "no" ]] ; then
 	    python -m hypernets.scripts.relay_command -soff -n2 -n3
@@ -105,4 +103,4 @@ exit_actions() {
 
 trap "exit_actions" EXIT
 
-python3 -m hypernets.open_sequence -df $sequence_file $extra_args
+python3 -m hypernets.open_sequence -f $sequence_file $extra_args

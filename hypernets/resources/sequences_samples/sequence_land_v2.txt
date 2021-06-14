@@ -1,0 +1,32 @@
+HypernetsProtocol 2.0
+
+@[ 90.0,  hyper, 180.0, hyper ] + 10.both.irr.0.0 + 3.both.dark.0.0 + 1.picture
+@[ 83.0,  hyper, 30.0,  hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 98.0,  hyper, 30.0,  hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 113.0, hyper, 30.0,  hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 113.0, hyper, 20.0,  hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 98.0,  hyper, 20.0,  hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 83.0,  hyper, 20.0,  hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 83.0,  hyper, 10.0,  hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 98.0,  hyper, 10.0,  hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 113.0, hyper, 10.0,  hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 113.0, hyper, 5.0,   hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 98.0,  hyper, 5.0 ,  hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 83.0,  hyper, 5.0 ,  hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 83.0,  hyper, 0.0,   hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0 + 1.picture
+@[ 98.0,  hyper, 0.0,   hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 113.0, hyper, 0.0,   hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 263.0, hyper, 5.0,   hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 278.0, hyper, 5.0,   hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 293.0, hyper, 5.0,   hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 293.0, hyper, 10.0,  hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 278.0, hyper, 10.0,  hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 263.0, hyper, 10.0,  hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 263.0, hyper, 20.0,  hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 278.0, hyper, 20.0,  hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 293.0, hyper, 20.0,  hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 293.0, hyper, 30.0,  hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 278.0, hyper, 30.0,  hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 263.0, hyper, 30.0,  hyper ] + 10.both.rad.0.0 + 3.both.dark.0.0
+@[ 263.0, hyper, 30.0,  hyper ] + 10.both.irr.0.0 + 3.both.dark.0.0 + 1.picture
+@[ 0.0,   hyper, 0.00,  hyper ]
