@@ -33,7 +33,7 @@ def spa_from_datetime(now=datetime.utcnow(), verbose=False):
 
 
 def spa_from_gps():
-    from hypernets.scripts.yocto_gps import get_gps
+    from hypernets.yocto.gps import get_gps
     latitude, longitude, now = get_gps()
     # TODO : test the gps trame
     now = datetime.strptime(now, '%Y/%m/%d %H:%M:%S')

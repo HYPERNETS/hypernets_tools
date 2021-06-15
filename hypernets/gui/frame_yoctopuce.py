@@ -5,9 +5,9 @@ from tkinter import E, W, N, S
 from tkinter import LabelFrame
 from tkinter import Tk, Button, Label, StringVar
 
-from hypernets.scripts.relay_command import get_state_relay, set_state_relay
-from hypernets.scripts.yocto_meteo import get_meteo
-from hypernets.scripts.yocto_gps import get_gps
+from hypernets.yocto.relay import get_state_relay, set_state_relay
+from hypernets.yocto.meteo import get_meteo
+from hypernets.yocto.gps import get_gps
 
 
 class FrameYoctopuce(LabelFrame):

@@ -1,5 +1,5 @@
 from time import sleep
-from hypernets.scripts.yocto_init import init
+from hypernets.yocto.init import init
 
 from yoctopuce.yocto_api import YAPI
 from yoctopuce.yocto_temperature import YTemperature

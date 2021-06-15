@@ -40,7 +40,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     from hypernets.scripts.pan_tilt import move_to_geometry  # RM
 
     if not instrument_standalone:
-        from hypernets.scripts.yocto_meteo import get_meteo # noqa
+        from hypernets.yocto.meteo import get_meteo # noqa
         from hypernets.scripts.pan_tilt import move_to # noqa
         from hypernets.scripts.spa.spa_hypernets import spa_from_datetime, spa_from_gps # noqa
 

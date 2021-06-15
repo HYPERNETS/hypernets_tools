@@ -5,7 +5,7 @@ from yoctopuce.yocto_relay import YRelay
 from yoctopuce.yocto_api import YModule, YAPI
 from time import sleep
 
-from hypernets.scripts.yocto_init import init
+from hypernets.yocto.init import init
 
 
 def get_state_relay(id_relay, verbose=False):

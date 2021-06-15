@@ -61,7 +61,7 @@ if [[ "$bypassYocto" == "no" ]] ; then
 	done
 	echo "Ok !"
 
-	python -m hypernets.scripts.relay_command -son -n2 -n3
+	python -m hypernets.yocto.relay -son -n2 -n3
 	#  echo "Sleeping 17s... (old firmware issue)"
 	#  sleep 17
 
