@@ -32,19 +32,16 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     mkdir(path.join(DATA_DIR, seq_name))
     mkdir(path.join(DATA_DIR, seq_name, "RADIOMETER"))
 
-    # XXX Add option to copy the sequence file ?:
+    # XXX Add option to copy the sequence file ?
     # copy(sequence_file, path.join(DATA_DIR, seq_name, sequence_file))
 
-    # from hypernets.scripts.pan_tilt import move_to # RM
-    from hypernets.scripts.pan_tilt import move_to_geometry  # RM
-
     if not instrument_standalone:
+        from hypernets.scripts.pan_tilt import move_to_geometry
         from hypernets.yocto.meteo import get_meteo # noqa
-        from hypernets.scripts.pan_tilt import move_to # noqa
-        from hypernets.scripts.spa.spa_hypernets import spa_from_datetime, spa_from_gps # noqa
+        from hypernets.scripts.spa.spa_hypernets import spa_from_datetime, \
+            spa_from_gps
 
         # mkdir(path.join(DATA_DIR, seq_name, "METEO"))
-
         # Write one line meteo file
         with open(path.join(DATA_DIR, seq_name, "meteo.csv"), "w") as meteo: # noqa
             try:
