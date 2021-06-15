@@ -121,23 +121,26 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         for request in requests:
             iter_line += 1
             block_position = geometry.create_block_position_name(iter_line)
+            now_str = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
+
             if request.entrance == EntranceExt.PICTURE:
-                output_name = block_position + ".jpg"
-                output_name = path.join(DATA_DIR, seq_name, "RADIOMETER", output_name)  # noqa
-                instrument_instance.take_picture(path_to_file=output_name)
+                filename = block_position + ".jpg"
+                filepath = path.join(DATA_DIR, seq_name, "RADIOMETER", filename)  # noqa
+                instrument_instance.take_picture(path_to_file=filepath)
 
             elif request.radiometer != RadiometerExt.NONE:
-                output_name = block_position
-                output_name += request.spectra_name_convention() + ".spe"
-                output_name = path.join(DATA_DIR, seq_name, "RADIOMETER", output_name)  # noqa
-                instrument_instance.take_spectra(request, path_to_file=output_name)  # noqa
+                filename = block_position
+                filename += request.spectra_name_convention() + ".spe"
+                filepath = path.join(DATA_DIR, seq_name, "RADIOMETER", filename)  # noqa
+                instrument_instance.take_spectra(request, path_to_file=filepath)  # noqa
 
-                mdfile.write(f"\n[{block_position}]\n")
-                mdfile.write(f"{output_name}")
+            mdfile.write(f"\n[{block_position}]\n")
+            mdfile.write(f"{filename}={now_str}\n")
 
-                # Write p/t values each blocks for backward compatibility
-                mdfile.write(f"pt_ask={geometry.pan:.2f}; {geometry.tilt:.2f}\n")  # noqa
-                mdfile.write(f"pt_ref={pan_real:.2f}; {tilt_real:.2f}\n")
+            # Write p/t values each blocks for backward compatibility
+            mdfile.write(f"pt_ask={geometry.pan:.2f}; {geometry.tilt:.2f}\n")
+            # mdfile.write(f"pt_abs={pan:.2f}; {tilt:.2f}\n")
+            mdfile.write(f"pt_ref={pan_real:.2f}; {tilt_real:.2f}\n")
 
     mdfile.close()
 
