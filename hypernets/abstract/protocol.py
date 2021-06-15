@@ -100,11 +100,22 @@ class Protocol(list[(Geometry, list[Request])]):
 
 
 if __name__ == '__main__':
-    protocol = Protocol("sequences_samples/sequence_water.txt")
-    #  print(protocol)
-    protocol.check_if_swir_requested()
+    from argparse import ArgumentParser
+    parser = ArgumentParser()
+    parser.add_argument("-f", "--filename", type=str, required=True,
+                        help="Select a protocol file (txt, csv)")
 
-    for i, (geometry, requests) in enumerate(protocol, start=1):
-        print(f"{i}, {geometry}")
-        for request in requests:
-            print(request.radiometer, request.entrance)
+    args = parser.parse_args()
+
+    protocol = Protocol(args.filename)
+
+    print(protocol)
+
+    # print("-"*80)
+    # for i, (geometry, requests) in enumerate(protocol, start=1):
+    #     print(f"{i}, {geometry}")
+    #     for request in requests:
+    #         print(request.radiometer, request.entrance)
+
+    # print("-"*80)
+    protocol.check_if_swir_requested()
