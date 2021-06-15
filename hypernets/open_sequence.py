@@ -8,20 +8,14 @@ from time import sleep  # noqa
 from datetime import datetime
 from os import mkdir, replace, path
 
-from hypernets.abstract.read_protocol import create_seq_name, \
-    create_spectra_name, create_block_position_name
-
+from hypernets.abstract.protocol import Protocol
+from hypernets.abstract.read_protocol import create_seq_name
 from hypernets.abstract.create_metadata import parse_config_metadata
-
-from hypernets.scripts.libhypstar.python.hypstar_wrapper import HypstarLogLevel
-
-from hypernets.scripts.libhypstar.python.data_structs.environment_log import \
-    get_csv_header
+from hypernets.abstract.request import EntranceExt, RadiometerExt
 
 from hypernets.scripts.hypstar_handler import HypstarHandler
+from hypernets.scripts.libhypstar.python.hypstar_wrapper import HypstarLogLevel
 
-from hypernets.abstract.protocol import Protocol
-from hypernets.abstract.request import EntranceExt
 
 # def hypstar_python(instrument_instance, line, block_position,
 #                    output_dir="DATA"):
@@ -42,10 +36,9 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         instrument_loglevel, instrument_standalone=False,
         DATA_DIR="DATA"): # FIXME : # noqa C901
 
-    # with open(sequence_file, mode='r') as sequence:
-    # protocol = Protocol(sequence_file)
+    protocol = Protocol(sequence_file)
     # protocol = Protocol("hypernets/resources/sequences_samples/sequence_water_v2.txt")  # noqa
-    protocol = Protocol("hypernets/resources/sequences_samples/sequence_short_v2.txt") # noqa
+    # protocol = Protocol("hypernets/resources/sequences_samples/sequence_short_v2.txt") # noqa
     print(protocol)
 
     # we should check if any of the lines want to use SWIR and enable TEC :
@@ -63,13 +56,12 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     # copy(sequence_file, path.join(DATA_DIR, seq_name, sequence_file))
 
     # from hypernets.scripts.pan_tilt import move_to # RM
-    from hypernets.scripts.pan_tilt import move_to_geometry # RM
+    from hypernets.scripts.pan_tilt import move_to_geometry  # RM
 
     if not instrument_standalone:
-        from hypernets.scripts.yocto_meteo import get_meteo
-        from hypernets.scripts.pan_tilt import move_to
-        from hypernets.scripts.spa.spa_hypernets import spa_from_datetime,\
-            spa_from_gps
+        from hypernets.scripts.yocto_meteo import get_meteo # noqa
+        from hypernets.scripts.pan_tilt import move_to # noqa
+        from hypernets.scripts.spa.spa_hypernets import spa_from_datetime, spa_from_gps # noqa
 
         # mkdir(path.join(DATA_DIR, seq_name, "METEO"))
 
@@ -83,17 +75,11 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             except Exception as e:
                 meteo_data.write(e)
 
-    # TODO : add params
-#   instrument_instance = HypstarHandler(instrument_loglevel=instrument_loglevel,
-#                                        instrument_baudrate=instrument_br)
-#                                         #instrument_port)
-
     if instrument_standalone:
-        instrument_instance = HypstarHandler(instrument_loglevel=instrument_loglevel,
+        instrument_instance = HypstarHandler(instrument_loglevel=instrument_loglevel,  # noqa
                                              instrument_baudrate=instrument_br,
                                              instrument_port=instrument_port,
                                              except_boot_packet=False)
-        # instrument_instance = None
 
     # Useless ?
     # instrument, visible, swir = instrument_instance.get_serials()
@@ -135,16 +121,19 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         for request in requests:
             iter_line += 1
             block_position = geometry.create_block_position_name(iter_line)
-            mdfile.write(f"\n[{block_position}]\n")
-            if request.entrance != EntranceExt.NONE:
-                if request.entrance == EntranceExt.PICTURE:
-                    output_name = block_position + '.jpg'
-                else:
-                    output_name = block_position + \
-                        request.spectra_name_convention() + '.spe'
+            if request.entrance == EntranceExt.PICTURE:
+                output_name = block_position + ".jpg"
+                output_name = path.join(DATA_DIR, seq_name, "RADIOMETER", output_name)  # noqa
+                instrument_instance.take_picture(path_to_file=output_name)
 
-                instrument_instance.take_request(request,
-                                                 path_to_file=output_name)
+            elif request.radiometer != RadiometerExt.NONE:
+                output_name = block_position
+                output_name += request.spectra_name_convention() + ".spe"
+                output_name = path.join(DATA_DIR, seq_name, "RADIOMETER", output_name)  # noqa
+                instrument_instance.take_spectra(request, path_to_file=output_name)  # noqa
+
+                mdfile.write(f"\n[{block_position}]\n")
+                mdfile.write(f"{output_name}")
 
                 # Write p/t values each blocks for backward compatibility
                 mdfile.write(f"pt_ask={geometry.pan:.2f}; {geometry.tilt:.2f}\n")  # noqa
@@ -183,7 +172,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 #                            print(" -- Afternoon : -90 (=counter-clockwise)")
 #                            pan = azimuth_sun - pan  # clockwise
 #
-#                    print(f"--> Converted Position (pan : {pan:.2f} / {ref} ; "
+#                    print(f"--> Converted Position (pan : {pan:.2f} / {ref} ;"
 #                          f"tilt :{tilt:.2f})")
 #
 #                mdfile.write(f"pt_abs={pan:.2f}; {tilt:.2f}\n")
@@ -213,7 +202,6 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 #           output_name = "ERR_" + block_position + ".jpg"
 #
 #       output_name = block_position + create_spectra_name(line) + ".spe"
-
 
 
 if __name__ == '__main__':

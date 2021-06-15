@@ -203,12 +203,6 @@ class HypstarHandler(Hypstar):
 
         return rad, ent
 
-    def take_request(self, request, path_to_file=None):
-        if request.entrance == EntranceExt.PICTURE:
-            self.take_picture()
-        else:
-            self.take_spectra(request, path_to_file=path_to_file)  # XXX
-
 
 # FIXME : write more generic function (refactor with take_spectra)
 # def _cli_extra_parser(args):
