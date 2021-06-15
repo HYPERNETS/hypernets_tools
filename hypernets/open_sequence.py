@@ -1,6 +1,3 @@
-"""
-05/10/2020 : open_sequence : to read sequence from csv file
-"""
 
 from argparse import ArgumentParser
 
@@ -17,28 +14,12 @@ from hypernets.scripts.hypstar_handler import HypstarHandler
 from hypernets.scripts.libhypstar.python.hypstar_wrapper import HypstarLogLevel
 
 
-# def hypstar_python(instrument_instance, line, block_position,
-#                    output_dir="DATA"):
-#
-#         try:  # FIXME : replace by error code..
-#             instrument_instance.take_spectra(path.join(output_dir, output_name), # noqa
-#                                              mode, action, it_vnir, it_swir, cap_count) # noqa
-#
-#         except Exception as e:
-#             print(f"Error : {e}")
-#             output_name = "ERR_" + output_name
-#
-#     return output_name
-#
-
 
 def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         instrument_loglevel, instrument_standalone=False,
         DATA_DIR="DATA"): # FIXME : # noqa C901
 
     protocol = Protocol(sequence_file)
-    # protocol = Protocol("hypernets/resources/sequences_samples/sequence_water_v2.txt")  # noqa
-    # protocol = Protocol("hypernets/resources/sequences_samples/sequence_short_v2.txt") # noqa
     print(protocol)
 
     # we should check if any of the lines want to use SWIR and enable TEC :
@@ -81,6 +62,11 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                                              instrument_port=instrument_port,
                                              except_boot_packet=False)
 
+    else:
+        instrument_instance = HypstarHandler(instrument_loglevel=instrument_loglevel,  # noqa
+                                             instrument_baudrate=instrument_br,
+                                             instrument_port=instrument_port,
+                                             except_boot_packet=True)
     # Useless ?
     # instrument, visible, swir = instrument_instance.get_serials()
     # print(f"SN : * instrument -> {instrument}")
@@ -102,21 +88,20 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         # hardcoded ?
         instrument_instance.set_SWIR_module_temperature(0)
 
-    iter_line = 0
+    iter_line, nb_error = 0, 0
     for i, (geometry, requests) in enumerate(protocol, start=1):
         print(f"== [Line {i}] " + 60*"=")
-        print(f"--> Requested Position : {geometry}")
+        if not instrument_standalone:
+            print(f"--> Requested Position : {geometry}")
+            try:
+                pan_real, tilt_real = move_to_geometry(geometry, wait=True,
+                                                       verbose=True)
+                pan_real = float(pan_real) / 100
+                tilt_real = float(tilt_real) / 100
+                print(f"--> final pan : {pan_real} ; final tilt : {tilt_real}")
 
-        try:
-            pan_real, tilt_real = move_to_geometry(geometry, wait=True,
-                                                   verbose=True)
-
-            pan_real = float(pan_real) / 100
-            tilt_real = float(tilt_real) / 100
-
-        except TypeError:
-            pan_real, tilt_real = -999, -999
-            print(f"--> final pan : {pan_real} ; final tilt : {tilt_real}") #noqa
+            except TypeError:
+                pan_real, tilt_real = -999, -999
 
         for request in requests:
             iter_line += 1
@@ -126,13 +111,25 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             if request.entrance == EntranceExt.PICTURE:
                 filename = block_position + ".jpg"
                 filepath = path.join(DATA_DIR, seq_name, "RADIOMETER", filename)  # noqa
-                instrument_instance.take_picture(path_to_file=filepath)
+
+                try:
+                    instrument_instance.take_picture(path_to_file=filepath)
+                except Exception as e:
+                    print(f"Error : {e}")
+                    nb_error += 1
+                    filename = "ERR_" + filename
 
             elif request.radiometer != RadiometerExt.NONE:
                 filename = block_position
                 filename += request.spectra_name_convention() + ".spe"
                 filepath = path.join(DATA_DIR, seq_name, "RADIOMETER", filename)  # noqa
-                instrument_instance.take_spectra(request, path_to_file=filepath)  # noqa
+
+                try:
+                    instrument_instance.take_spectra(request, path_to_file=filepath)  # noqa
+                except Exception as e:
+                    print(f"Error : {e}")
+                    nb_error += 1
+                    filename = "ERR_" + filename
 
             mdfile.write(f"\n[{block_position}]\n")
             mdfile.write(f"{filename}={now_str}\n")
@@ -191,20 +188,6 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 #                    pan_real, tilt_real = -999, -999
 #                    print(f"--> final pan : {pan_real} ; final tilt : {tilt_real}") #noqa
 #                    mdfile.write(f"pt_ref={pan_real:.2f}; {tilt_real:.2f}\n")
-#
-#            if True:  # or not park: # quickfix
-#                output_name = hypstar_python(instrument_instance, line, block_position, # noqa
-#                                             output_dir=path.join(DATA_DIR, seq_name, "RADIOMETER"))  # noqa
-#
-#                now_str = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
-#                mdfile.write(f"{output_name}={now_str}\n")
-#
-#       if instrument_instance.take_picture(path_to_file=path.join(output_dir,
-#                                           block_position + ".jpg")):
-#           output_name = block_position + ".jpg"
-#           output_name = "ERR_" + block_position + ".jpg"
-#
-#       output_name = block_position + create_spectra_name(line) + ".spe"
 
 
 if __name__ == '__main__':

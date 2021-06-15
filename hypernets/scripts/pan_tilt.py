@@ -164,7 +164,7 @@ def move_to(ser, pan, tilt, wait=False, verbose=False): # FIXME : C901 # noqa
                       f"pan : {.02 * (position_1[0] - position_0[0])}, "
                       f"tilt : {.02 * (position_1[1] - position_0[1])} "
                       "(degrees.s^-1)")
-                print("-"*80)
+                print("-"*60)
 
             if position_0 is not None and position_1 is not None and (
                     position_0 == position_1 or
@@ -183,8 +183,7 @@ def move_to(ser, pan, tilt, wait=False, verbose=False): # FIXME : C901 # noqa
 def move_to_geometry(geometry, wait=False, verbose=False):
     if geometry.reference == "Sun":
         pass
-    # move_to(None, geometry.pan, geometry.tilt)
-    return 0, 0
+    return move_to(None, geometry.pan, geometry.tilt, wait=wait, verbose=verbose)
 
 
 def open_serial():
