@@ -49,8 +49,6 @@ from random import random, shuffle, choice
 from hypernets.abstract.create_metadata import metadata_header_base
 
 
-def create_seq_name(now, prefix="SEQ", fmt="%Y%m%dT%H%M%S"):
-    return now.strftime(prefix + fmt)
 
 
 def create_block_position_name(iter_line, line, iter_scheduler=1):

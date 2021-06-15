@@ -6,7 +6,6 @@ from datetime import datetime
 from os import mkdir, replace, path
 
 from hypernets.abstract.protocol import Protocol
-from hypernets.abstract.read_protocol import create_seq_name
 from hypernets.abstract.create_metadata import parse_config_metadata
 from hypernets.abstract.request import EntranceExt, RadiometerExt
 
@@ -29,7 +28,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         mkdir(DATA_DIR)
 
     start = datetime.utcnow()  # start = datetime.now()
-    seq_name = create_seq_name(now=start, prefix="CUR")
+    seq_name = Protocol.create_seq_name(now=start, prefix="CUR")
     mkdir(path.join(DATA_DIR, seq_name))
     mkdir(path.join(DATA_DIR, seq_name, "RADIOMETER"))
 
@@ -142,7 +141,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     mdfile.close()
 
     replace(path.join(DATA_DIR, seq_name),
-            path.join(DATA_DIR, create_seq_name(now=start)))
+            path.join(DATA_DIR, Protocol.create_seq_name(now=start)))
 
     if swir_is_requested is True:
         instrument_instance.shutdown_SWIR_module_thermal_control()

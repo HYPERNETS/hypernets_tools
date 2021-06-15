@@ -74,7 +74,7 @@ sequence_file=$(parse_config "sequence_file" config_dynamic.ini)
 
 shutdown_sequence() {
     if [[ "$bypassYocto" == "no" ]] ; then
-	    python -m hypernets.scripts.relay_command -soff -n2 -n3
+	    python -m hypernets.yocto.relay_command -soff -n2 -n3
     fi
 
     keepPc=$(parse_config "keep_pc" config_dynamic.ini)
@@ -82,7 +82,7 @@ shutdown_sequence() {
     if [[ "$keepPc" == "off" ]]; then
 	    echo "Option : Keep PC OFF"
 	    # Send Yoctopuce To sleep (or not)
-	    python -m hypernets.scripts.sleep_monitor
+	    python -m hypernets.yocto.sleep_monitor
 	    exit 0
     else
 	    # Cause service exit 1 and doesnt execute SuccessAction=poweroff

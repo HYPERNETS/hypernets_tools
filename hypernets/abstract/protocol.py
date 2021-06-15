@@ -98,6 +98,10 @@ class Protocol(list[(Geometry, list[Request])]):
         print("Note : This protocol doesn't have SWIR request")
         return False
 
+    @staticmethod
+    def create_seq_name(now, prefix="SEQ", fmt="%Y%m%dT%H%M%S"):
+        return now.strftime(prefix + fmt)
+
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
