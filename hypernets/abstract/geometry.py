@@ -42,6 +42,21 @@ class Geometry(object):
         pan_ref, tilt_ref = divmod(ref, 3)
         return Geometry.int_to_ref[pan_ref], Geometry.int_to_ref[tilt_ref]
 
+    def create_block_position_name(self, iter_line, iter_scheduler=1):
+        """
+        OUT : [1_90_0_180]
+        """
+
+        # ref_dict = {'abs': 0, 'nor': 1, 'sun': 2}
+
+        block_position = "{:0=2d}".format(iter_scheduler) + '_'
+        block_position += "{:0=3d}".format(iter_line) + '_'
+        block_position += "{:0=4d}".format(int(self.pan)) + '_'
+        block_position += str(self.reference) + '_'
+        block_position += "{:0=4d}".format(int(self.tilt))
+
+        return block_position
+
 
 if __name__ == '__main__':
 

@@ -26,28 +26,6 @@ from hypernets.abstract.request import EntranceExt
 # def hypstar_python(instrument_instance, line, block_position,
 #                    output_dir="DATA"):
 #
-#     _, _, _, mode, action, it_vnir, cap_count, total_time = line
-#
-#     print(f"--> [Mode : {mode} | Action : {action} | IT {it_vnir} ms] x "
-#           f"{cap_count} | total time : {total_time} ms]")
-#
-#     if action in ['cal', 'non']:
-#         output_name = 'NA_' + block_position
-#
-#     elif action == 'pic':
-#         if instrument_instance.take_picture(path_to_file=path.join(output_dir,
-#                                             block_position + ".jpg")):
-#             output_name = block_position + ".jpg"
-#         else:
-#             output_name = "ERR_" + block_position + ".jpg"
-#     else:
-#         # Tset = 10
-#         it_vnir = int(it_vnir)
-#         it_swir = it_vnir  # For now
-#         cap_count = int(cap_count)
-#
-#         output_name = block_position + create_spectra_name(line) + ".spe"
-#
 #         try:  # FIXME : replace by error code..
 #             instrument_instance.take_spectra(path.join(output_dir, output_name), # noqa
 #                                              mode, action, it_vnir, it_swir, cap_count) # noqa
@@ -138,10 +116,10 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         # hardcoded ?
         instrument_instance.set_SWIR_module_temperature(0)
 
+    iter_line = 0
     for i, (geometry, requests) in enumerate(protocol, start=1):
         print(f"== [Line {i}] " + 60*"=")
         print(f"--> Requested Position : {geometry}")
-        mdfile.write(f"pt_ask={geometry.pan:.2f}; {geometry.tilt:.2f}\n")
 
         try:
             pan_real, tilt_real = move_to_geometry(geometry, wait=True,
@@ -153,7 +131,32 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         except TypeError:
             pan_real, tilt_real = -999, -999
             print(f"--> final pan : {pan_real} ; final tilt : {tilt_real}") #noqa
-            mdfile.write(f"pt_ref={pan_real:.2f}; {tilt_real:.2f}\n")
+
+        for request in requests:
+            iter_line += 1
+            block_position = geometry.create_block_position_name(iter_line)
+            mdfile.write(f"\n[{block_position}]\n")
+            if request.entrance != EntranceExt.NONE:
+                if request.entrance == EntranceExt.PICTURE:
+                    output_name = block_position + '.jpg'
+                else:
+                    output_name = block_position + \
+                        request.spectra_name_convention() + '.spe'
+
+                instrument_instance.take_request(request,
+                                                 path_to_file=output_name)
+
+                # Write p/t values each blocks for backward compatibility
+                mdfile.write(f"pt_ask={geometry.pan:.2f}; {geometry.tilt:.2f}\n")  # noqa
+                mdfile.write(f"pt_ref={pan_real:.2f}; {tilt_real:.2f}\n")
+
+    mdfile.close()
+
+    replace(path.join(DATA_DIR, seq_name),
+            path.join(DATA_DIR, create_seq_name(now=start)))
+
+    if swir_is_requested is True:
+        instrument_instance.shutdown_SWIR_module_thermal_control()
 
 
 #        if not instrument_standalone:
@@ -204,21 +207,13 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 #                now_str = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
 #                mdfile.write(f"{output_name}={now_str}\n")
 #
-        for request in requests:
-            # block_position = create_block_position_name(i, line)
-            print(request)
-            block_position = "TODO"
-            mdfile.write(f"\n[{block_position}]\n")
-            if request.entrance != EntranceExt.NONE:
-                instrument_instance.take_request(request)
+#       if instrument_instance.take_picture(path_to_file=path.join(output_dir,
+#                                           block_position + ".jpg")):
+#           output_name = block_position + ".jpg"
+#           output_name = "ERR_" + block_position + ".jpg"
+#
+#       output_name = block_position + create_spectra_name(line) + ".spe"
 
-    mdfile.close()
-
-    replace(path.join(DATA_DIR, seq_name),
-            path.join(DATA_DIR, create_seq_name(now=start)))
-
-    if swir_is_requested is True:
-        instrument_instance.shutdown_SWIR_module_thermal_control()
 
 
 if __name__ == '__main__':

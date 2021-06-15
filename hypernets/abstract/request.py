@@ -17,6 +17,10 @@ class EntranceExt(IntEnum):
 class Request(object):
     def __init__(self):
         self.total_measurement_time = 0
+        self.it_vnir = 0
+        self.it_swir = 0
+        self.radiometer = None
+        self.entrance = None
 
     def __str__(self):
         output_str = f"{self.number_cap}."
@@ -88,3 +92,31 @@ class Request(object):
                'non': EntranceExt.NONE}[action.lower()]
 
         return rad, ent
+
+    def spectra_name_convention(self):
+
+        dict_radiometer = {RadiometerExt.NONE: 0x00,
+                           RadiometerType.SWIR: 0x40,
+                           RadiometerType.VIS_NIR: 0x80,
+                           RadiometerType.BOTH: 0xC0}
+
+        dict_entrance = {RadiometerEntranceType.DARK: 0x00,
+                         RadiometerEntranceType.RADIANCE: 0x10,
+                         RadiometerEntranceType.IRRADIANCE: 0x08,
+                         EntranceExt.PICTURE: 0x02,
+                         EntranceExt.NONE: 0x03}
+        # EntranceExt.CALIBRATION: 0x01,
+
+        spectra_name = '_'
+        spectra_name += "{:0=3d}".format(int(dict_radiometer[self.radiometer]))
+        spectra_name += '_'
+        spectra_name += "{:0=2d}".format(int(dict_entrance[self.entrance]))
+        spectra_name += '_'
+        spectra_name += "{:0=4d}".format(self.it_vnir)
+        spectra_name += '_'
+        # spectra_name += "{:0=4d}".format(int(float(self.it_vnir)) # XXX To
+        # spectra_name += '_'                                       # discuss
+        spectra_name += "{:0=2d}".format(self.number_cap)
+        spectra_name += '_'
+        spectra_name += "{:0=4d}".format(self.total_measurement_time)
+        return spectra_name
