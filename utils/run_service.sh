@@ -74,7 +74,7 @@ sequence_file=$(parse_config "sequence_file" config_dynamic.ini)
 
 shutdown_sequence() {
     if [[ "$bypassYocto" == "no" ]] ; then
-	    python -m hypernets.yocto.relay_command -soff -n2 -n3
+	    python -m hypernets.yocto.relay -soff -n2 -n3
     fi
 
     keepPc=$(parse_config "keep_pc" config_dynamic.ini)

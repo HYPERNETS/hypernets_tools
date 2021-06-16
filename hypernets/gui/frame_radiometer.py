@@ -143,7 +143,13 @@ class FrameRadiometer(LabelFrame):
 
     def check_if_hypstar_exists(self):
         if self.hypstar is None:
-            self.hypstar = HypstarHandler(except_boot=False)
+            try:
+                self.hypstar = HypstarHandler(except_boot_packet=False)
+            except Exception as e:
+                showerror("Error", str(e))
+                return False
+        else:
+            return True
 
     def general_callback(self, output_dir="DATA"):
 
@@ -157,8 +163,8 @@ class FrameRadiometer(LabelFrame):
 
         # FIXME import from appropriated module ?
         output_name = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
-
-        self.check_if_hypstar_exists()
+        if not self.check_if_hypstar_exists():
+            return
 
         if action == "Picture":
             output_name += ".jpg"
@@ -308,17 +314,20 @@ class FrameRadiometer(LabelFrame):
         self.str_timestamp.set(f"{current_spectrum.timestamp} ms")
 
     def get_instrument_hw_info(self):
-        self.check_if_hypstar_exists()
+        if not self.check_if_hypstar_exists():
+            return
         self.hypstar.get_hw_info()
         showinfo("Hardware Infos", str(self.hypstar.hw_info))
 
     def get_instrument_env_log(self):
-        self.check_if_hypstar_exists()
+        if not self.check_if_hypstar_exists():
+            return
         showinfo("Environmental Logs", str(self.hypstar.get_env_log()))
 
     def set_swir_temperature(self):
-        TEC = 0
-        self.check_if_hypstar_exists()
+        TEC = 0  # TODO : tunable from config / gui ?
+        if not self.check_if_hypstar_exists():
+            return
         output = self.hypstar.set_SWIR_module_temperature(TEC)
 
         if isinstance(output, Exception):
@@ -327,7 +336,8 @@ class FrameRadiometer(LabelFrame):
             showinfo("Thermal Control", f"Thermal Control setted to {TEC}.")
 
     def unset_swir_temperature(self):
-        self.check_if_hypstar_exists()
+        if not self.check_if_hypstar_exists():
+            return
         output = self.hypstar.shutdown_SWIR_module_thermal_control()
         if isinstance(output, Exception):
             showerror("Error", str(output))

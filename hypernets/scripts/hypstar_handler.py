@@ -12,7 +12,7 @@ from hypernets.scripts.libhypstar.python.data_structs.hardware_info import \
 
 from sys import exit
 
-from hypernets.abstract.request import EntranceExt
+# from hypernets.abstract.request import EntranceExt
 
 
 # TODO : move it to virtual
@@ -29,31 +29,21 @@ class HypstarHandler(Hypstar):
         # self.last_it_swir = None
         # self.last_it_vnir = None
 
-        if except_boot_packet is True:
-            boot_timeout = 17
-            if not wait_for_instrument(instrument_port, boot_timeout):
-                # just in case instrument sent BOOTED packet while we were
-                # switching baudrates, let's test if it's there
-                try:
-                    super().__init__(instrument_port)
+        boot_timeout = 17  # TODO : static config ?
+        if except_boot_packet and not wait_for_instrument(instrument_port, boot_timeout): # noqa
+            # just in case instrument sent BOOTED packet while we were
+            # switching baudrates, let's test if it's there
+            try:
+                super().__init__(instrument_port)
 
-                except IOError as e:
-                    print(f"Error : {e}")
-                    print("[ERROR] Did not get instrument BOOTED packet in {}s".format(boot_timeout)) # noqa
-                    exit(27)
+            except IOError as e:
+                print(f"Error : {e}")
+                print("[ERROR] Did not get instrument BOOTED packet in {}s".format(boot_timeout)) # noqa
+                exit(27)
 
-                except Exception as e:
-                    print(f"Error : {e}")
-
-            else:  # We got the boot packet
-                try:
-                    super().__init__(instrument_port)
-
-                except Exception as e:
-                    print(f"Error : {e}")
-                    exit(6)
-
-        else:  # no boot packet if expected (gui mode)
+            except Exception as e:
+                print(f"Error : {e}")
+        else:  # Got the boot packet or boot packet is not expected (gui mode)
             try:
                 super().__init__(instrument_port)
 
