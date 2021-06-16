@@ -74,16 +74,14 @@ class Protocol(list[(Geometry, list[Request])]):
                 # Remove spaces
                 line = line.replace(" ", "")
 
-                # Geometry
+                # New Geometry
                 if line[0] == "@":
                     pan, ref_p, tilt, ref_t, *flags = split_geometry(line)
-                    ref = Geometry.reference_to_int(ref_p, ref_t)
-                    cur_geo = Geometry(ref, pan=pan, tilt=tilt, flags=flags)
-
-                    # print(f"New geometry : {current_geometry}")
+                    reference = Geometry.reference_to_int(ref_p, ref_t)
+                    cur_geo = Geometry(reference, pan, tilt, flags=flags)
                     self.append((cur_geo, list()))
 
-                # Measurement or Picture
+                # New Request : Measurement or Picture
                 else:
                     request = Request.from_params(*split_measurement(line))
                     self[-1][1].append(request)

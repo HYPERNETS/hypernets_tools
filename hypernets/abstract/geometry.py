@@ -21,10 +21,13 @@ class Geometry(object):
         self.reference = reference
         self.pan = float(pan)
         self.tilt = float(tilt)
+        self.flags = flags
 
     def __str__(self):
         ref_pan, ref_tilt = Geometry.int_to_reference(self.reference)
-        return f"{self.pan} ({ref_pan}) ; {self.tilt} ({ref_tilt})"
+        str_output = f"{self.pan} ({ref_pan}) ; {self.tilt} ({ref_tilt})"
+        str_output += f"{self.flags}"
+        return str_output
 
     @classmethod
     def from_references(cls, ref_pan, ref_tilt, pan=0.0, tilt=0.0, flags=[]):

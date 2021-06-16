@@ -25,7 +25,8 @@ class FramePanTilt(LabelFrame):
         self.tilt = Spinbox(self, from_=0, to=360, width=5,
                             format="%.1f", increment=0.1, wrap=True)
         # ---------------------------------------------------------------------
-        self.reference = Combobox(self, state="disabled")
+        # self.reference = Combobox(self, state="disabled")
+        self.reference = Combobox(self)
         self.reference['values'] = ("Absolute", "North", "Sun")
         # ---------------------------------------------------------------------
         movePT = Button(self, text="Move Pan-Tilt", command=self.callback)
