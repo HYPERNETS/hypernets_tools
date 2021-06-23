@@ -27,7 +27,7 @@ webcam_site(){
 	config_site=$(awk -F "[ =]+" '/webcam_site/ {print $2; exit}' config_hypernets.ini)
 	credent_site=$(echo $config_site | cut -d "@" -f1)
 	ip_site=$(echo $config_site | cut -d "@" -f2)
-	./webcamGetImg.sh -c "$credent_site" -i "$ip_site" -d "WEBCAM/" -wv
+	./webcam_get_image.sh -c "$credent_site" -i "$ip_site" -d "WEBCAM/" -wv
 	echo $PWD
 	python -m hypernets.scripts.relay_command -n5 -soff
 	echo "Closing relay 5"
@@ -40,7 +40,8 @@ webcam_sky(){
 	credent_sky=$(echo $config_sky | cut -d "@" -f1)
 	ip_sky=$(echo $config_sky | cut -d "@" -f2)
 	echo $PWD
-	./webcamGetImg.sh -c "$credent_sky" -i "$ip_sky" -d "WEBCAM/" -wv
+	./webcam_get_image.sh -c "$credent_sky" -i "$ip_sky" -d "WEBCAM/" -wv
+
 	python -m hypernets.scripts.relay_command -n6 -soff
 	echo "Closing relay 6"
 }
