@@ -3,6 +3,7 @@
 keep_pc = on
 start_sequence = no
 sequence_file = hypernets/resources/sequences_samples/your_sequence.csv
+auto_update = no
 
 [GPS] 
 # In case of no GPS signal

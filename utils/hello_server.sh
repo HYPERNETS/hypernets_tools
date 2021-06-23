@@ -30,17 +30,21 @@ source utils/configparser.sh
 ipServer=$(parse_config "credentials" config_static.ini)
 remoteDir=$(parse_config "remote_dir" config_static.ini)
 sshPort=$(parse_config "ssh_port" config_static.ini)
+autoUpdate=$(parse_config "auto_update" config_dynamic.ini)
 
 if [ -z $sshPort ]; then
 	sshPort="22"
 fi
 
+if [ -z $autoUpdate ]; then
+	autoUpdate="no"
+fi
 
 # Make Logs
 mkdir -p LOGS
 journalctl -eu hypernets-sequence -n 15000 --no-pager > LOGS/hypernets-sequence.log
 journalctl -eu hypernets-hello -n 150 --no-pager > LOGS/hypernets-hello.log
-journalctl -eu hypernets-access -n 150 --no-pager > LOGS/hypernets-hello.log
+journalctl -eu hypernets-access -n 150 --no-pager > LOGS/hypernets-access.log
 
 # Update the datetime flag on the server
 echo "Touching $ipServer:$remoteDir/system_is_up"
@@ -52,6 +56,13 @@ source utils/bidirectional_sync.sh
 bidirectional_sync "config_dynamic.ini" \
 	"$ipServer" "$remoteDir/config_dynamic.ini.$USER" "$sshPort"
 
+if [[ ! "$autoUpdate" == "no" ]] ; then
+	echo "Auto Update ON"
+	set +e
+	git pull
+	if [ $? -ne 0 ]; then echo "Do you have local change ?" ; fi
+	set -e
+fi
 
 # Send data
 echo "Syncing Data..."
