@@ -1,4 +1,4 @@
-from hypernets.scripts.spa.spa_py import spa_calc
+from hypernets.spa.spa_py import spa_calc
 from datetime import datetime
 
 

@@ -144,7 +144,7 @@ class FrameRadiometer(LabelFrame):
     def check_if_hypstar_exists(self):
         if self.hypstar is None:
             try:
-                self.hypstar = HypstarHandler(except_boot_packet=False)
+                self.hypstar = HypstarHandler(expect_boot_packet=False)
             except Exception as e:
                 showerror("Error", str(e))
                 return False

@@ -24,13 +24,13 @@ class HypstarHandler(Hypstar):
     def __init__(self, instrument_port="/dev/radiometer0", # noqa : C901
                  instrument_baudrate=3000000,
                  instrument_loglevel=3,
-                 except_boot_packet=True):
+                 expect_boot_packet=True):
 
         # self.last_it_swir = None
         # self.last_it_vnir = None
 
         boot_timeout = 17  # TODO : static config ?
-        if except_boot_packet and not wait_for_instrument(instrument_port, boot_timeout): # noqa
+        if expect_boot_packet and not wait_for_instrument(instrument_port, boot_timeout): # noqa
             # just in case instrument sent BOOTED packet while we were
             # switching baudrates, let's test if it's there
             try:

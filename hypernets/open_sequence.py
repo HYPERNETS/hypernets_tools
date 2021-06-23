@@ -38,7 +38,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     if not instrument_standalone:
         from hypernets.scripts.pan_tilt import move_to_geometry
         from hypernets.yocto.meteo import get_meteo # noqa
-        from hypernets.scripts.spa.spa_hypernets import spa_from_datetime, \
+        from hypernets.spa.spa_hypernets import spa_from_datetime, \
             spa_from_gps
 
         # mkdir(path.join(DATA_DIR, seq_name, "METEO"))
@@ -56,13 +56,13 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         instrument_instance = HypstarHandler(instrument_loglevel=instrument_loglevel,  # noqa
                                              instrument_baudrate=instrument_br,
                                              instrument_port=instrument_port,
-                                             except_boot_packet=False)
+                                             expect_boot_packet=False)
 
     else:
         instrument_instance = HypstarHandler(instrument_loglevel=instrument_loglevel,  # noqa
                                              instrument_baudrate=instrument_br,
                                              instrument_port=instrument_port,
-                                             except_boot_packet=True)
+                                             expect_boot_packet=True)
     # Useless ?
     # instrument, visible, swir = instrument_instance.get_serials()
     # print(f"SN : * instrument -> {instrument}")
