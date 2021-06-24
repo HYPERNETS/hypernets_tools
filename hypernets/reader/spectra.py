@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 
 
-
 def show_interactive_plots(spectra):
 
     # Next Button
@@ -19,14 +18,13 @@ def show_interactive_plots(spectra):
     plt.show()
 
 
-class Spectra(object):
+class Spectra(list[Spectrum]):
     def __init__(self, filename, figure=None, axes=None):
 
         self.figure = figure
         self.axes = axes
 
         self.index = 0
-        self.spectra_list = list()
 
         # Open the file and create a list of Spectrum
         with open(filename, 'rb') as fd:
@@ -35,23 +33,23 @@ class Spectra(object):
         index = 0
         while index < len(spectra_file):
             current_spectrum = Spectrum(spectra_file[index:], verbose=True)
-            self.spectra_list.append(current_spectrum)
+            self.append(current_spectrum)
             index += current_spectrum.total
 
-        print(f"{len(self.spectra_list)} spectra readed.")
+        print(f"{len(self)} spectra readed.")
 
         self.update()
 
     def next_spectrum(self, event):
-        self.index = (self.index + 1) % len(self.spectra_list)
+        self.index = (self.index + 1) % len(self)
         self.update()
 
     def prev_spectrum(self, event):
-        self.index = (self.index - 1) % len(self.spectra_list)
+        self.index = (self.index - 1) % len(self)
         self.update()
 
     def update(self):
-        self.current_spectrum = self.spectra_list[self.index]
+        self.current_spectrum = self[self.index]
         # print(self.current_spectrum)
 
         if self.axes is not None:
@@ -62,7 +60,7 @@ class Spectra(object):
 
             spec_info = Spectrum.read_spectrum_info(self.current_spectrum.spec_type)
 
-            self.axes.set_title(f"Spectrum {self.index+1}/{len(self.spectra_list)}\n"
+            self.axes.set_title(f"Spectrum {self.index+1}/{len(self)}\n"
                                 f"{spec_info[0]} --> {spec_info[1]}")
 
             # self.axes.set_xlabel("")
