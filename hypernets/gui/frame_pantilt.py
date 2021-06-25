@@ -6,7 +6,8 @@ from tkinter import Label, LabelFrame, Spinbox
 from tkinter import Tk, Button
 from tkinter.ttk import Combobox
 
-from hypernets.scripts.pan_tilt import move_to
+from hypernets.abstract.geometry import Geometry
+from hypernets.scripts.pan_tilt import move_to_geometry
 
 
 class FramePanTilt(LabelFrame):
@@ -25,9 +26,11 @@ class FramePanTilt(LabelFrame):
         self.tilt = Spinbox(self, from_=0, to=360, width=5,
                             format="%.1f", increment=0.1, wrap=True)
         # ---------------------------------------------------------------------
-        # self.reference = Combobox(self, state="disabled")
         self.reference = Combobox(self)
-        self.reference['values'] = ("Absolute", "North", "Sun")
+        geom = [Geometry.int_to_reference(i) for i in range(Geometry.length)]
+        self.reference['values'] = geom
+        self.reference.current(8)
+
         # ---------------------------------------------------------------------
         movePT = Button(self, text="Move Pan-Tilt", command=self.callback)
         # ---------------------------------------------------------------------
@@ -47,8 +50,13 @@ class FramePanTilt(LabelFrame):
         # ---------------------------------------------------------------------
 
     def callback(self):
-        # See FIXME in frame_pantilt
-        move_to(None, float(self.pan.get()), float(self.tilt.get()))
+        reference = Geometry.reference_to_int(*self.reference.get().split(' '))
+
+        geometry = Geometry(pan=self.pan.get(), tilt=self.pan.get(),
+                            reference=reference)
+
+        geometry.get_absolute_pan_tilt()
+        move_to_geometry(geometry)
 
 
 if __name__ == '__main__':

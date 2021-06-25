@@ -1,11 +1,15 @@
 
 class Geometry(object):
+
+    length = 9
+
     # FIXME : some constant should be here
     ref_to_int = dict()
 
     ref_to_int['sun'] = 0
     ref_to_int['abs'] = 1
     ref_to_int['nor'] = 2
+    ref_to_int['hyp'] = 2
 
     # For V2
     ref_to_int['sun'] = 0
@@ -95,20 +99,23 @@ class Geometry(object):
             from hypernets.spa.spa_hypernets import spa_from_datetime  # pickle
             azimuth_sun, zenith_sun = spa_from_datetime(verbose=False)
             zenith_sun = 180 - zenith_sun
+
+            # Point to the sun
             if pan_ref == 'sun':
                 self.pan_abs += azimuth_sun
+
             if tilt_ref == 'sun':
                 self.tilt_abs += zenith_sun
 
 
 if __name__ == '__main__':
-    # print("Ref     Pan    Tilt")
-    # for ref in range(9):
-    #     print(f"{ref}  -> {Geometry.int_to_reference(ref)}")
+    print("Ref     Pan    Tilt")
+    for ref in range(Geometry.length):
+        print(f"{ref}  -> {Geometry.int_to_reference(ref)}")
 
-    for ref in range(9):
-        reference = Geometry.int_to_reference(ref)
-        geometry = Geometry(ref)
-        print(geometry)
-        geometry.get_absolute_pan_tilt()
-        print(geometry)
+    # for ref in range(9):
+    #     reference = Geometry.int_to_reference(ref)
+    #     geometry = Geometry(ref)
+    #     print(geometry)
+    #     geometry.get_absolute_pan_tilt()
+    #     print(geometry)
