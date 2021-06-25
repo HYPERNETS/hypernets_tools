@@ -97,30 +97,10 @@ def query_position(ser, verbose=False):
     return pan, tilt
 
 
-def move_to(ser, pan, tilt, wait=False, verbose=False): # FIXME : C901 # noqa
-    # offset_pan=0, offset_tilt=-60):
+def move_to(ser, pan, tilt, wait=False, verbose=False):
 
     if ser is None:
         ser = open_serial()
-
-    try:
-        from configparser import ConfigParser
-        config_file = "config_dynamic.ini"
-
-        config = ConfigParser()
-        config.read(config_file)
-        offset_pan = int(config["pantilt"]["offset_pan"])
-        offset_tilt = int(config["pantilt"]["offset_tilt"])
-
-    except Exception as e:
-        print(f"Config Error : {e}")
-
-    print(f"offset_tilt : {offset_tilt}")
-    print(f"offset_pan: {offset_pan}")
-
-    # Orientation
-    pan -= offset_pan
-    tilt -= offset_tilt
 
     # Conversion FIXME : here modulo should fit pan/tilt range specification
     pan, tilt = int(pan*100) % 36000, int(tilt*100) % 36000
@@ -183,7 +163,8 @@ def move_to(ser, pan, tilt, wait=False, verbose=False): # FIXME : C901 # noqa
 def move_to_geometry(geometry, wait=False, verbose=False):
     if geometry.reference == "Sun":
         pass
-    return move_to(None, geometry.pan, geometry.tilt, wait=wait, verbose=verbose)
+    return move_to(None, geometry.pan_abs, geometry.tilt_abs, wait=wait,
+                   verbose=verbose)
 
 
 def open_serial():
@@ -210,7 +191,7 @@ if __name__ == '__main__':
 
     parser = ArgumentParser()
 
-    # TODO add only request pan tilt
+    # TODO add only request pan or tilt
     # mode = parser.add_mutually_exclusive_group(required=True)
 
     parser.add_argument("-p", "--pan", type=restricted_float,

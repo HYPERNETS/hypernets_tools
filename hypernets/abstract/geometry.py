@@ -1,5 +1,6 @@
 
 class Geometry(object):
+    # FIXME : some constant should be here
     ref_to_int = dict()
 
     ref_to_int['sun'] = 0
@@ -22,11 +23,14 @@ class Geometry(object):
         self.pan = float(pan)
         self.tilt = float(tilt)
         self.flags = flags
+        self.pan_abs = 0
+        self.tilt_abs = 0
 
     def __str__(self):
         ref_pan, ref_tilt = Geometry.int_to_reference(self.reference)
-        str_output = f"{self.pan} ({ref_pan}) ; {self.tilt} ({ref_tilt})"
-        str_output += f"{self.flags}"
+        str_output = f"{self.pan:.2f} ({ref_pan}) ; {self.tilt:.2f} ({ref_tilt})" # noqa
+        str_output += f" --> [{self.pan_abs:.2f} ; {self.tilt_abs:.2f}]"
+        str_output += f" -- {self.flags}"
         return str_output
 
     @classmethod
@@ -60,12 +64,51 @@ class Geometry(object):
 
         return block_position
 
+    def get_absolute_pan_tilt(self):
+
+        self.pan_abs, self.tilt_abs = self.pan, self.tilt
+
+        pan_ref, tilt_ref = Geometry.int_to_reference(self.reference)
+
+        # Get offset values
+        if 'sun' in [pan_ref, tilt_ref] or 'hyp' in [pan_ref, tilt_ref]:
+            try:
+                from configparser import ConfigParser
+                config_file = "config_dynamic.ini"
+                config = ConfigParser()
+                config.read(config_file)
+                offset_pan = int(config["pantilt"]["offset_pan"])
+                offset_tilt = int(config["pantilt"]["offset_tilt"])
+
+            except Exception as e:
+                print(f"Config Error : {e}")
+
+            # Orientation
+            if pan_ref in ['sun', 'hyp']:
+                self.pan_abs -= offset_pan
+
+            if tilt_ref in ['sun', 'hyp']:
+                self.tilt_abs -= offset_tilt
+
+        # Get sun position
+        if 'sun' in [pan_ref, tilt_ref]:
+            from hypernets.spa.spa_hypernets import spa_from_datetime  # pickle
+            azimuth_sun, zenith_sun = spa_from_datetime(verbose=False)
+            zenith_sun = 180 - zenith_sun
+            if pan_ref == 'sun':
+                self.pan_abs += azimuth_sun
+            if tilt_ref == 'sun':
+                self.tilt_abs += zenith_sun
+
 
 if __name__ == '__main__':
+    # print("Ref     Pan    Tilt")
+    # for ref in range(9):
+    #     print(f"{ref}  -> {Geometry.int_to_reference(ref)}")
 
-    # geometry = Geometry.reference_to_int('sun', 'hyp')
-    # print(geometry)
-
-    print("Ref     Pan    Tilt")
     for ref in range(9):
-        print(f"{ref}  -> {Geometry.int_to_reference(ref)}")
+        reference = Geometry.int_to_reference(ref)
+        geometry = Geometry(ref)
+        print(geometry)
+        geometry.get_absolute_pan_tilt()
+        print(geometry)

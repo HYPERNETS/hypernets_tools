@@ -28,6 +28,9 @@ def spa_from_datetime(now=datetime.utcnow(), verbose=False):
                    pressure=820,
                    temperature=11,
                    delta_t=67)
+    if verbose:
+        print(f"Sun Position  (azimuth : {spa['azimuth']:.2f}, "
+              f"zenith : {spa['zenith']:.2f})")
 
     return spa['azimuth'], spa['zenith']
 

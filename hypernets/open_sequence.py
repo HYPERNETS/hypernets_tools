@@ -15,7 +15,7 @@ from hypernets.scripts.libhypstar.python.hypstar_wrapper import HypstarLogLevel
 
 
 def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
-        instrument_loglevel, instrument_standalone=False,
+        instrument_loglvl, instrument_standalone=False,
         DATA_DIR="DATA"): # FIXME : # noqa C901
 
     protocol = Protocol(sequence_file)
@@ -38,8 +38,6 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     if not instrument_standalone:
         from hypernets.scripts.pan_tilt import move_to_geometry
         from hypernets.yocto.meteo import get_meteo # noqa
-        from hypernets.spa.spa_hypernets import spa_from_datetime, \
-            spa_from_gps
 
         # mkdir(path.join(DATA_DIR, seq_name, "METEO"))
         # Write one line meteo file
@@ -53,16 +51,15 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                 meteo_data.write(e)
 
     if instrument_standalone:
-        instrument_instance = HypstarHandler(instrument_loglevel=instrument_loglevel,  # noqa
-                                             instrument_baudrate=instrument_br,
-                                             instrument_port=instrument_port,
-                                             expect_boot_packet=False)
+        except_boot = False
 
     else:
-        instrument_instance = HypstarHandler(instrument_loglevel=instrument_loglevel,  # noqa
-                                             instrument_baudrate=instrument_br,
-                                             instrument_port=instrument_port,
-                                             expect_boot_packet=True)
+        except_boot = True
+
+    instrument_instance = HypstarHandler(instrument_loglevel=instrument_loglvl,
+                                         instrument_baudrate=instrument_br,
+                                         instrument_port=instrument_port,
+                                         expect_boot_packet=except_boot)
     # Useless ?
     # instrument, visible, swir = instrument_instance.get_serials()
     # print(f"SN : * instrument -> {instrument}")
@@ -88,6 +85,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     for i, (geometry, requests) in enumerate(protocol, start=1):
         print(f"== [Line {i}] " + 60*"=")
         if not instrument_standalone:
+            geometry.get_absolute_pan_tilt()
             print(f"--> Requested Position : {geometry}")
             try:
                 pan_real, tilt_real = move_to_geometry(geometry, wait=True,
@@ -219,4 +217,4 @@ if __name__ == '__main__':
     run_sequence_file(args.file,
                       instrument_standalone=args.noyocto,
                       instrument_port=args.port, instrument_br=args.baudrate,
-                      instrument_loglevel=HypstarLogLevel[args.loglevel.upper()]) # noqa
+                      instrument_loglvl=HypstarLogLevel[args.loglevel.upper()])

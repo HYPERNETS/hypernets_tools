@@ -23,7 +23,7 @@ class Protocol(list[(Geometry, list[Request])]):
 
         protocol_str = "\n"
         for i, (geometry, request) in enumerate(self, start=1):
-            protocol_str += f"{i}, {geometry}, {request}\n"
+            protocol_str += f"[{i}] {geometry}\n\t{request}\n\n"
 
         return f"==== Protocol version : {self.version} ====\n" + \
             "-"*len(self.name) + f"\n{self.name}\n" + "-"*len(self.name) + \
