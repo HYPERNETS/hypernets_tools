@@ -1,0 +1,50 @@
+HypernetsProtocol v2.0
+
+@[ 90.0, sun, 180.0, hyper ]
+	+ 3.vnir.irr.256.0 + 3.vnir.dark.0.0 + 1.picture
+	+ 3.vnir.rad.128.0 + 3.vnir.dark.0.0
+	
+@[ 90.0, sun, 160.0, hyper ]
+	+ 3.vnir.rad.128.0 + 3.vnir.dark.0.0 + 1.picture
+
+@[ 90.0, sun, 140.0, hyper ]
+	+ 3.vnir.rad.128.0 + 3.vnir.dark.0.0 + 1.picture
+
+@[ 90.0, sun, 120.0, hyper ]
+	+ 3.vnir.rad.128.0 + 3.vnir.dark.0.0 + 1.picture
+
+@[ 90.0, sun, 100.0, hyper ]
+	+ 3.vnir.rad.128.0 + 3.vnir.dark.0.0 + 1.picture
+
+@[ 90.0, sun, 40.0, hyper ]
+	+ 3.vnir.rad.128.0 + 3.vnir.dark.0.0 + 1.picture
+
+@[ 10.0, sun, 60.0, hyper ]
+	+ 3.vnir.rad.128.0 + 3.vnir.dark.0.0 + 1.picture
+
+@[ 10.0, sun, 20.0, hyper ]
+	+ 3.vnir.rad.128.0 + 3.vnir.dark.0.0 + 1.picture
+
+@[ 10.0, sun, 10.0, hyper ]
+	+ 3.vnir.rad.128.0 + 3.vnir.dark.0.0 + 1.picture
+
+@[ 10.0, sun, 0.0, hyper ]
+	+ 3.vnir.rad.128.0 + 3.vnir.dark.0.0 + 1.picture
+
+@[ 10.0, sun, 100.0, hyper ]
+	+ 3.vnir.rad.128.0 + 3.vnir.dark.0.0 + 1.picture
+
+@[ 10.0, sun, 120.0, hyper ]
+	+ 3.vnir.rad.128.0 + 3.vnir.dark.0.0 + 1.picture
+
+@[ 10.0, sun, 140.0, hyper ]
+	+ 3.vnir.rad.128.0 + 3.vnir.dark.0.0 + 1.picture
+
+@[ 10.0, sun, 160.0, hyper ]
+	+ 3.vnir.rad.128.0 + 3.vnir.dark.0.0 + 1.picture
+
+@[ 10.0, sun, 180.0, hyper ]
+	+ 3.vnir.rad.128.0 + 3.vnir.dark.0.0 + 1.picture
+	+ 3.vnir.irr.256.0 + 3.vnir.dark.0.0
+
+@[ 0.0, hyper, 0.0, hyper ]

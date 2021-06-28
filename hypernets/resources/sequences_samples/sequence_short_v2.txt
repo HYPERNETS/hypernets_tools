@@ -1,10 +1,17 @@
 HypernetsProtocol v2.0
 
-# Irradiance Sky (Ed)
-@[ 90.0, sun, 180.0, hyper, #2, #1 ]
-	+ 3.vnir.irr.64.0
-	+ 3.vnir.dark.64.0
+~ #firstLessThanOneSec := $file1.swir_it <= 1024
+~ #secondMoreLessThanTwo := $file2.vnir_it <= 2048
+~ #ifEnoughTime := $elapsed_time < 60s
+
+# Irradiance VNIR and Radiance BOTH - AIT
+@[ 90.0, sun, 180.0, hyper, #notDefinedFlag ]
+	+ 3.vnir.irr.0.0
+	+ 1.both.rad.0.0
+
+# Picture Sun
+@[ 0.0, sun, 0.0, sun, #ifEnoughTime ] 
 	+ 1.picture
 
 # Park
-@[ 0.0, hyper, 0.0, hyper ]
+@[ 0.0, sun, 0.0, hyper ]
