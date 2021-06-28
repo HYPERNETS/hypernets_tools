@@ -27,8 +27,8 @@ class FramePanTilt(LabelFrame):
                             format="%.1f", increment=0.1, wrap=True)
         # ---------------------------------------------------------------------
         self.reference = Combobox(self)
-        geom = [Geometry.int_to_reference(i) for i in range(Geometry.length)]
-        self.reference['values'] = geom
+        _ = [Geometry.int_to_reference(i) for i in range(Geometry.length)]
+        self.reference['values'] = _
         self.reference.current(8)
 
         # ---------------------------------------------------------------------

@@ -25,4 +25,4 @@ HypernetsProtocol v2.0
 @[ 0.0, sun, 0.0, sun ] + 1.picture
 
 # Park
-@[ 0.0, hyper, 0.0, hyper ]
+@[ 0.0, sun, 0.0, hyper ]

@@ -3,7 +3,7 @@ class Geometry(object):
 
     length = 9
 
-    # FIXME : some constant should be here
+    # FIXME : some constant should be here ?
     ref_to_int = dict()
 
     ref_to_int['sun'] = 0

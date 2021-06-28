@@ -89,7 +89,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             print(f"--> Requested Position : {geometry}")
             try:
                 pan_real, tilt_real = move_to_geometry(geometry, wait=True,
-                                                       verbose=True)
+                                                       verbose=False)
                 pan_real = float(pan_real) / 100
                 tilt_real = float(tilt_real) / 100
                 print(f"--> final pan : {pan_real} ; final tilt : {tilt_real}")
