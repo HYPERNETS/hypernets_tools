@@ -59,6 +59,9 @@ class Protocol(list[(Geometry, list[Request])]):
         def split_measurement(line):
             return [e for e in split(r"\.", line) if e]
 
+        def split_flag_definition(line):
+            return [e for e in split(r"~|:=", line) if e]
+
         # Split line with '+' as separation character
         for line in split_lines(lines):
 
@@ -81,6 +84,10 @@ class Protocol(list[(Geometry, list[Request])]):
                     cur_geo = Geometry(reference, pan, tilt, flags=flags)
                     self.append((cur_geo, list()))
 
+                elif line[0] == "~":
+                    print(f"New flag definition : {line}")
+                    print(split_flag_definition(line))
+
                 # New Request : Measurement or Picture
                 else:
                     request = Request.from_params(*split_measurement(line))
@@ -91,9 +98,9 @@ class Protocol(list[(Geometry, list[Request])]):
             for request in request_list:
                 if request.radiometer == RadiometerType.SWIR or\
                         request.radiometer == RadiometerType.BOTH:
-                    print("Note : This protocol has SWIR request")
+                    print("Note : This protocol has SWIR request\n")
                     return True
-        print("Note : This protocol doesn't have SWIR request")
+        print("Note : This protocol doesn't have SWIR request\n")
         return False
 
     @staticmethod
