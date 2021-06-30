@@ -22,14 +22,12 @@ def make_datetime_name(extension=".jpg"):  # todo : move to virtual
 
 class HypstarHandler(Hypstar):
     def __init__(self, instrument_port="/dev/radiometer0", # noqa : C901
-                 instrument_baudrate=3000000,
-                 instrument_loglevel=3,
-                 expect_boot_packet=True):
+                 instrument_baudrate=3000000, instrument_loglevel=3,
+                 expect_boot_packet=True, boot_timeout=30):
 
         # self.last_it_swir = None
         # self.last_it_vnir = None
 
-        boot_timeout = 17  # TODO : static config ?
         if expect_boot_packet and not wait_for_instrument(instrument_port, boot_timeout): # noqa
             # just in case instrument sent BOOTED packet while we were
             # switching baudrates, let's test if it's there

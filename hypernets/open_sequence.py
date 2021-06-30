@@ -13,10 +13,9 @@ from hypernets.scripts.hypstar_handler import HypstarHandler
 from hypernets.scripts.libhypstar.python.hypstar_wrapper import HypstarLogLevel
 
 
-
 def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
-        instrument_loglvl, instrument_standalone=False,
-        DATA_DIR="DATA"): # FIXME : # noqa C901
+                      instrument_loglvl, instrument_boot_timeout,
+                      instrument_standalone=False, DATA_DIR="DATA"):
 
     protocol = Protocol(sequence_file)
     print(protocol)
@@ -59,7 +58,8 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     instrument_instance = HypstarHandler(instrument_loglevel=instrument_loglvl,
                                          instrument_baudrate=instrument_br,
                                          instrument_port=instrument_port,
-                                         expect_boot_packet=except_boot)
+                                         expect_boot_packet=except_boot,
+                                         boot_timeout=instrument_boot_timeout)
     # Useless ?
     # instrument, visible, swir = instrument_instance.get_serials()
     # print(f"SN : * instrument -> {instrument}")
@@ -210,11 +210,16 @@ if __name__ == '__main__':
                         help="Serial port baud rate used for communications with instrument", # noqa
                         default=3000000)
 
+    parser.add_argument("-t", "--timeout", type=int,
+                        help="Boot timeout for the instrument",
+                        default=30)
+
     args = parser.parse_args()
 
     print(80*"-" + f"\n{args}\n" + 80*"-")
 
     run_sequence_file(args.file,
-                      instrument_standalone=args.noyocto,
                       instrument_port=args.port, instrument_br=args.baudrate,
-                      instrument_loglvl=HypstarLogLevel[args.loglevel.upper()])
+                      instrument_loglvl=HypstarLogLevel[args.loglevel.upper()],
+                      instrument_boot_timeout=args.timeout,
+                      instrument_standalone=args.noyocto)

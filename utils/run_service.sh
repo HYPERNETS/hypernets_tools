@@ -30,6 +30,7 @@ baudrate=$(parse_config "baudrate" config_static.ini)
 hypstarPort=$(parse_config "'hypstar_port" config_static.ini)
 bypassYocto=$(parse_config "bypass_yocto" config_static.ini)
 loglevel=$(parse_config "loglevel" config_static.ini)
+bootTimeout=$(parse_config "boot_timeout" config_static.ini)
 
 startSequence=$(parse_config "start_sequence" config_dynamic.ini)
 
@@ -51,6 +52,10 @@ if [[ -n $loglevel ]] ; then
 	extra_args="$extra_args -l $loglevel"
 fi
 
+if [[ -n $bootTimeout ]] ; then
+	extra_args="$extra_args -t $bootTimeout"
+fi
+
 # Ensure Yocto is online
 if [[ "$bypassYocto" == "no" ]] ; then
 	yoctopuceIP=$(parse_config "yoctopuce_ip" config_static.ini)
@@ -62,8 +67,6 @@ if [[ "$bypassYocto" == "no" ]] ; then
 	echo "Ok !"
 
 	python -m hypernets.yocto.relay -son -n2 -n3
-	#  echo "Sleeping 17s... (old firmware issue)"
-	#  sleep 17
 
 else
 	echo "Bypassing Yocto"
