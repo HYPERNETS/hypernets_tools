@@ -18,6 +18,7 @@ webcam_site = user:pass@ip_cam_site
 
 [hypstar]
 hypstar_port = /dev/radiometer0
+boot_timeout = 30
 # supported rates are: 115200, 460800, 921600, 3000000, 6000000, 8000000
 baudrate = 3000000
 # supported levels are: ERROR (only errors are reported on stderr); 
