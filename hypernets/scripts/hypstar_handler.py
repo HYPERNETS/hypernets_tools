@@ -192,27 +192,6 @@ class HypstarHandler(Hypstar):
         return rad, ent
 
 
-# FIXME : write more generic function (refactor with take_spectra)
-# def _cli_extra_parser(args):
-#     if args.picture:
-#         take_picture(path_to_file=args.output)
-#     else:
-#         if args.radiometer == 'vnir':
-#             mode = "vis"
-#         elif args.radiometer == 'swir':
-#             mode = "swi"
-#         elif args.radiometer == 'both':
-#             mode = "bot"
-#
-#         if args.entrance == 'dark':
-#             action = 'bla'
-#         else:
-#             action = args.entrance
-#
-#         take_spectra(None, args.output, mode, action,
-#                      args.it_vnir, args.it_swir, args.count)
-
-
 if __name__ == '__main__':
 
     parser = ArgumentParser()
@@ -252,4 +231,14 @@ if __name__ == '__main__':
     if args.entrance and not args.radiometer:
         parser.error(f"Please select a radiometer for {args.entrance}.")
 
-#    _cli_extra_parser(args)
+    # TODO : more args for hypstar options ? (i.e. : baudate, etc..)
+    instrument_instance = HypstarHandler(expect_boot_packet=False)
+
+    if args.picture:
+        instrument_instance.take_picture()
+        exit(0)
+
+    from hypernets.abstract.request import Request
+    measurement = args.radiometer, args.entrance, args.it_vnir, args.it_swir
+    request = Request.from_params(args.count, *measurement)
+    instrument_instance.take_spectra(request)
