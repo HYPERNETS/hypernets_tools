@@ -1,8 +1,8 @@
 
 from argparse import ArgumentParser
 
-from time import sleep  # noqa
 from datetime import datetime
+from time import time
 from os import mkdir, replace, path
 
 from hypernets.abstract.protocol import Protocol
@@ -26,6 +26,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     if not path.exists(DATA_DIR):  # TODO move management of output folder
         mkdir(DATA_DIR)
 
+    start_time = time()  # for ellapsed time
     start = datetime.utcnow()  # start = datetime.now()
     seq_name = Protocol.create_seq_name(now=start, prefix="CUR")
     mkdir(path.join(DATA_DIR, seq_name))
@@ -84,6 +85,9 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     iter_line, nb_error = 0, 0
     for i, (geometry, requests) in enumerate(protocol, start=1):
         print(f"== [Line {i}] " + 60*"=")
+        print(f"{geometry.flags}")
+        print(f"Ellapsed time : {time()-start_time}")
+
         if not instrument_standalone:
             geometry.get_absolute_pan_tilt()
             print(f"--> Requested Position : {geometry}")

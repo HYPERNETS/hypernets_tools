@@ -9,6 +9,8 @@ class Protocol(list[(Geometry, list[Request])]):
     def __init__(self, filename):
         self.name = filename
         self.version = None
+        self.flags = dict()
+        self.start_time = None
 
         with open(filename, 'r') as fd:
             first_line = fd.readline()
@@ -25,9 +27,22 @@ class Protocol(list[(Geometry, list[Request])]):
         for i, (geometry, request) in enumerate(self, start=1):
             protocol_str += f"[{i}] {geometry}\n\t{request}\n\n"
 
+        flags_str = "\n" + "Defined flags : "
+        for flag, definition in self.flags.items():
+            flags_str += f"{flag} := {definition}\n\t\t"
+
         return f"==== Protocol version : {self.version} ====\n" + \
             "-"*len(self.name) + f"\n{self.name}\n" + "-"*len(self.name) + \
-            f"{protocol_str}"
+            f"{protocol_str}" + f"{flags_str}"
+
+    def add_flag(self, flag, definition):
+
+        def split_flag_definition(lines):
+            return [e for e in split(r"(<=|=>|<|>)", definition) if e]
+
+        variable, operator, value = split_flag_definition(flag)
+        print(variable, operator, value)
+        self.flags[flag] = definition
 
     def read_protocol_v1(self, lines):
 
@@ -50,6 +65,7 @@ class Protocol(list[(Geometry, list[Request])]):
 
     def read_protocol_v2(self, lines, print_comment=False):
 
+        # Some regex defintions :
         def split_lines(lines):
             return [e for e in split(r"\+|\n|\t", lines) if e]
 
@@ -59,7 +75,7 @@ class Protocol(list[(Geometry, list[Request])]):
         def split_measurement(line):
             return [e for e in split(r"\.", line) if e]
 
-        def split_flag_definition(line):
+        def split_flag(line):
             return [e for e in split(r"~|:=", line) if e]
 
         # Split line with '+' as separation character
@@ -77,16 +93,16 @@ class Protocol(list[(Geometry, list[Request])]):
                 # Remove spaces
                 line = line.replace(" ", "")
 
+                # New flag Definition
+                if line[0] == "~":
+                    self.add_flag(*split_flag(line))
+
                 # New Geometry
-                if line[0] == "@":
+                elif line[0] == "@":
                     pan, ref_p, tilt, ref_t, *flags = split_geometry(line)
                     reference = Geometry.reference_to_int(ref_p, ref_t)
                     cur_geo = Geometry(reference, pan, tilt, flags=flags)
                     self.append((cur_geo, list()))
-
-                elif line[0] == "~":
-                    print(f"New flag definition : {line}")
-                    print(split_flag_definition(line))
 
                 # New Request : Measurement or Picture
                 else:
@@ -115,16 +131,19 @@ if __name__ == '__main__':
                         help="Select a protocol file (txt, csv)")
 
     args = parser.parse_args()
-
     protocol = Protocol(args.filename)
-
     print(protocol)
 
-    # print("-"*80)
-    # for i, (geometry, requests) in enumerate(protocol, start=1):
-    #     print(f"{i}, {geometry}")
-    #     for request in requests:
-    #         print(request.radiometer, request.entrance)
+    for i, (geometry, requests) in enumerate(protocol, start=1):
+        print(f"{i}, {geometry}")
+        for flag in geometry.flags:
+            try:
+                print(protocol.flags[flag])
+            except KeyError:
+                print(f"Error : {flag} must be defined first ! (using ~)")
+
+        # for request in requests:
+        #     print(request.radiometer, request.entrance)
 
     # print("-"*80)
-    protocol.check_if_swir_requested()
+    # protocol.check_if_swir_requested()
