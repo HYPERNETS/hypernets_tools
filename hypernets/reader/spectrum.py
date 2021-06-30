@@ -3,6 +3,9 @@
 from datetime import datetime
 from struct import unpack, calcsize
 
+from hypernets.scripts.libhypstar.python.data_structs.spectrum import \
+    Spectrum as HySpectrum
+
 
 class Spectrum(object):
     def __init__(self, data, verbose=True):
@@ -24,7 +27,7 @@ class Spectrum(object):
         # concat all formats together
         headerFormat = '<' + "".join(fmt for _, fmt, _ in self.headerDef)
 
-        # compute size of the whole header
+        # compute size of the whole header and unpack it
         headerSize = calcsize(headerFormat)
         header = unpack(headerFormat, data[:headerSize])
 
@@ -54,18 +57,8 @@ class Spectrum(object):
 
     @staticmethod
     def read_spectrum_info(spec_type: int):
-        optic = (spec_type >> 3) & 0x03
-        radiometer = (spec_type >> 6) & 0x03
-        entranceType = {0x02: "RADIANCE", 0x01: "IRRADIANCE", 0x00: "DARK"}
-        radiometerType = {0x02: "VIS", 0x01: "SWIR", 0x03: "BOTH"}
-
-        try:
-            spec_type_str = radiometerType[radiometer], entranceType[optic]
-
-        except KeyError:
-            spec_type_str = "Error", "Error"
-
-        return spec_type_str
+        spec_type = HySpectrum.SpectrumHeader.SpectrumType.parse_raw(spec_type)
+        return spec_type.radiometer.name, spec_type.optics.name
 
     @staticmethod
     def read_timestamp(timestamp):
