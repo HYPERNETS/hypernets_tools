@@ -15,7 +15,9 @@ from hypernets.scripts.libhypstar.python.hypstar_wrapper import HypstarLogLevel
 
 def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                       instrument_loglvl, instrument_boot_timeout,
-                      instrument_standalone=False, DATA_DIR="DATA"):
+                      instrument_standalone=False,
+                      instrument_swir_tec=0,
+                      DATA_DIR="DATA"):
 
     protocol = Protocol(sequence_file)
     print(protocol)
@@ -78,9 +80,9 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     # power, one has to remember, that during initial thermal regulation
     # TEC consumes 5x more current + does it for longer.
     if swir_is_requested:
-        # Does the TEC point should be picked from the config instead of
-        # hardcoded ?
-        instrument_instance.set_SWIR_module_temperature(0)
+        print(f"Cooling SWIR module to {instrument_swir_tec}°C...")
+        instrument_instance.set_SWIR_module_temperature(instrument_swir_tec)
+        print("Done!")
 
     iter_line, nb_error = 0, 0
     for i, (geometry, requests) in enumerate(protocol, start=1):
@@ -225,6 +227,10 @@ if __name__ == '__main__':
                         help="Boot timeout for the instrument",
                         default=30)
 
+    parser.add_argument("-T", "--swir-tec", type=int,
+                        help="Thermoelectric Cooler Point for the SWIR module",
+                        default=0)
+
     args = parser.parse_args()
 
     print(80*"-" + f"\n{args}\n" + 80*"-")
@@ -233,4 +239,5 @@ if __name__ == '__main__':
                       instrument_port=args.port, instrument_br=args.baudrate,
                       instrument_loglvl=HypstarLogLevel[args.loglevel.upper()],
                       instrument_boot_timeout=args.timeout,
-                      instrument_standalone=args.noyocto)
+                      instrument_standalone=args.noyocto,
+                      instrument_swir_tec=args.swir_tec)

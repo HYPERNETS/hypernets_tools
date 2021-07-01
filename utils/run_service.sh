@@ -31,6 +31,7 @@ hypstarPort=$(parse_config "'hypstar_port" config_static.ini)
 bypassYocto=$(parse_config "bypass_yocto" config_static.ini)
 loglevel=$(parse_config "loglevel" config_static.ini)
 bootTimeout=$(parse_config "boot_timeout" config_static.ini)
+swirTec=$(parse_config "swir_tec" config_static.ini)
 
 startSequence=$(parse_config "start_sequence" config_dynamic.ini)
 
@@ -54,6 +55,10 @@ fi
 
 if [[ -n $bootTimeout ]] ; then
 	extra_args="$extra_args -t $bootTimeout"
+fi
+
+if [[ -n $swirTec ]] ; then
+	extra_args="$extra_args -T $swirTec"
 fi
 
 # Ensure Yocto is online

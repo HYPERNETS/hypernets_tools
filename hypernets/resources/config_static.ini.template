@@ -25,3 +25,4 @@ baudrate = 3000000
 # INFO (stdout + stderr); DEBUG (driver command execution printout to stdout);
 # TRACE (low level communication bytes are printed to stdout)
 loglevel = ERROR
+swir_tec = 0
