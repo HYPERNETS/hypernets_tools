@@ -1,5 +1,18 @@
 
 class Geometry(object):
+    """
+    Definitions :
+
+        * Absolute : actual geometry of the pan-tilt
+
+        * Hypernets, such as Hypernets(0, 0) = (south, nadir)
+
+        * Sun : such as Sun(0, 0) = point to the sun
+
+        Every relative pan / tilt relative to azimuth / zenith are defined
+        clockwise when positive and counter-clockwise when negative.
+
+    """
 
     length = 9
 
@@ -109,6 +122,7 @@ class Geometry(object):
 
 
 if __name__ == '__main__':
+    print(Geometry.__doc__)
     print("Ref     Pan    Tilt")
     for ref in range(Geometry.length):
         print(f"{ref}  -> {Geometry.int_to_reference(ref)}")

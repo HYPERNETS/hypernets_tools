@@ -1,28 +1,20 @@
 
-from datetime import datetime
+from sys import exit
+
 from argparse import ArgumentParser
 
-from hypernets.scripts.libhypstar.python.hypstar_wrapper import Hypstar, wait_for_instrument # noqa
+from hypernets.abstract.request import Request
 
-from hypernets.scripts.libhypstar.python.data_structs.spectrum_raw import \
-    RadiometerType, RadiometerEntranceType
+from hypernets.scripts.libhypstar.python.hypstar_wrapper import Hypstar, \
+    wait_for_instrument
 
 from hypernets.scripts.libhypstar.python.data_structs.hardware_info import \
     HypstarSupportedBaudRates
 
-from sys import exit
-
-# from hypernets.abstract.request import EntranceExt
-
-
-# TODO : move it to virtual
-def make_datetime_name(extension=".jpg"):  # todo : move to virtual
-    return datetime.utcnow().strftime("%Y%m%dT%H%M%S") + extension
-
 
 class HypstarHandler(Hypstar):
-    def __init__(self, instrument_port="/dev/radiometer0", # noqa : C901
-                 instrument_baudrate=3000000, instrument_loglevel=3,
+    def __init__(self, instrument_port="/dev/radiometer0",
+                 instrument_baudrate=115200, instrument_loglevel=3,
                  expect_boot_packet=True, boot_timeout=30):
 
         # self.last_it_swir = None
@@ -78,7 +70,7 @@ class HypstarHandler(Hypstar):
         # Note : 'params = None' for now, only 5MP is working
         if path_to_file is None:
             from os import path, mkdir
-            path_to_file = make_datetime_name()
+            path_to_file = Request.make_datetime_name()
             if not path.exists("DATA"):
                 mkdir("DATA")
             path_to_file = path.join("DATA", path_to_file)
@@ -112,7 +104,7 @@ class HypstarHandler(Hypstar):
             print(f"Error : {e}")
             return e
 
-    def take_spectra(self, request, path_to_file=None, gui=False):
+    def take_spectra(self, request, path_to_file=None, gui=False, env=False):
 
         # if it_vnir == 0 and ent == RadiometerEntranceType.DARK:
         #     it_vnir == self.last_it_vnir
@@ -124,13 +116,14 @@ class HypstarHandler(Hypstar):
             from os import path, mkdir
             if not path.exists("DATA"):
                 mkdir("DATA")
-            path_to_file = make_datetime_name(extension=".spe")
+            path_to_file = Request.make_datetime_name(extension=".spe")
             path_to_file = path.join("DATA", path_to_file)
 
         try:
-            # get latest environmental log and print it to output log
-            # env_log = self.get_env_log()
-            # print(env_log.get_csv_line(), flush=True)
+            if env:
+                # get latest environmental log and print it to output log
+                env_log = self.get_env_log()
+                print(env_log.get_csv_line(), flush=True)
 
             capture_count = self.capture_spectra(request.radiometer,
                                                  request.entrance,
@@ -180,17 +173,6 @@ class HypstarHandler(Hypstar):
         # return it_vnir, it_swir
         return True
 
-    @staticmethod
-    def mode_action_to_radiance_entrance(mode, action):
-        rad = {'vis': RadiometerType.VIS_NIR, 'swi': RadiometerType.SWIR,
-               'bot': RadiometerType.BOTH}[mode]
-
-        ent = {'rad': RadiometerEntranceType.RADIANCE,
-               'irr': RadiometerEntranceType.IRRADIANCE,
-               'bla': RadiometerEntranceType.DARK}[action]
-
-        return rad, ent
-
 
 if __name__ == '__main__':
 
@@ -238,7 +220,6 @@ if __name__ == '__main__':
         instrument_instance.take_picture()
         exit(0)
 
-    from hypernets.abstract.request import Request
     measurement = args.radiometer, args.entrance, args.it_vnir, args.it_swir
     request = Request.from_params(args.count, *measurement)
     instrument_instance.take_spectra(request)

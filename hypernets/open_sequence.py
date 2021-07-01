@@ -54,7 +54,6 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
     if instrument_standalone:
         except_boot = False
-
     else:
         except_boot = True
 
@@ -69,7 +68,6 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     # print(f"     * visible    -> {visible}")
     # if swir != 0:
     #     print(f"     * swir       -> {swir}")
-    # print(get_csv_header(), flush=True)
 
     mdfile = open(path.join(DATA_DIR, seq_name, "metadata.txt"), "w")
     mdfile.write(parse_config_metadata())

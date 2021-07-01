@@ -1,5 +1,8 @@
 
+
 from enum import IntEnum
+
+from datetime import datetime
 
 from hypernets.scripts.libhypstar.python.data_structs.spectrum_raw import \
     RadiometerType, RadiometerEntranceType
@@ -105,6 +108,7 @@ class Request(object):
                          RadiometerEntranceType.IRRADIANCE: 0x08,
                          EntranceExt.PICTURE: 0x02,
                          EntranceExt.NONE: 0x03}
+
         # EntranceExt.CALIBRATION: 0x01,
 
         spectra_name = '_'
@@ -120,3 +124,7 @@ class Request(object):
         spectra_name += '_'
         spectra_name += "{:0=4d}".format(self.total_measurement_time)
         return spectra_name
+
+    @staticmethod
+    def make_datetime_name(extension=".jpg"):
+        return datetime.utcnow().strftime("%Y%m%dT%H%M%S") + extension
