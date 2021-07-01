@@ -175,31 +175,12 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         instrument_instance.shutdown_SWIR_module_thermal_control()
 
 #        if not instrument_standalone:
-#            if ref == "sun":
-#                try:
-#                azimuth_sun, zenith_sun = spa_from_gps()
-#                    except Exception as e:
-#                        print(f"Error : {e}")
-#                        azimuth_sun, zenith_sun = spa_from_datetime()
-#
-#                    print(f"--> Sun Position  (azimuth : {azimuth_sun:.2f}, "
-#                          f"zenith : {zenith_sun:.2f})")
-#
-#                    if pan == -1 and tilt == -1:
-#                        print("--> Special position : point to the sun")
-#                        pan = azimuth_sun
-#                        tilt = 180 - zenith_sun
-#
-#                    else:
 #                        if azimuth_sun <= 180:
 #                            print(" -- Morning : +90 (=clockwise)")
 #                            pan = azimuth_sun + pan  # clockwise
 #                        else:
 #                            print(" -- Afternoon : -90 (=counter-clockwise)")
 #                            pan = azimuth_sun - pan  # clockwise
-#
-#                    print(f"--> Converted Position (pan : {pan:.2f} / {ref} ;"
-#                          f"tilt :{tilt:.2f})")
 #
 #                mdfile.write(f"pt_abs={pan:.2f}; {tilt:.2f}\n")
 #
