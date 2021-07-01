@@ -1,5 +1,7 @@
 
 from re import split
+from operator import le, ge, lt, gt
+
 from hypernets.abstract.geometry import Geometry
 from hypernets.abstract.request import Request
 from hypernets.scripts.libhypstar.python.data_structs.spectrum_raw import RadiometerType # noqa
@@ -10,7 +12,6 @@ class Protocol(list[(Geometry, list[Request])]):
         self.name = filename
         self.version = None
         self.flags = dict()
-        self.start_time = None
 
         with open(filename, 'r') as fd:
             first_line = fd.readline()
@@ -28,21 +29,23 @@ class Protocol(list[(Geometry, list[Request])]):
             protocol_str += f"[{i}] {geometry}\n\t{request}\n\n"
 
         flags_str = "\n" + "Defined flags : "
-        for flag, definition in self.flags.items():
-            flags_str += f"{flag} := {definition}\n\t\t"
+        for flag, (var, op, val) in self.flags.items():
+            flags_str += f"{flag} := {var} [{op.__name__}] {val}\n\t\t"
 
         return f"==== Protocol version : {self.version} ====\n" + \
             "-"*len(self.name) + f"\n{self.name}\n" + "-"*len(self.name) + \
             f"{protocol_str}" + f"{flags_str}"
 
     def add_flag(self, flag, definition):
-
-        def split_flag_definition(lines):
-            return [e for e in split(r"(<=|=>|<|>)", definition) if e]
-
-        variable, operator, value = split_flag_definition(flag)
-        print(variable, operator, value)
-        self.flags[flag] = definition
+        # We understand formal expressions such as : variable [operator] value.
+        def split_flag_definition(definition):
+            # with the following operators :
+            operators = {"<=": le, "=>": ge, "<": lt, ">": gt}
+            regex = r'|'.join(operators.keys())
+            var, op, value = [e for e in split(f"({regex})", definition) if e]
+            return var, operators[op], int(value)
+        # variable, operator, value =
+        self.flags[flag] = split_flag_definition(definition)
 
     def read_protocol_v1(self, lines):
 
@@ -133,17 +136,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     protocol = Protocol(args.filename)
     print(protocol)
+    protocol.check_if_swir_requested()
 
-    for i, (geometry, requests) in enumerate(protocol, start=1):
-        print(f"{i}, {geometry}")
-        for flag in geometry.flags:
-            try:
-                print(protocol.flags[flag])
-            except KeyError:
-                print(f"Error : {flag} must be defined first ! (using ~)")
-
-        # for request in requests:
-        #     print(request.radiometer, request.entrance)
-
+    # for i, (geometry, requests) in enumerate(protocol, start=1):
+    #      for request in requests:
+    #          print(request.radiometer, request.entrance)
     # print("-"*80)
-    # protocol.check_if_swir_requested()

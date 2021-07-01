@@ -129,8 +129,8 @@ class HypstarHandler(Hypstar):
 
         try:
             # get latest environmental log and print it to output log
-            env_log = self.get_env_log()
-            print(env_log.get_csv_line(), flush=True)
+            # env_log = self.get_env_log()
+            # print(env_log.get_csv_line(), flush=True)
 
             capture_count = self.capture_spectra(request.radiometer,
                                                  request.entrance,

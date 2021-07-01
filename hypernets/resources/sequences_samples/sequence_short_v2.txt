@@ -1,11 +1,11 @@
 HypernetsProtocol v2.0
 
 ~ #firstLessThanOneSec := $file1.swir_it <= 1024
-~ #ifEnoughTime := $elapsed_time < 60
+~ #ifEnoughTime := $elapsed_time > 4
 
 @[ 90.0, sun, 180.0, hyper, #notDefinedFlag, #ifEnoughTime]
-	+ 3.vnir.irr.0.0
-	+ 1.both.rad.0.0
+	+ 3.vnir.irr.1024.0
+	+ 1.vnir.rad.1024.0
 
 # Park
 @[ 0.0, sun, 0.0, hyper, #firstLessThanOneSec]

@@ -27,6 +27,8 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         mkdir(DATA_DIR)
 
     start_time = time()  # for ellapsed time
+    flags_dict = {}
+
     start = datetime.utcnow()  # start = datetime.now()
     seq_name = Protocol.create_seq_name(now=start, prefix="CUR")
     mkdir(path.join(DATA_DIR, seq_name))
@@ -85,9 +87,32 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     iter_line, nb_error = 0, 0
     for i, (geometry, requests) in enumerate(protocol, start=1):
         print(f"== [Line {i}] " + 60*"=")
-        print(f"{geometry.flags}")
-        print(f"Ellapsed time : {time()-start_time}")
+        print(f"--> {len(geometry.flags)} flags for this geometry")
+        flag_condition = False
+        for j, flag in enumerate(geometry.flags, start=1):
+            try:
 
+                variable, operator, value = protocol.flags[flag]
+                print(f" {j}) {variable} [{operator.__name__}] {value}")
+
+                flags_dict["$elapsed_time"] = time() - start_time
+
+                print(f"  - Elapsed time : {flags_dict['$elapsed_time']:.2f}s")
+
+                try:
+                    flag_condition = operator(flags_dict[variable], value)
+
+                except Exception as e:
+                    print(f" {j}) Error : {e}")
+
+            except KeyError:
+                print(f" {j}) Error : {flag} must be defined first !")
+
+        if flag_condition:
+            print(f"--> Skipping this Geometry because of the flag : {flag}")
+            continue
+
+        print("-"*72)
         if not instrument_standalone:
             geometry.get_absolute_pan_tilt()
             print(f"--> Requested Position : {geometry}")
@@ -97,6 +122,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                 pan_real = float(pan_real) / 100
                 tilt_real = float(tilt_real) / 100
                 print(f"--> final pan : {pan_real} ; final tilt : {tilt_real}")
+                print("-"*72)
 
             except TypeError:
                 pan_real, tilt_real = -999, -999
@@ -135,6 +161,9 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             # Write p/t values each blocks for backward compatibility
             mdfile.write(f"pt_ask={geometry.pan:.2f}; {geometry.tilt:.2f}\n")
             # mdfile.write(f"pt_abs={pan:.2f}; {tilt:.2f}\n")
+            # FIXME : quickfix when standalone
+            if instrument_standalone:
+                pan_real, tilt_real = 0.0, 0.0
             mdfile.write(f"pt_ref={pan_real:.2f}; {tilt_real:.2f}\n")
 
     mdfile.close()
@@ -144,7 +173,6 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
     if swir_is_requested is True:
         instrument_instance.shutdown_SWIR_module_thermal_control()
-
 
 #        if not instrument_standalone:
 #            if ref == "sun":
