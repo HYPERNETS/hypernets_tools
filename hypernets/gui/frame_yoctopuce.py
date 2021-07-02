@@ -61,10 +61,13 @@ class FrameYoctopuce(LabelFrame):
         update_gps.grid(column=0, row=0)
         lbl_gps.grid(column=1, row=0, padx=8)
         # ---------------------------------------------------------------------
+        lbl_webpage = Label(self, text="http://10.42.0.196")
+        # ---------------------------------------------------------------------
         connection.grid(column=0, row=0)
         frm_relays.grid(sticky=W, column=0, row=1)
         frm_meteo.grid(sticky=W, column=0, row=2)
         frm_gps.grid(sticky=W, column=0, row=3)
+        lbl_webpage.grid(sticky=W, column=0, row=4)
 
     def callback(self, i):
         if self.relays_states[i-1] is True:
@@ -89,12 +92,10 @@ class FrameYoctopuce(LabelFrame):
     def update_meteo(self):
         meteo_data = get_meteo()
         meteo_data = "   ".join([str(val) + unit for val, unit in meteo_data])
-        print(meteo_data)
         self.meteo_data.set(meteo_data)
 
     def update_gps(self):
         gps_data = get_gps(print_value=False, return_float=False)
-        print(gps_data)
         self.gps_data.set(gps_data)
 
 
