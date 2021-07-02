@@ -106,12 +106,6 @@ class HypstarHandler(Hypstar):
 
     def take_spectra(self, request, path_to_file=None, gui=False, env=False):
 
-        # if it_vnir == 0 and ent == RadiometerEntranceType.DARK:
-        #     it_vnir == self.last_it_vnir
-
-        # if it_swir == 0 and ent == RadiometerEntranceType.DARK:
-        #     it_swir == self.last_it_swir
-
         if path_to_file is None:
             from os import path, mkdir
             if not path.exists("DATA"):
@@ -125,20 +119,18 @@ class HypstarHandler(Hypstar):
                 env_log = self.get_env_log()
                 print(env_log.get_csv_line(), flush=True)
 
-            capture_count = self.capture_spectra(request.radiometer,
-                                                 request.entrance,
-                                                 request.it_vnir,
-                                                 request.it_swir,
-                                                 request.number_cap,
-                                                 request.total_measurement_time) # noqa
+            cap_count = self.capture_spectra(request.radiometer,
+                                             request.entrance,
+                                             request.it_vnir,
+                                             request.it_swir,
+                                             request.number_cap,
+                                             request.total_measurement_time)
 
-            slot_list = self.get_last_capture_spectra_memory_slots(
-                capture_count)
-
+            slot_list = self.get_last_capture_spectra_memory_slots(cap_count)
             cap_list = self.download_spectra(slot_list)
 
             if len(cap_list) == 0:
-                return Exception("Cap list length is zero")
+                return Exception("Cap list length is zero!")
 
             # Concatenation
             spectra = b''
