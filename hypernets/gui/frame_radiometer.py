@@ -11,13 +11,11 @@ from tkinter.messagebox import showerror, showinfo
 
 from hypernets.scripts.hypstar_handler import HypstarHandler
 
+from hypernets.abstract.request import Request
+
 from hypernets.reader.spectrum import Spectrum
 from hypernets.reader.spectra import Spectra, show_interactive_plots
 import matplotlib.pyplot as plt
-
-from datetime import datetime
-
-from os import path, mkdir
 
 
 class FrameRadiometer(LabelFrame):
@@ -27,7 +25,7 @@ class FrameRadiometer(LabelFrame):
 
         self.configure_items_radiometer()
         self.configure_items_output()
-        self.last_spectra_path = None
+        self.last_file_path = None
         self.spectra = None
         self.hypstar = None
 
@@ -56,13 +54,13 @@ class FrameRadiometer(LabelFrame):
         # --------------------------------------------------------------------
         # Objects definitions
         # --------------------------------------------------------------------
-        mode = Combobox(self, width=20, state="readonly",
-                        textvariable=self.radiometer_var[0])
-        mode['values'] = ("VNIR", "SWIR", "BOTH")
+        radiometer = Combobox(self, width=20, state="readonly",
+                              textvariable=self.radiometer_var[0])
+        radiometer['values'] = ("VNIR", "SWIR", "BOTH")
         # --------------------------------------------------------------------
-        action = Combobox(self, width=20, state="readonly",
-                          textvariable=self.radiometer_var[1])
-        action['values'] = ("Irradiance", "Radiance", "Dark", "Picture")
+        entrance = Combobox(self, width=20, state="readonly",
+                            textvariable=self.radiometer_var[1])
+        entrance['values'] = ("Irradiance", "Radiance", "Dark", "Picture")
         # --------------------------------------------------------------------
         IT_vnir = Combobox(self, width=10, values=range_IT, state="readonly",
                            textvariable=self.radiometer_var[2])
@@ -101,15 +99,15 @@ class FrameRadiometer(LabelFrame):
         # --------------------------------------------------------------------
         # Init Values
         # --------------------------------------------------------------------
-        mode.current(0)
-        action.current(0)
+        radiometer.current(0)
+        entrance.current(0)
         IT_vnir.current(0)
         IT_swir.current(0)
         IT_total.current(0)
         resolution.current(0)
         # --------------------------------------------------------------------
-        mode.grid(sticky=E,              column=1, row=0)
-        action.grid(sticky=E,            column=1, row=1)
+        radiometer.grid(sticky=E,              column=1, row=0)
+        entrance.grid(sticky=E,            column=1, row=1)
         IT_vnir.grid(sticky=E,           column=1, row=2)
         IT_swir.grid(sticky=E,           column=1, row=3)
         repeat.grid(sticky=E,            column=1, row=4)
@@ -153,53 +151,27 @@ class FrameRadiometer(LabelFrame):
 
     def general_callback(self, output_dir="DATA"):
 
-        mode, action, vnir, swir, cap_count, total, reso = \
+        # if not path.exists(output_dir):
+        #     mkdir(output_dir)
+
+        radiometer, entrance, it_vnir, it_swir, count, total, reso = \
             [v.get() for v in self.radiometer_var]
 
-        print(mode, action, vnir, swir, cap_count, total, reso)
+        radiometer, entrance = radiometer.lower(), entrance.lower()[:3]
+        it_vnir, it_swir, count = int(it_vnir), int(it_swir), int(count)
+        measurement = radiometer, entrance, it_vnir, it_swir
+        request = Request.from_params(count, *measurement)
 
-        if not path.exists(output_dir):
-            mkdir(output_dir)
-
-        # FIXME import from appropriated module ?
-        output_name = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
         if not self.check_if_hypstar_exists():
             return
 
-        if action == "Picture":
-            output_name += ".jpg"
-            self.hypstar.take_picture(None, path.join(output_dir, output_name))
+        try:
+            self.last_file_path = self.hypstar.take_request(request, gui=True)
+            self.make_output()
+            showinfo("End Acquisition", f"Saved to : {self.last_file_path}")
 
-        elif mode in ['VNIR', 'SWIR', 'BOTH'] and \
-                action in ['Irradiance', 'Radiance', 'Dark']:
-
-            output_name += f"_{mode}"
-            output_name += f"_{action[:3]}"
-            output_name += "_{:0=5d}".format(int(vnir))
-            output_name += "_{:0=5d}".format(int(swir))
-            output_name += "_{:0=2d}".format(int(cap_count))
-            output_name += ".spe"
-
-            # Translation into "sequence file syntax" for radiometer call
-            vnir, swir, cap_count = int(vnir), int(swir), int(cap_count)
-            mode = {"VNIR": "vis", "SWIR": "swi", "BOTH": "bot"}[mode]
-            action = {"Radiance": "rad", "Irradiance": "irr",
-                      "Dark": "bla"}[action]
-
-            output = self.hypstar.take_spectra(path.join(output_dir, output_name),  # noqa
-                                  mode, action, vnir, swir, cap_count,
-                                  gui=True)
-
-            if isinstance(output, Exception):
-                showerror("Error", str(output))
-
-            elif isinstance(output, tuple):
-                print(f"Integration Times : VNIR : {output[0]} ms")
-                print(f"                  : SWIR : {output[1]} ms")
-                self.last_spectra_path = output[2]
-                self.make_output()
-                showinfo("End Acquisition", "Saved to : "
-                         f"{self.last_spectra_path}")
+        except Exception as e:
+            showerror("Error", str(e))
 
     def configure_items_output(self):
         output_frame = LabelFrame(self, text="Output")
@@ -272,22 +244,22 @@ class FrameRadiometer(LabelFrame):
         self.update_output()
 
     def show_plot(self):
-        if self.last_spectra_path is None:
+        if self.last_file_path is None:
             return
         # self.make_output()
         show_interactive_plots(self.spectra)
 
     def make_output(self):
-        if self.last_spectra_path is None:
+        if self.last_file_path is None:
             return
         self.figure, self.axes = plt.subplots()
         plt.subplots_adjust(bottom=0.2)
-        self.spectra = Spectra(self.last_spectra_path, figure=self.figure,
+        self.spectra = Spectra(self.last_file_path, figure=self.figure,
                                axes=self.axes)
         self.update_output()
 
     def update_output(self):
-        if self.last_spectra_path is None:
+        if self.last_file_path is None:
             showerror("Error", "Please take an acquisition")
             return
 

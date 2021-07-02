@@ -7,7 +7,6 @@ from os import mkdir, replace, path
 
 from hypernets.abstract.protocol import Protocol
 from hypernets.abstract.create_metadata import parse_config_metadata
-from hypernets.abstract.request import EntranceExt, RadiometerExt
 
 from hypernets.scripts.hypstar_handler import HypstarHandler
 from hypernets.scripts.libhypstar.python.hypstar_wrapper import HypstarLogLevel
@@ -132,28 +131,16 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             block_position = geometry.create_block_position_name(iter_line)
             now_str = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
 
-            if request.entrance == EntranceExt.PICTURE:
-                filename = block_position + ".jpg"
-                filepath = path.join(DATA_DIR, seq_name, "RADIOMETER", filename)  # noqa
+            filepath = path.join(DATA_DIR, seq_name, "RADIOMETER")
+            filename = request.spectra_name_convention(prefix=block_position)
+            output = path.join(filepath, filename)
 
-                try:
-                    instrument_instance.take_picture(path_to_file=filepath)
-                except Exception as e:
-                    print(f"Error : {e}")
-                    nb_error += 1
-                    filename = "ERR_" + filename
+            try:
+                instrument_instance.take_request(request, path_to_file=output)
 
-            elif request.radiometer != RadiometerExt.NONE:
-                filename = block_position
-                filename += request.spectra_name_convention() + ".spe"
-                filepath = path.join(DATA_DIR, seq_name, "RADIOMETER", filename)  # noqa
-
-                try:
-                    instrument_instance.take_spectra(request, path_to_file=filepath)  # noqa
-                except Exception as e:
-                    print(f"Error : {e}")
-                    nb_error += 1
-                    filename = "ERR_" + filename
+            except Exception as e:
+                print(f"Error : {e}")
+                nb_error += 1
 
             mdfile.write(f"\n[{block_position}]\n")
             mdfile.write(f"{filename}={now_str}\n")
@@ -161,6 +148,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             # Write p/t values each blocks for backward compatibility
             mdfile.write(f"pt_ask={geometry.pan:.2f}; {geometry.tilt:.2f}\n")
             # mdfile.write(f"pt_abs={pan:.2f}; {tilt:.2f}\n")
+
             # FIXME : quickfix when standalone
             if instrument_standalone:
                 pan_real, tilt_real = 0.0, 0.0

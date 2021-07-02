@@ -1,7 +1,5 @@
 
-
 from enum import IntEnum
-
 from datetime import datetime
 
 from hypernets.scripts.libhypstar.python.data_structs.spectrum_raw import \
@@ -91,12 +89,13 @@ class Request(object):
                'irr': RadiometerEntranceType.IRRADIANCE,
                'bla': RadiometerEntranceType.DARK,
                'dark': RadiometerEntranceType.DARK,
+               'dar': RadiometerEntranceType.DARK,
                'pic': EntranceExt.PICTURE,
                'non': EntranceExt.NONE}[action.lower()]
 
         return rad, ent
 
-    def spectra_name_convention(self):
+    def spectra_name_convention(self, prefix=None):
 
         dict_radiometer = {RadiometerExt.NONE: 0x00,
                            RadiometerType.SWIR: 0x40,
@@ -111,7 +110,12 @@ class Request(object):
 
         # EntranceExt.CALIBRATION: 0x01,
 
-        spectra_name = '_'
+        if prefix is None:
+            spectra_name = self.make_datetime_name(extension="")
+
+        else:
+            spectra_name = prefix + '_'
+
         spectra_name += "{:0=3d}".format(int(dict_radiometer[self.radiometer]))
         spectra_name += '_'
         spectra_name += "{:0=2d}".format(int(dict_entrance[self.entrance]))
@@ -123,6 +127,8 @@ class Request(object):
         spectra_name += "{:0=2d}".format(self.number_cap)
         spectra_name += '_'
         spectra_name += "{:0=4d}".format(self.total_measurement_time)
+        spectra_name += ".spe"
+
         return spectra_name
 
     @staticmethod

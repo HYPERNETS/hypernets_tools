@@ -3,7 +3,7 @@ from sys import exit
 
 from argparse import ArgumentParser
 
-from hypernets.abstract.request import Request
+from hypernets.abstract.request import Request, EntranceExt, RadiometerExt
 
 from hypernets.scripts.libhypstar.python.hypstar_wrapper import Hypstar, \
     wait_for_instrument
@@ -16,9 +16,6 @@ class HypstarHandler(Hypstar):
     def __init__(self, instrument_port="/dev/radiometer0",
                  instrument_baudrate=115200, instrument_loglevel=3,
                  expect_boot_packet=True, boot_timeout=30):
-
-        # self.last_it_swir = None
-        # self.last_it_vnir = None
 
         if expect_boot_packet and not wait_for_instrument(instrument_port, boot_timeout): # noqa
             # just in case instrument sent BOOTED packet while we were
@@ -33,6 +30,7 @@ class HypstarHandler(Hypstar):
 
             except Exception as e:
                 print(f"Error : {e}")
+
         else:  # Got the boot packet or boot packet is not expected (gui mode)
             try:
                 super().__init__(instrument_port)
@@ -66,15 +64,26 @@ class HypstarHandler(Hypstar):
             # catch exception
             exit(6)  # SIGABRT
 
-    def take_picture(self, params=None, path_to_file=None, return_stream=False): # noqa
-        # Note : 'params = None' for now, only 5MP is working
+    def take_request(self, request, path_to_file=None, gui=False):
+
         if path_to_file is None:
             from os import path, mkdir
-            path_to_file = Request.make_datetime_name()
+            path_to_file = path.join("DATA", request.spectra_name_convention())
+
             if not path.exists("DATA"):
                 mkdir("DATA")
-            path_to_file = path.join("DATA", path_to_file)
 
+        if request.entrance == EntranceExt.PICTURE:
+            path_to_file += ".jpg"
+            self.take_picture(path_to_file)
+
+        elif request.radiometer != RadiometerExt.NONE:
+            self.take_spectra(request, path_to_file)
+
+        return path_to_file
+
+    def take_picture(self, path_to_file, params=None, return_stream=False):
+        # Note : 'params = None' for now, only 5MP is working
         try:
             self.packet_count = self.capture_JPEG_image(flip=True)
             if not self.packet_count:
@@ -92,27 +101,8 @@ class HypstarHandler(Hypstar):
             print(f"Error : {e}")
             return e
 
-    def get_serials(self):
-        try:
-            print("Getting SN")  # LOGME
-            instrument = self.hw_info.instrument_serial_number
-            visible = self.hw_info.vis_serial_number
-            swir = self.hw_info.swir_serial_number
-            return instrument, visible, swir
-
-        except Exception as e:
-            print(f"Error : {e}")
-            return e
-
-    def take_spectra(self, request, path_to_file=None, gui=False, env=False):
-
-        if path_to_file is None:
-            from os import path, mkdir
-            if not path.exists("DATA"):
-                mkdir("DATA")
-            path_to_file = Request.make_datetime_name(extension=".spe")
-            path_to_file = path.join("DATA", path_to_file)
-
+    def take_spectra(self, request, path_to_file, env=False,
+                     overwrite_IT=True):
         try:
             if env:
                 # get latest environmental log and print it to output log
@@ -136,17 +126,17 @@ class HypstarHandler(Hypstar):
             spectra = b''
             for n, spectrum in enumerate(cap_list):
                 spectra += spectrum.getBytes()
+                print_extra_log = False
+                if print_extra_log:
+                    print(spectrum)
 
-                # # Read ITs :
-                # if spectrum.spectrum_header.spectrum_config.vnir:
-                #     self.last_it_vnir = \
-                #         spectrum.spectrum_header.integration_time_ms
-                #   # print(f"AIT update: {spectrum.radiometer}->{it_vnir} ms")
-                # elif spectrum.spectrum_header.spectrum_config.swir:
-                #     self.last_it_swir = \
-                #         spectrum.spectrum_header.integration_time_ms
-                #   # print(f"AIT update: {spectrum.radiometer}->{it_swir} ms")
-                #     # XXX --> LOG me
+                if overwrite_IT:
+                    if spectrum.spectrum_header.spectrum_config.vnir:
+                        request.it_vnir = \
+                            spectrum.spectrum_header.integration_time_ms
+                    elif spectrum.spectrum_header.spectrum_config.swir:
+                        request.it_swir = \
+                            spectrum.spectrum_header.integration_time_ms
 
             # Save
             with open(path_to_file, "wb") as f:
@@ -158,12 +148,19 @@ class HypstarHandler(Hypstar):
             print(f"Error (in take_spectra): {e}")
             return e
 
-        if gui:
-            # return self.last_it_vnir, self.last_it_swir, path_to_file
-            return None, None, path_to_file
-
-        # return it_vnir, it_swir
         return True
+
+    def get_serials(self):
+        try:
+            print("Getting SN")  # LOGME
+            instrument = self.hw_info.instrument_serial_number
+            visible = self.hw_info.vis_serial_number
+            swir = self.hw_info.swir_serial_number
+            return instrument, visible, swir
+
+        except Exception as e:
+            print(f"Error : {e}")
+            return e
 
 
 if __name__ == '__main__':
