@@ -61,8 +61,8 @@ if [[ -n $swirTec ]] ; then
 	extra_args="$extra_args -T $swirTec"
 fi
 
-# Ensure Yocto is online
 if [[ "$bypassYocto" == "no" ]] ; then
+	# Ensure Yocto is online
 	yoctopuceIP=$(parse_config "yoctopuce_ip" config_static.ini)
 	echo "Waiting for yoctopuce..."
 	while ! timeout 2 ping -c 1 -n $yoctopuceIP &>/dev/null
@@ -110,5 +110,4 @@ exit_actions() {
 }
 
 trap "exit_actions" EXIT
-
 python3 -m hypernets.open_sequence -f $sequence_file $extra_args

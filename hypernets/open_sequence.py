@@ -40,18 +40,19 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
     if not instrument_standalone:
         from hypernets.scripts.pan_tilt import move_to_geometry
-        from hypernets.yocto.meteo import get_meteo # noqa
+        from hypernets.yocto.meteo import get_meteo
 
         # mkdir(path.join(DATA_DIR, seq_name, "METEO"))
         # Write one line meteo file
-        with open(path.join(DATA_DIR, seq_name, "meteo.csv"), "w") as meteo: # noqa
+        with open(path.join(DATA_DIR, seq_name, "meteo.csv"), "w") as meteo:
             try:
                 meteo_data = get_meteo()
-                meteo_data = "; ".join([str(val) + unit for val, unit in meteo_data])  # noqa
+                meteo_data = "; ".join([str(val) + unit
+                                        for val, unit in meteo_data])
                 meteo.write(f"{meteo_data}\n")
 
             except Exception as e:
-                meteo_data.write(e)
+                meteo.write(e)
 
     if instrument_standalone:
         except_boot = False
@@ -74,7 +75,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     mdfile.write(parse_config_metadata())
 
     # Enabling SWIR TEC for the whole sequence is a tradeoff between
-    # current consumption and execution time
+    # current consumption and execution time.
     # Although it would seem that disabling TEC while rotating saves
     # power, one has to remember, that during initial thermal regulation
     # TEC consumes 5x more current + does it for longer.
@@ -85,21 +86,27 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
     iter_line, nb_error = 0, 0
     for i, (geometry, requests) in enumerate(protocol, start=1):
+
+        flags_dict["$elapsed_time"] = time() - start_time
+
         print(f"== [Line {i}] " + 60*"=")
         print(f"--> {len(geometry.flags)} flags for this geometry")
-        flag_condition = False
+        # TODO : LOG
+        # if len(geometry.flags) != 0:
+        #     print("    With :")
+        #     for key, value in flags_dict.items():
+        #         print(f"\t- {key} : {value}")
+
+        flag_condition = True
         for j, flag in enumerate(geometry.flags, start=1):
             try:
-
                 variable, operator, value = protocol.flags[flag]
-                print(f" {j}) {variable} [{operator.__name__}] {value}")
-
-                flags_dict["$elapsed_time"] = time() - start_time
-
-                print(f"  - Elapsed time : {flags_dict['$elapsed_time']:.2f}s")
+                print(f"\n {j}) {variable} [{operator.__name__}] {value}")
 
                 try:
                     flag_condition = operator(flags_dict[variable], value)
+                    print(f" --> {flags_dict[variable]} [{operator.__name__}]"
+                          f" {value} => {flag_condition}")
 
                 except Exception as e:
                     print(f" {j}) Error : {e}")
@@ -107,8 +114,8 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             except KeyError:
                 print(f" {j}) Error : {flag} must be defined first !")
 
-        if flag_condition:
-            print(f"--> Skipping this Geometry because of the flag : {flag}")
+        if not flag_condition:
+            print(f" --> Skipping this Geometry because of the flag : {flag}")
             continue
 
         print("-"*72)
@@ -128,8 +135,11 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
         for request in requests:
             iter_line += 1
+
             block_position = geometry.create_block_position_name(iter_line)
             now_str = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
+
+            print(f"{iter_line}) {request} : {now_str}")
 
             filepath = path.join(DATA_DIR, seq_name, "RADIOMETER")
             filename = request.spectra_name_convention(prefix=block_position)
@@ -142,12 +152,16 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                 print(f"Error : {e}")
                 nb_error += 1
 
+            flags_dict[f"$spectra_file{iter_line}.it_vnir"] = request.it_vnir
+            flags_dict[f"$spectra_file{iter_line}.it_swir"] = request.it_swir
+
             mdfile.write(f"\n[{block_position}]\n")
             mdfile.write(f"{filename}={now_str}\n")
 
             # Write p/t values each blocks for backward compatibility
             mdfile.write(f"pt_ask={geometry.pan:.2f}; {geometry.tilt:.2f}\n")
-            # mdfile.write(f"pt_abs={pan:.2f}; {tilt:.2f}\n")
+            mdfile.write(f"pt_abs={geometry.pan_abs:.2f};"
+                         f"{geometry.tilt_abs:.2f}\n")
 
             # FIXME : quickfix when standalone
             if instrument_standalone:
@@ -163,26 +177,12 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         instrument_instance.shutdown_SWIR_module_thermal_control()
 
 #        if not instrument_standalone:
-#                        if azimuth_sun <= 180:
-#                            print(" -- Morning : +90 (=clockwise)")
-#                            pan = azimuth_sun + pan  # clockwise
-#                        else:
-#                            print(" -- Afternoon : -90 (=counter-clockwise)")
-#                            pan = azimuth_sun - pan  # clockwise
-#
-#                mdfile.write(f"pt_abs={pan:.2f}; {tilt:.2f}\n")
-#
-#                try:
-#                    pan_real, tilt_real = move_to(None, pan, tilt, wait=True,
-#                                                  verbose=False)
-#
-#                    pan_real = float(pan_real) / 100
-#                    tilt_real = float(tilt_real) / 100
-#
-#                except TypeError:
-#                    pan_real, tilt_real = -999, -999
-#                    print(f"--> final pan : {pan_real} ; final tilt : {tilt_real}") #noqa
-#                    mdfile.write(f"pt_ref={pan_real:.2f}; {tilt_real:.2f}\n")
+#            if azimuth_sun <= 180:
+#                print(" -- Morning : +90 (=clockwise)")
+#                pan = azimuth_sun + pan  # clockwise
+#            else:
+#                print(" -- Afternoon : -90 (=counter-clockwise)")
+#                pan = azimuth_sun - pan  # clockwise
 
 
 if __name__ == '__main__':

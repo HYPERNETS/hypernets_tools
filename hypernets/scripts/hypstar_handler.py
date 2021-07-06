@@ -127,6 +127,7 @@ class HypstarHandler(Hypstar):
             for n, spectrum in enumerate(cap_list):
                 spectra += spectrum.getBytes()
                 print_extra_log = False
+
                 if print_extra_log:
                     print(spectrum)
 
