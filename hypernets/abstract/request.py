@@ -111,11 +111,12 @@ class Request(object):
         # EntranceExt.CALIBRATION: 0x01,
 
         if prefix is None:
-            spectra_name = self.make_datetime_name(extension="")
+            prefix = self.make_datetime_name(extension="")
 
-        else:
-            spectra_name = prefix + '_'
+        if self.entrance == EntranceExt.PICTURE:
+            return prefix + ".jpg"
 
+        spectra_name = prefix + '_'
         spectra_name += "{:0=3d}".format(int(dict_radiometer[self.radiometer]))
         spectra_name += '_'
         spectra_name += "{:0=2d}".format(int(dict_entrance[self.entrance]))

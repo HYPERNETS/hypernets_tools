@@ -74,7 +74,6 @@ class HypstarHandler(Hypstar):
                 mkdir("DATA")
 
         if request.entrance == EntranceExt.PICTURE:
-            path_to_file += ".jpg"
             self.take_picture(path_to_file)
 
         elif request.radiometer != RadiometerExt.NONE:

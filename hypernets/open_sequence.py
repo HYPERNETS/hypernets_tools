@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 from datetime import datetime
 from time import time
 from os import mkdir, replace, path
+from shutil import copy
 
 from hypernets.abstract.protocol import Protocol
 from hypernets.abstract.create_metadata import parse_config_metadata
@@ -32,17 +33,21 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
     start = datetime.utcnow()  # start = datetime.now()
     seq_name = Protocol.create_seq_name(now=start, prefix="CUR")
-    mkdir(path.join(DATA_DIR, seq_name))
-    mkdir(path.join(DATA_DIR, seq_name, "RADIOMETER"))
 
-    # XXX Add option to copy the sequence file ?
-    # copy(sequence_file, path.join(DATA_DIR, seq_name, sequence_file))
+    seq_path = path.join(DATA_DIR, seq_name)
+    filepath = path.join(seq_path, "RADIOMETER")
+
+    mkdir(seq_path)
+    mkdir(filepath)
+
+    # XXX Add option to copy
+    copy(sequence_file, path.join(seq_path, path.basename(sequence_file)))
 
     if not instrument_standalone:
         from hypernets.scripts.pan_tilt import move_to_geometry
         from hypernets.yocto.meteo import get_meteo
 
-        # mkdir(path.join(DATA_DIR, seq_name, "METEO"))
+        # mkdir(path.join(seq_path, "METEO"))
         # Write one line meteo file
         with open(path.join(DATA_DIR, seq_name, "meteo.csv"), "w") as meteo:
             try:
@@ -71,7 +76,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     # if swir != 0:
     #     print(f"     * swir       -> {swir}")
 
-    mdfile = open(path.join(DATA_DIR, seq_name, "metadata.txt"), "w")
+    mdfile = open(path.join(seq_path, "metadata.txt"), "w")
     mdfile.write(parse_config_metadata())
 
     # Enabling SWIR TEC for the whole sequence is a tradeoff between
@@ -141,7 +146,6 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
             print(f"{iter_line}) {request} : {now_str}")
 
-            filepath = path.join(DATA_DIR, seq_name, "RADIOMETER")
             filename = request.spectra_name_convention(prefix=block_position)
             output = path.join(filepath, filename)
 
@@ -170,8 +174,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
     mdfile.close()
 
-    replace(path.join(DATA_DIR, seq_name),
-            path.join(DATA_DIR, Protocol.create_seq_name(now=start)))
+    replace(seq_path, path.join(DATA_DIR, Protocol.create_seq_name(now=start)))
 
     if swir_is_requested is True:
         instrument_instance.shutdown_SWIR_module_thermal_control()
