@@ -18,6 +18,7 @@ elevation = 0.0
 # Tilt offset should be positif and < 70
 offset_pan = 0
 offset_tilt = +60
+reverse_tilt = no
 
 
 [metadata]

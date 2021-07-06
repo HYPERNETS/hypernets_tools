@@ -96,18 +96,24 @@ class Geometry(object):
                 config.read(config_file)
                 offset_pan = int(config["pantilt"]["offset_pan"])
                 offset_tilt = int(config["pantilt"]["offset_tilt"])
-                reverse_tilt = config_file["pantilt"]["reverse_tilt"] == "yes"
-                print(reverse_tilt)
+                reverse_tilt = config["pantilt"]["reverse_tilt"] == "yes"
+
+            except KeyError as key:
+                print(f"Warning : {key} default values loaded")
+                reverse_tilt = False
 
             except Exception as e:
                 print(f"Config Error : {e}")
 
+            from operator import neg, pos
+            reverse_tilt = {True: neg, False: pos}[reverse_tilt]
+
             # Orientation
             if pan_ref in ['sun', 'hyp']:
-                self.pan_abs -= offset_pan
+                self.pan_abs -= reverse_tilt(offset_pan)
 
             if tilt_ref in ['sun', 'hyp']:
-                self.tilt_abs -= offset_tilt
+                self.tilt_abs -= reverse_tilt(offset_tilt)
 
         # Get sun position
         if 'sun' in [pan_ref, tilt_ref]:  # pickle me :
@@ -121,6 +127,9 @@ class Geometry(object):
 
             if tilt_ref == 'sun':
                 self.tilt_abs += zenith_sun
+
+        self.tilt_abs = reverse_tilt(self.tilt_abs)
+        self.pan_abs = reverse_tilt(self.pan_abs)
 
 
 if __name__ == '__main__':
