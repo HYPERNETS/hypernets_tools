@@ -29,7 +29,7 @@ webcam_site(){
 	ip_site=$(echo $config_site | cut -d "@" -f2)
 	./webcam_get_image.sh -c "$credent_site" -i "$ip_site" -d "WEBCAM/" -wv
 	echo $PWD
-	python -m hypernets.scripts.relay_command -n5 -soff
+	python -m hypernets.yocto.relay_command -n5 -soff
 	echo "Closing relay 5"
 }
 
@@ -42,15 +42,15 @@ webcam_sky(){
 	echo $PWD
 	./webcam_get_image.sh -c "$credent_sky" -i "$ip_sky" -d "WEBCAM/" -wv
 
-	python -m hypernets.scripts.relay_command -n6 -soff
+	python -m hypernets.yocto.relay_command -n6 -soff
 	echo "Closing relay 6"
 }
 
 echo "Opening relay 5"
-python -m hypernets.scripts.relay_command -n5 -son
+python -m hypernets.yocto.relay_command -n5 -son
 sleep 1
 echo "Opening relay 6"
-python -m hypernets.scripts.relay_command -n6 -son
+python -m hypernets.yocto.relay_command -n6 -son
 
 webcam_sky &
 pid_sky=$!

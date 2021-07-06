@@ -44,7 +44,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     copy(sequence_file, path.join(seq_path, path.basename(sequence_file)))
 
     if not instrument_standalone:
-        from hypernets.scripts.pan_tilt import move_to_geometry
+        from hypernets.geometry.pan_tilt import move_to_geometry
         from hypernets.yocto.meteo import get_meteo
 
         # mkdir(path.join(seq_path, "METEO"))

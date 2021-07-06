@@ -96,6 +96,8 @@ class Geometry(object):
                 config.read(config_file)
                 offset_pan = int(config["pantilt"]["offset_pan"])
                 offset_tilt = int(config["pantilt"]["offset_tilt"])
+                reverse_tilt = config_file["pantilt"]["reverse_tilt"] == "yes"
+                print(reverse_tilt)
 
             except Exception as e:
                 print(f"Config Error : {e}")

@@ -7,7 +7,7 @@ from tkinter import Tk, Button
 from tkinter.ttk import Combobox
 
 from hypernets.abstract.geometry import Geometry
-from hypernets.scripts.pan_tilt import move_to_geometry
+from hypernets.geometry.pan_tilt import move_to_geometry
 
 
 class FramePanTilt(LabelFrame):
