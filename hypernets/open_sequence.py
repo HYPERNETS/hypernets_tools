@@ -9,8 +9,8 @@ from shutil import copy
 from hypernets.abstract.protocol import Protocol
 from hypernets.abstract.create_metadata import parse_config_metadata
 
-from hypernets.scripts.hypstar_handler import HypstarHandler
-from hypernets.scripts.libhypstar.python.hypstar_wrapper import HypstarLogLevel
+from hypernets.hypstar.hypstar_handler import HypstarHandler
+from hypernets.hypstar.libhypstar.python.hypstar_wrapper import HypstarLogLevel
 
 
 def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901

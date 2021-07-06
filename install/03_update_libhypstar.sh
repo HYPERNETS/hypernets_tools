@@ -22,7 +22,7 @@ sudo -u $user git submodule init
 sudo -u $user git submodule update
 
 # Update and Install
-cd hypernets/scripts/libhypstar/
+cd hypernets/hypstar/libhypstar/
 sudo -u $user git checkout main
 sudo -u $user git pull
 sudo -u $user make lib

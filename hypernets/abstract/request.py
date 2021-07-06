@@ -2,7 +2,7 @@
 from enum import IntEnum
 from datetime import datetime
 
-from hypernets.scripts.libhypstar.python.data_structs.spectrum_raw import \
+from hypernets.hypstar.libhypstar.python.data_structs.spectrum_raw import \
     RadiometerType, RadiometerEntranceType
 
 

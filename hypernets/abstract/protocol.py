@@ -4,7 +4,7 @@ from operator import le, ge, lt, gt
 
 from hypernets.abstract.geometry import Geometry
 from hypernets.abstract.request import Request
-from hypernets.scripts.libhypstar.python.data_structs.spectrum_raw import RadiometerType # noqa
+from hypernets.hypstar.libhypstar.python.data_structs.spectrum_raw import RadiometerType # noqa
 
 
 class Protocol(list[(Geometry, list[Request])]):

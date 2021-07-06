@@ -5,10 +5,10 @@ from argparse import ArgumentParser
 
 from hypernets.abstract.request import Request, EntranceExt, RadiometerExt
 
-from hypernets.scripts.libhypstar.python.hypstar_wrapper import Hypstar, \
+from hypernets.hypstar.libhypstar.python.hypstar_wrapper import Hypstar, \
     wait_for_instrument
 
-from hypernets.scripts.libhypstar.python.data_structs.hardware_info import \
+from hypernets.hypstar.libhypstar.python.data_structs.hardware_info import \
     HypstarSupportedBaudRates
 
 

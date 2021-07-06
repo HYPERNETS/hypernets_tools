@@ -9,7 +9,7 @@ from tkinter.ttk import Combobox, Separator
 
 from tkinter.messagebox import showerror, showinfo
 
-from hypernets.scripts.hypstar_handler import HypstarHandler
+from hypernets.hypstar.hypstar_handler import HypstarHandler
 
 from hypernets.abstract.request import Request
 
