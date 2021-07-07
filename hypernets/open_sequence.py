@@ -179,6 +179,8 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     if swir_is_requested is True:
         instrument_instance.shutdown_SWIR_module_thermal_control()
 
+    del instrument_instance
+
 #        if not instrument_standalone:
 #            if azimuth_sun <= 180:
 #                print(" -- Morning : +90 (=clockwise)")
