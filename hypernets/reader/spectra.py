@@ -26,6 +26,8 @@ class Spectra(list[Spectrum]):
 
         self.index = 0
 
+        self.cc = None
+
         # Open the file and create a list of Spectrum
         with open(filename, 'rb') as fd:
             spectra_file = fd.read()
@@ -50,21 +52,49 @@ class Spectra(list[Spectrum]):
 
     def update(self):
         self.current_spectrum = self[self.index]
-        # print(self.current_spectrum)
 
         if self.axes is not None:
             self.axes.clear()
-            self.axes.plot(range(len(self.current_spectrum.counts)),
-                           self.current_spectrum.counts)
+            self.axes.plot(*self.scale_wavelength())
 
-
-            spec_info = Spectrum.read_spectrum_info(self.current_spectrum.spec_type)
+            info = Spectrum.read_spectrum_info(self.current_spectrum.spec_type)
 
             self.axes.set_title(f"Spectrum {self.index+1}/{len(self)}\n"
-                                f"{spec_info[0]} --> {spec_info[1]}")
+                                f"{info[0]} --> {info[1]}")
 
             # self.axes.set_xlabel("")
             self.axes.set_ylabel("Raw Counts")
 
         if self.figure is not None:
             self.figure.canvas.draw()
+
+    def scale_wavelength(self):
+
+        def apply(x, coefs):
+            return sum([k * (x**p) for p, k in enumerate(coefs)])
+
+        if self.cc is None:
+            try:
+                from pickle import load
+                with open("config.dump", 'rb') as conf:
+                    _, self.cc, _ = load(conf)
+                    print(self.cc)
+
+            except Exception as e:
+                print(f"Warning : {e}")
+
+        x = range(len(self.current_spectrum.counts))
+        y = self.current_spectrum.counts
+
+        s_typ, _ = Spectrum.read_spectrum_info(self.current_spectrum.spec_type)
+
+        if self.cc is not None:
+            if s_typ == 'VIS':
+                x = [apply(i, list(self.cc.vnir_wavelength_coefficients)) for i in x] # noqa
+                y = [i/apply(i, list(self.cc.vnir_lin_coefs)) for i in y]
+
+            elif s_typ == 'SWIR':
+                x = [apply(i, list(self.cc.swir_wavelength_coefs)) for i in x]
+                # y = [i/apply(i, vnir_lin) for i in y] ?
+
+        return x, y

@@ -3,7 +3,7 @@
 from datetime import datetime
 from struct import unpack, calcsize
 
-from hypernets.scripts.libhypstar.python.data_structs.spectrum import \
+from hypernets.hypstar.libhypstar.python.data_structs.spectrum import \
     Spectrum as HySpectrum
 
 
