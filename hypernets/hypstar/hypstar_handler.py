@@ -64,6 +64,9 @@ class HypstarHandler(Hypstar):
             # catch exception
             exit(6)  # SIGABRT
 
+        env_log = self.get_env_log()
+        print(env_log)
+
     def take_request(self, request, path_to_file=None, gui=False):
 
         if path_to_file is None:
@@ -100,14 +103,9 @@ class HypstarHandler(Hypstar):
             print(f"Error : {e}")
             return e
 
-    def take_spectra(self, request, path_to_file, env=False,
-                     overwrite_IT=True):
-        try:
-            if env:
-                # get latest environmental log and print it to output log
-                env_log = self.get_env_log()
-                print(env_log.get_csv_line(), flush=True)
+    def take_spectra(self, request, path_to_file, overwrite_IT=True):
 
+        try:
             cap_count = self.capture_spectra(request.radiometer,
                                              request.entrance,
                                              request.it_vnir,
