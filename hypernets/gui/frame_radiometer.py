@@ -106,8 +106,8 @@ class FrameRadiometer(LabelFrame):
         IT_total.current(0)
         resolution.current(0)
         # --------------------------------------------------------------------
-        radiometer.grid(sticky=E,              column=1, row=0)
-        entrance.grid(sticky=E,            column=1, row=1)
+        radiometer.grid(sticky=E,        column=1, row=0)
+        entrance.grid(sticky=E,          column=1, row=1)
         IT_vnir.grid(sticky=E,           column=1, row=2)
         IT_swir.grid(sticky=E,           column=1, row=3)
         repeat.grid(sticky=E,            column=1, row=4)
@@ -143,16 +143,13 @@ class FrameRadiometer(LabelFrame):
         if self.hypstar is None:
             try:
                 self.hypstar = HypstarHandler(expect_boot_packet=False)
+
             except Exception as e:
                 showerror("Error", str(e))
                 return False
-        else:
-            return True
+        return True
 
-    def general_callback(self, output_dir="DATA"):
-
-        # if not path.exists(output_dir):
-        #     mkdir(output_dir)
+    def general_callback(self):
 
         radiometer, entrance, it_vnir, it_swir, count, total, reso = \
             [v.get() for v in self.radiometer_var]
@@ -252,6 +249,7 @@ class FrameRadiometer(LabelFrame):
     def make_output(self):
         if self.last_file_path is None:
             return
+
         self.figure, self.axes = plt.subplots()
         plt.subplots_adjust(bottom=0.2)
         self.spectra = Spectra(self.last_file_path, figure=self.figure,
@@ -265,7 +263,7 @@ class FrameRadiometer(LabelFrame):
 
         current_spectrum = self.spectra.current_spectrum
 
-        self.str_number.set(f"{self.spectra.index + 1}/{len(self.spectra.spectra_list)}")  # noqa
+        self.str_number.set(f"{self.spectra.index + 1}/{len(self.spectra)}")
 
         self.str_lenght.set(f"{current_spectrum.total} bytes"
                             f" ; {current_spectrum.pixel_count} pixels")
