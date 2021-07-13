@@ -1,10 +1,21 @@
 HypernetsProtocol v2.0
 
-~ #firstLessThanOneSec := $file1.swir_it <= 1024
+# Flag definitions :
 
-@[ 90.0, sun, 180.0, hyper]
+~ #firstLessThanFourSec := $spectra_file1.it_vnir <= 4096
+~ #sequenceWasFastEnough := $elapsed_time < 120
+
+
+@[ 90.0, sun, 180.0, hyper ]
 	+ 3.vnir.irr.0.0
 	+ 1.vnir.rad.0.0
 
-# Park
-# @[ 0.0, sun, 0.0, hyper, #firstLessThanOneSec]
+
+# Picture of the Sun only if sequence is < 2 minutes
+@[ 0.0, sun, 0.0, sun, #firstLessThanFourSec ]
+	+ 1.picture
+
+
+# Park only if first integration time is less than 4 second :
+@[ 0.0, sun, 0.0, hyper, #sequenceWasFastEnough ]
+
