@@ -87,7 +87,10 @@ class Geometry(object):
 
         pan_ref, tilt_ref = Geometry.int_to_reference(self.reference)
 
-        # Get offset values
+        # Default values :
+        offset_tilt, offset_tilt, reverse_tilt = 0, 0, False
+
+        # Get offset values :
         if 'sun' in [pan_ref, tilt_ref] or 'hyp' in [pan_ref, tilt_ref]:
             try:
                 from configparser import ConfigParser
@@ -100,7 +103,6 @@ class Geometry(object):
 
             except KeyError as key:
                 print(f"Warning : {key} default values loaded")
-                reverse_tilt = False
 
             except Exception as e:
                 print(f"Config Error : {e}")

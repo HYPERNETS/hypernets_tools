@@ -57,4 +57,5 @@ EOF
 rm -rf /dev/radiometer*
 udevadm control --reload-rules
 udevadm trigger
-
+sleep 1
+ls -l /dev/radiometer*

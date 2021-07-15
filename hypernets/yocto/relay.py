@@ -106,6 +106,7 @@ if __name__ == '__main__':
                       metavar="{on, off}",
                       choices=["on", "off"])
 
+    # XXX : Add N second argument (default=1)
     mode.add_argument("-r", "--reset", action="store_true",
                       help="reset relay (1 sec off, then on)")
 
@@ -122,7 +123,8 @@ if __name__ == '__main__':
                         choices=list(range(1, 7, 1)))
 
     parser.add_argument("-f", "--force", action="store_true",
-                        help="force relay #1 to switch off")
+                        help="forces relay #1 to switch off, and allows to"
+                        " write in memory for the state at power-on option")
 
     args = parser.parse_args()
 
