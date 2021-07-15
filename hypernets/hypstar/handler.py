@@ -204,9 +204,10 @@ if __name__ == '__main__':
     instrument_instance = HypstarHandler(expect_boot_packet=False)
 
     if args.picture:
-        instrument_instance.take_picture()
+        request = Request.from_params(args.count, "picture")
+        instrument_instance.take_request(request)
         exit(0)
 
     measurement = args.radiometer, args.entrance, args.it_vnir, args.it_swir
     request = Request.from_params(args.count, *measurement)
-    instrument_instance.take_spectra(request)
+    instrument_instance.take_request(request)

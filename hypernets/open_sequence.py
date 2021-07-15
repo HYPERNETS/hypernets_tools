@@ -9,7 +9,7 @@ from shutil import copy
 from hypernets.abstract.protocol import Protocol
 from hypernets.abstract.create_metadata import parse_config_metadata
 
-from hypernets.hypstar.hypstar_handler import HypstarHandler
+from hypernets.hypstar.handler import HypstarHandler
 from hypernets.hypstar.libhypstar.python.hypstar_wrapper import HypstarLogLevel
 
 

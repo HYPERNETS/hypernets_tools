@@ -1,7 +1,7 @@
 
 
 from pickle import dump
-from hypernets.hypstar.hypstar_handler import HypstarHandler
+from hypernets.hypstar.handler import HypstarHandler
 from hypernets.yocto.gps import get_gps
 from hypernets.yocto.relay import set_state_relay
 
