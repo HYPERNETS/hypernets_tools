@@ -88,7 +88,7 @@ class Geometry(object):
         pan_ref, tilt_ref = Geometry.int_to_reference(self.reference)
 
         # Default values :
-        offset_tilt, offset_tilt, reverse_tilt = 0, 0, False
+        offset_pan, offset_tilt, reverse_tilt = 0, 0, False
 
         # Get offset values :
         if 'sun' in [pan_ref, tilt_ref] or 'hyp' in [pan_ref, tilt_ref]:
