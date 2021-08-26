@@ -13,22 +13,18 @@ def get_state_relay(id_relay, verbose=False):
     config = init()
     yocto_prefix = config["yoctopuce"]["yocto_prefix1"]
 
-    def _alias_get_state(id_relay):
-        relay = YRelay.FindRelay(yocto_prefix + '.relay' + str(id_relay))
-        return tuple((id_relay, relay.get_state()))
-
     relay_states = list()
 
     if id_relay == -1:
-        for id_relay in range(1, 7, 1):
-            relay_states.append(_alias_get_state(id_relay))
-    else:
-        relay_states.append(_alias_get_state(id_relay))
+        id_relay = list(range(1, 7, 1))
+
+    for i in id_relay:
+        state = YRelay.FindRelay(yocto_prefix + '.relay' + str(i))
+        relay_states.append(state.get_state())
 
     if verbose is True:
-        str_output = {False: "off", True: "on"}
-        for id_relay, state in relay_states:
-            print(f"Relay #{id_relay} is {str_output[state]}")
+        for id_relay, state in enumerate(relay_states):
+            print(f"Relay #{id_relay+1} is {state}")
 
     YAPI.FreeAPI()
     return relay_states
