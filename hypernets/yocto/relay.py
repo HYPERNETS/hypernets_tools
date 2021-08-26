@@ -96,6 +96,7 @@ def _set_at_power_on_usb(id_relay, state, force):
     else:
         get = "api?scr=&ctx=module&persistentSettings=1"
         url = "/".join([url_base, get])
+        urlopen(url)
 
 
 # -----------------------------------------------------------------------------
