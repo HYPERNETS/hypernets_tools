@@ -6,7 +6,7 @@ from yoctopuce.yocto_api import YModule, YAPI
 from urllib.request import urlopen
 from time import sleep
 
-from hypernets.yocto.init import init
+from hypernets.yocto.init import init, get_url_base
 
 
 # -----------------------------------------------------------------------------
@@ -35,19 +35,11 @@ def set_at_power_on(*args, force=False):
 
 
 # -----------------------------------------------------------------------------
-def get_url_base():
-    config = init()
-    yocto_prefix2 = config["yoctopuce"]["yocto_prefix2"]
-    yocto_prefix1 = config["yoctopuce"]["yocto_prefix1"]
-    return "/".join(["http://127.0.0.1:4444/bySerial", yocto_prefix2,
-                     yocto_prefix1])
 
 
 def _get_state_relay_usb(id_relay, verbose):
 
     url_base = get_url_base()
-
-    # http://127.0.0.1:4444/bySerial/OBSVLFR2-13FB00/OBSVLFR1-13F871/api/relay1/state
 
     # TODO : Parse Y_STATE_INVALID
 
