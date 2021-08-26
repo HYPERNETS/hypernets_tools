@@ -6,6 +6,7 @@ from tkinter import LabelFrame
 from tkinter import Tk, Button, Label, StringVar
 
 from hypernets.yocto.relay import get_state_relay, set_state_relay
+
 from hypernets.yocto.meteo import get_meteo
 from hypernets.yocto.gps import get_gps
 
@@ -82,7 +83,7 @@ class FrameYoctopuce(LabelFrame):
         """color update"""
         states_relay = get_state_relay(-1)
         for id_relay, state in enumerate(states_relay):
-            if state[1]:
+            if state:
                 self.relays[id_relay].configure(bg="green")
                 self.relays_states[id_relay] = True
             else:

@@ -3,12 +3,97 @@
 from argparse import ArgumentParser
 from yoctopuce.yocto_relay import YRelay
 from yoctopuce.yocto_api import YModule, YAPI
+from urllib.request import urlopen
 from time import sleep
 
 from hypernets.yocto.init import init
 
 
-def get_state_relay(id_relay, verbose=False):
+# -----------------------------------------------------------------------------
+def get_state_relay(*args, verbose=False):
+    config = init()
+    if config["yoctopuce"]["yoctopuce_ip"] == "usb":
+        return _get_state_relay_usb(*args, verbose)
+    else:
+        return _get_state_relay_ip(*args, verbose)
+
+
+def set_state_relay(*args):
+    config = init()
+    if config["yoctopuce"]["yoctopuce_ip"] == "usb":
+        return _set_state_relay_usb(*args)
+    else:
+        return _set_state_relay_ip(*args)
+
+
+def set_at_power_on(*args):
+    config = init()
+    if config["yoctopuce"]["yoctopuce_ip"] == "usb":
+        return _set_at_power_on_usb(*args)
+    else:
+        return _get_state_relay_ip(*args)
+
+
+# -----------------------------------------------------------------------------
+def get_url_base():
+    config = init()
+    yocto_prefix2 = config["yoctopuce"]["yocto_prefix2"]
+    yocto_prefix1 = config["yoctopuce"]["yocto_prefix1"]
+    return "/".join(["http://127.0.0.1:4444/bySerial", yocto_prefix2,
+                     yocto_prefix1])
+
+
+def _get_state_relay_usb(id_relay, verbose):
+
+    url_base = get_url_base()
+
+    # http://127.0.0.1:4444/bySerial/OBSVLFR2-13FB00/OBSVLFR1-13F871/api/relay1/state
+
+    # TODO : Parse Y_STATE_INVALID
+
+    if id_relay == -1:
+        id_relay = list(range(1, 7, 1))
+
+    relay_states = list()
+    for i in id_relay:
+        url = "/".join([url_base, "api", "relay" + str(i), "state"])
+        state = urlopen(url)
+        state = {b"B": True, b"A": False}[state.read()]
+        relay_states.append(state)
+        if verbose:
+            print(f"Relay #{i} is {state}.")
+
+    return relay_states
+
+
+def _set_state_relay_usb(id_relay, state, force=False):
+
+    # Display a warning and ask to use "--force" if relay 1 is turned off
+    if 1 in id_relay and state in ["off", "reset"] and not force:
+        print("""Warning : if your rugged pc is connected throught this
+          relay, this action could switch it off. (use --force [-f]
+          to enable this functionality)""")
+        return
+
+    url_base = get_url_base()
+
+    state = {"on": YRelay.STATE_B, "off": YRelay.STATE_A}[state]
+
+    for i in id_relay:
+        get = "api?ctx=relay" + str(i) + "&state=" + str(state)
+        url = "/".join([url_base, get])
+        urlopen(url)
+    return
+
+
+def _set_at_power_on_usb(*args):
+    pass
+
+
+# -----------------------------------------------------------------------------
+
+
+def _get_state_relay_ip(id_relay, verbose):
     # TODO : Parse Y_STATE_INVALID
     config = init()
     yocto_prefix = config["yoctopuce"]["yocto_prefix1"]
@@ -30,7 +115,7 @@ def get_state_relay(id_relay, verbose=False):
     return relay_states
 
 
-def set_state_relay(id_relay, state, force=False):
+def _set_state_relay_ip(id_relay, state, force=False):
     print(id_relay)
     config = init()
     yocto_prefix = config["yoctopuce"]["yocto_prefix1"]
@@ -61,7 +146,7 @@ def set_state_relay(id_relay, state, force=False):
     YAPI.FreeAPI()
 
 
-def set_at_power_on(id_relay, state, force=False):
+def _set_at_power_on_ip(id_relay, state, force=False):
     config = init()
     yocto_prefix = config["yoctopuce"]["yocto_prefix1"]
 
