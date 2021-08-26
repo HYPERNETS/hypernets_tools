@@ -26,12 +26,12 @@ def set_state_relay(*args):
         return _set_state_relay_ip(*args)
 
 
-def set_at_power_on(*args):
+def set_at_power_on(*args, force=False):
     config = init()
     if config["yoctopuce"]["yoctopuce_ip"] == "usb":
-        return _set_at_power_on_usb(*args)
+        return _set_at_power_on_usb(*args, force)
     else:
-        return _get_state_relay_ip(*args)
+        return _set_at_power_on_ip(*args, force)
 
 
 # -----------------------------------------------------------------------------
@@ -86,8 +86,24 @@ def _set_state_relay_usb(id_relay, state, force=False):
     return
 
 
-def _set_at_power_on_usb(*args):
-    pass
+def _set_at_power_on_usb(id_relay, state, force):
+
+    state = {"on": YRelay.STATEATPOWERON_B,
+             "off": YRelay.STATEATPOWERON_A,
+             "unchanged": YRelay.STATEATPOWERON_UNCHANGED}[state]
+
+    id_relay = id_relay[0]
+    url_base = get_url_base()
+    get = "api?scr=&ctx=relay" + str(id_relay) + "&stateAtPowerOn=" + str(state) # noqa
+    url = "/".join([url_base, get])
+    urlopen(url)
+
+    if not force:
+        print("""Warning : You need to use --force [-f] to write on flash
+              memory, else modifications will be lost""")
+    else:
+        get = "api?scr=&ctx=module&persistentSettings=1"
+        url = "/".join([url_base, get])
 
 
 # -----------------------------------------------------------------------------
@@ -146,7 +162,7 @@ def _set_state_relay_ip(id_relay, state, force=False):
     YAPI.FreeAPI()
 
 
-def _set_at_power_on_ip(id_relay, state, force=False):
+def _set_at_power_on_ip(id_relay, state, force):
     config = init()
     yocto_prefix = config["yoctopuce"]["yocto_prefix1"]
 
@@ -219,4 +235,4 @@ if __name__ == '__main__':
         set_state_relay(args.id_relay, "reset")
 
     elif args.set_at_power_on:
-        set_at_power_on(args.id_relay, args.set_at_power_on, args.force)
+        set_at_power_on(args.id_relay, args.set_at_power_on, force=args.force)
