@@ -24,6 +24,9 @@ class Request(object):
         self.entrance = None
 
     def __str__(self):
+        if self.entrance == EntranceExt.NONE and self.number_cap == 0:
+            return chr(8709)
+
         output_str = f"{self.number_cap}."
 
         if self.radiometer == RadiometerExt.NONE:

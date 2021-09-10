@@ -4,6 +4,7 @@ from operator import le, ge, lt, gt
 
 from hypernets.abstract.geometry import Geometry
 from hypernets.abstract.request import Request
+from hypernets.abstract.request import RadiometerExt
 from hypernets.hypstar.libhypstar.python.data_structs.spectrum_raw import RadiometerType # noqa
 
 
@@ -63,6 +64,7 @@ class Protocol(list[(Geometry, list[Request])]):
                 ref = 4
 
             request = Request.from_line(measurement)
+            print(request)
             pan, tilt = float(pan), float(tilt)
             self.append((Geometry(ref, pan=pan, tilt=tilt), [request]))
 
@@ -112,14 +114,23 @@ class Protocol(list[(Geometry, list[Request])]):
                     request = Request.from_params(*split_measurement(line))
                     self[-1][1].append(request)
 
+    def check_if_instrument_requested(self):
+        for _, request_list in self:
+            for request in request_list:
+                if request.radiometer != RadiometerExt.NONE:
+                    print("Note : This protocol requests instrument.")
+                    return True
+        print("Note : This protocol doesn't request instrument.")
+        return False
+
     def check_if_swir_requested(self):
         for _, request_list in self:
             for request in request_list:
                 if request.radiometer == RadiometerType.SWIR or\
                         request.radiometer == RadiometerType.BOTH:
-                    print("Note : This protocol has SWIR request\n")
+                    print("Note : This protocol has SWIR request.\n")
                     return True
-        print("Note : This protocol doesn't have SWIR request\n")
+        print("Note : This protocol doesn't have SWIR request.\n")
         return False
 
     @staticmethod
@@ -136,6 +147,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     protocol = Protocol(args.filename)
     print(protocol)
+    protocol.check_if_instrument_requested()
     protocol.check_if_swir_requested()
 
     # for i, (geometry, requests) in enumerate(protocol, start=1):
