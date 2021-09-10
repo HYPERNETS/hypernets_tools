@@ -1,0 +1,22 @@
+HypernetsProtocol v2.0
+
+# Irradiance Sky (Ed)
+@[ 90.0, sun, 180.0, hyper ]
+
+# Radiance Sky (Ld)
+@[ 90.0, sun, 140.0, hyper ]
+
+# Radiance Water (Lu)
+@[ 90.0, sun, 040.0, hyper ] 
+
+# Radiance Sky (Ld)
+@[ 90.0, sun, 140.0, hyper ] 
+
+# Irradiance Sky (Ed)
+@[ 90.0, sun, 180.0, hyper ] 
+
+# Picture Sun
+@[ 0.0, sun, 0.0, sun ] 
+
+# Park
+@[ 0.0, sun, 0.0, hyper ]

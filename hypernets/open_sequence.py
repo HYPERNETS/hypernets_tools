@@ -22,6 +22,9 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     protocol = Protocol(sequence_file)
     print(protocol)
 
+    # check if this protocol wants to use instrument
+    instrument_is_requested = protocol.check_if_instrument_requested()
+
     # we should check if any of the lines want to use SWIR and enable TEC :
     swir_is_requested = protocol.check_if_swir_requested()
 
@@ -52,8 +55,9 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         with open(path.join(DATA_DIR, seq_name, "meteo.csv"), "w") as meteo:
             try:
                 meteo_data = get_meteo()
-                meteo_data = "; ".join([str(val) + unit
+                meteo_data = "; ".join([str(val) + str(unit)
                                         for val, unit in meteo_data])
+
                 meteo.write(f"{meteo_data}\n")
 
             except Exception as e:
@@ -64,11 +68,12 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     else:
         except_boot = True
 
-    instrument_instance = HypstarHandler(instrument_loglevel=instrument_loglvl,
-                                         instrument_baudrate=instrument_br,
-                                         instrument_port=instrument_port,
-                                         expect_boot_packet=except_boot,
-                                         boot_timeout=instrument_boot_timeout)
+    if instrument_is_requested:
+        instrument_instance = HypstarHandler(instrument_loglevel=instrument_loglvl,  # noqa
+                                             instrument_baudrate=instrument_br,
+                                             instrument_port=instrument_port,
+                                             expect_boot_packet=except_boot,
+                                             boot_timeout=instrument_boot_timeout)   # noqa
     # Useless ?
     # instrument, visible, swir = instrument_instance.get_serials()
     # print(f"SN : * instrument -> {instrument}")
@@ -179,7 +184,8 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     if swir_is_requested is True:
         instrument_instance.shutdown_SWIR_module_thermal_control()
 
-    del instrument_instance
+    if instrument_is_requested:
+        del instrument_instance
 
 #        if not instrument_standalone:
 #            if azimuth_sun <= 180:
