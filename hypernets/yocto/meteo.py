@@ -1,5 +1,5 @@
 from time import sleep
-from hypernets.yocto.init import init, get_url_base
+from hypernets.yocto.init import init
 
 
 def get_meteo(count=1, interval=1, print_value=False):
