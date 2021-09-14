@@ -6,7 +6,8 @@ from yoctopuce.yocto_api import YModule, YAPI
 from urllib.request import urlopen
 from time import sleep
 
-from hypernets.yocto.init import init
+from hypernets.yocto.yocto_init import init, get_url_base
+
 
 
 # -----------------------------------------------------------------------------
