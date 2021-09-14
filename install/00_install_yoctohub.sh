@@ -66,7 +66,7 @@ echo "and go to this webpage : 10.42.0.1:4444"
 # Note previous used version of VirtualHub : 40924
 
 # No need Systemd installation as we use it only once
-# cp Yoctopuce/startup_script/yvirtualhub.service /etc/systemd/system/
-# systemctl daemon-reload
-# systemctl start yvirtualhub.service
-# systemctl enable yvirtualhub.service
+cp Yoctopuce/startup_script/yvirtualhub.service /etc/systemd/system/
+systemctl daemon-reload
+systemctl start yvirtualhub.service
+systemctl enable yvirtualhub.service
