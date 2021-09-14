@@ -6,7 +6,11 @@ from yoctopuce.yocto_api import YModule, YAPI
 from urllib.request import urlopen
 from time import sleep
 
+<<<<<<< HEAD
 from hypernets.yocto.init import init, get_url_base
+=======
+from hypernets.yocto.init import init
+>>>>>>> parent of d9b8df8 (back to previous)
 
 
 # -----------------------------------------------------------------------------

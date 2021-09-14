@@ -9,6 +9,18 @@ from yoctopuce.yocto_longitude import YLongitude
 
 def get_gps(print_value=True, return_float=True):
     config = init()
+    if config["yoctopuce"]["yoctopuce_ip"] == "usb":
+        return _get_gps_usb(print_value, return_float)
+    else:
+        return _get_gps_ip(print_value, return_float)
+
+
+def _get_gps_usb(print_value, return_float):
+    pass
+
+
+def _get_gps_ip(print_value, return_float):
+    config = init()
     yocto_prefix = config["yoctopuce"]["yocto_gps"]
 
     gps = YGps.FindGps(yocto_prefix + '.gps')

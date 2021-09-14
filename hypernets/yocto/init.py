@@ -20,3 +20,11 @@ def init():
         exit("init error:" + errmsg.value)
 
     return config
+
+
+def get_url_base():
+    config = init()
+    yocto_prefix2 = config["yoctopuce"]["yocto_prefix2"]
+    yocto_prefix1 = config["yoctopuce"]["yocto_prefix1"]
+    return "/".join(["http://127.0.0.1:4444/bySerial", yocto_prefix2,
+                     yocto_prefix1])
