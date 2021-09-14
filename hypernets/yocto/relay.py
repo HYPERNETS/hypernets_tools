@@ -10,6 +10,7 @@ from hypernets.yocto.init import init, get_url_base
 
 
 # -----------------------------------------------------------------------------
+
 def get_state_relay(*args, verbose=False):
     config = init()
     if config["yoctopuce"]["yoctopuce_ip"] == "usb":
