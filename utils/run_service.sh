@@ -62,16 +62,26 @@ if [[ -n $swirTec ]] ; then
 fi
 
 if [[ "$bypassYocto" == "no" ]] ; then
-	# Ensure Yocto is online
-	yoctopuceIP=$(parse_config "yoctopuce_ip" config_static.ini)
-	echo "Waiting for yoctopuce..."
-	while ! timeout 2 ping -c 1 -n $yoctopuceIP &>/dev/null
-	do
-		echo -n '.'
-	done
-	echo "Ok !"
 
-	python -m hypernets.yocto.relay -son -n2 -n3
+   # Ensure Yocto is online
+   yoctopuceIP=$(parse_config "yoctopuce_ip" config_static.ini)
+
+   if [[ ! "$yoctopuceIP" == "usb" ]] ; then
+       # We ping it if there is an IP address
+       echo "Waiting for yoctopuce..."
+       while ! timeout 2 ping -c 1 -n $yoctopuceIP &>/dev/null
+       do
+           echo -n '.'
+       done
+       echo "Ok !"
+   else
+       # Else check  if VirtualHub is running
+       echo "VirtualHub is running"
+
+
+   fi
+
+   python -m hypernets.yocto.relay -son -n2 -n3
 
 else
 	echo "Bypassing Yocto"
