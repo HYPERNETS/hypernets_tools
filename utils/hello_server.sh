@@ -42,9 +42,18 @@ fi
 
 # Make Logs
 mkdir -p LOGS
-journalctl -eu hypernets-sequence -n 15000 --no-pager > LOGS/hypernets-sequence.log
-journalctl -eu hypernets-hello -n 150 --no-pager > LOGS/hypernets-hello.log
-journalctl -eu hypernets-access -n 150 --no-pager > LOGS/hypernets-access.log
+
+
+logNameBase=$(date +"%Y-%m-%d-%H%M")
+
+journalctl -b-1 -u hypernets-sequence --no-pager > LOGS/$logNameBase-sequence.log
+journalctl -b-1 -u hypernets-hello --no-pager > LOGS/$logNameBase-hello.log
+journalctl -b-1 -u hypernets-access --no-pager > LOGS/$logNameBase-access.log
+
+# journalctl -eu hypernets-sequence -n 15000 --no-pager > LOGS/hypernets-sequence.log
+# journalctl -eu hypernets-hello -n 150 --no-pager > LOGS/hypernets-hello.log
+# journalctl -eu hypernets-access -n 150 --no-pager > LOGS/hypernets-access.log
+
 
 # Update the datetime flag on the server
 echo "Touching $ipServer:$remoteDir/system_is_up"
