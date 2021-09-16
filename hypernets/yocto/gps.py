@@ -1,4 +1,4 @@
-from hypernets.yocto.init import init
+from hypernets.yocto.init import init, get_url_gps
 
 from yoctopuce.yocto_api import YAPI
 from yoctopuce.yocto_gps import YGps
@@ -16,7 +16,22 @@ def get_gps(print_value=True, return_float=True):
 
 
 def _get_gps_usb(print_value, return_float):
-    pass
+    from urllib.request import urlopen
+    url_base = get_url_gps()
+
+    get = "/".join(["api", "latitude", "currentValue"])
+    url = "/".join([url_base, get])
+    latitude = float(urlopen(url).read())
+
+    get = "/".join(["api", "longitude", "currentValue"])
+    url = "/".join([url_base, get])
+    longitude = float(urlopen(url).read())
+
+    get = "/".join(["api", "gps", "dateTime"])
+    url = "/".join([url_base, get])
+    datetime = urlopen(url).read()
+
+    return latitude, longitude, datetime
 
 
 def _get_gps_ip(print_value, return_float):

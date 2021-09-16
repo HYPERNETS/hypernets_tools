@@ -6,7 +6,7 @@ from yoctopuce.yocto_api import YModule, YAPI
 from urllib.request import urlopen
 from time import sleep
 
-from hypernets.yocto.init import init, get_url_base
+from hypernets.yocto.init import init, get_url_base_prefixed
 
 
 # -----------------------------------------------------------------------------
@@ -40,7 +40,7 @@ def set_at_power_on(*args, force=False):
 
 def _get_state_relay_usb(id_relay, verbose):
 
-    url_base = get_url_base()
+    url_base = get_url_base_prefixed()
 
     # TODO : Parse Y_STATE_INVALID
 
@@ -68,7 +68,7 @@ def _set_state_relay_usb(id_relay, state, force=False):
           to enable this functionality)""")
         return
 
-    url_base = get_url_base()
+    url_base = get_url_base_prefixed()
 
     state = {"on": YRelay.STATE_B, "off": YRelay.STATE_A}[state]
 
@@ -86,8 +86,8 @@ def _set_at_power_on_usb(id_relay, state, force):
              "unchanged": YRelay.STATEATPOWERON_UNCHANGED}[state]
 
     id_relay = id_relay[0]
-    url_base = get_url_base()
-    get = "api?scr=&ctx=relay" + str(id_relay) + "&stateAtPowerOn=" + str(state) # noqa
+    url_base = get_url_base_prefixed()
+    get = "api?ctx=relay" + str(id_relay) + "&stateAtPowerOn=" + str(state)
     url = "/".join([url_base, get])
     urlopen(url)
 
@@ -95,7 +95,7 @@ def _set_at_power_on_usb(id_relay, state, force):
         print("""Warning : You need to use --force [-f] to write on flash
               memory, else modifications will be lost""")
     else:
-        get = "api?scr=&ctx=module&persistentSettings=1"
+        get = "api?ctx=module&persistentSettings=1"
         url = "/".join([url_base, get])
         urlopen(url)
 

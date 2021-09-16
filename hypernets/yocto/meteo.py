@@ -1,5 +1,5 @@
 from time import sleep
-from hypernets.yocto.init import init, get_url_base
+from hypernets.yocto.init import init, get_url_base_prefixed
 
 
 def get_meteo(count=1, interval=1, print_value=False):
@@ -12,13 +12,11 @@ def get_meteo(count=1, interval=1, print_value=False):
 
 def _get_meteo_usb(count, interval, print_value):
     from urllib.request import urlopen
-    get_url_base, urlopen
-
-    url_base = get_url_base()
+    url_base = get_url_base_prefixed()
 
     # TODO
-    # get = "?scr=&ctx=&lowestValue=100.0"
-    # get = "?scr=&ctx=&highestValue=0.0"
+    # get = "?ctx=&lowestValue=100.0"
+    # get = "?ctx=&highestValue=0.0"
 
     def get_value_and_unit(sensor):
         get = "/".join(["api", sensor, "currentValue"])
@@ -27,11 +25,12 @@ def _get_meteo_usb(count, interval, print_value):
         get = "/".join(["api", sensor, "unit"])
         url = "/".join([url_base, get])
         unit = urlopen(url).read()
-        return tuple([value, unit])
+        return tuple([value, unit.decode("utf-8")])
+        # return value
 
     values = list()
     for sensor in ["temperature", "humidity", "pressure", "lightSensor"]:
-        values.append(get_value_and_unit(sensor))
+        values.append((get_value_and_unit(sensor)))
 
     return values
 
@@ -69,5 +68,5 @@ def _get_meteo_ip(count, interval, print_value):
 
 if __name__ == "__main__":
     # TODO : make CLI
-    # print(get_meteo(count=1000, interval=.5, print_value=True))
-    print(get_meteo())
+    print(get_meteo(count=1000, interval=.5, print_value=True))
+    # print(get_meteo())
