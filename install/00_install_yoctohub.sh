@@ -56,6 +56,12 @@ cp Yoctopuce/64bits/VirtualHub /usr/sbin
 
 # - 2: ensure that the /usr/sbin/Virtualhub
 chmod +x /usr/sbin/VirtualHub
+
+cp -f Yoctopuce/startup_script/yvirtualhub.service /etc/systemd/system/
+systemctl daemon-reload
+systemctl start yvirtualhub.service
+systemctl enable yvirtualhub.service
+
 rm -rf Yoctopuce "$last_virtualhub"
 
 echo
@@ -64,9 +70,3 @@ echo "Try to run the VirtualHub with /usr/sbin/VirtualHub"
 echo "and go to this webpage : 10.42.0.1:4444"
 
 # Note previous used version of VirtualHub : 40924
-
-# No need Systemd installation as we use it only once
-cp Yoctopuce/startup_script/yvirtualhub.service /etc/systemd/system/
-systemctl daemon-reload
-systemctl start yvirtualhub.service
-systemctl enable yvirtualhub.service
