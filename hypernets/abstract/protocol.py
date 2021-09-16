@@ -4,7 +4,7 @@ from operator import le, ge, lt, gt
 
 from hypernets.abstract.geometry import Geometry
 from hypernets.abstract.request import Request
-from hypernets.abstract.request import RadiometerExt
+from hypernets.abstract.request import RadiometerExt, EntranceExt
 from hypernets.hypstar.libhypstar.python.data_structs.spectrum_raw import RadiometerType # noqa
 
 
@@ -117,7 +117,8 @@ class Protocol(list[(Geometry, list[Request])]):
     def check_if_instrument_requested(self):
         for _, request_list in self:
             for request in request_list:
-                if request.radiometer != RadiometerExt.NONE:
+                if request.radiometer != RadiometerExt.NONE or\
+                        request.entrance == EntranceExt.PICTURE:
                     print("Note : This protocol requests instrument.")
                     return True
         print("Note : This protocol doesn't request instrument.")
