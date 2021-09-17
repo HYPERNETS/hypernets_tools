@@ -76,7 +76,17 @@ if [[ "$bypassYocto" == "no" ]] ; then
 		echo "Ok !"
 	else
 		# Else check  if VirtualHub is running
-		echo "VirtualHub is running"
+		set +e
+		systemctl is-active yvirtualhub.service
+		set -e
+		if [[ $? -eq 0 ]] ; then
+			echo "VirtualHub is running"
+		else
+			echo "VirtualHub is starting"
+			/usr/bin/VirtualHub
+			sleep 2
+			echo "ok"
+		fi
 	fi
 
 	python -m hypernets.yocto.relay -son -n2 -n3
@@ -111,10 +121,14 @@ exit_actions() {
     return_value=$?
     if [ $return_value -eq 0 ] ; then
         echo "Success"
-        shutdown_sequence;
     else
     	echo "Hysptar scheduled job exited with code $return_value";
+		echo "Second try : "
+		set +e
+		python3 -m hypernets.open_sequence -f $sequence_file $extra_args
+		set -e
     fi
+	shutdown_sequence;
 }
 
 trap "exit_actions" EXIT

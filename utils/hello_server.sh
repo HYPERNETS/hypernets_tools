@@ -21,8 +21,17 @@ set -o nounset                              # Treat unset variables as an error
 set -euo pipefail                           # Bash Strict Mode	
 
 
-echo "Sleep 30 sec"
-sleep 30
+# echo "Sleep 30 sec"
+# sleep 30
+
+# We ping Google DNS to check if network is up
+echo "Waiting for network..."
+while ! timeout 2 ping -c 1 -n 8.8.8.8 &>/dev/null
+do
+	echo -n '.'
+done
+echo "Ok !"
+
 
 # Read config file :
 source utils/configparser.sh
