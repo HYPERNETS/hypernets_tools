@@ -78,7 +78,7 @@ if [[ ! "$autoUpdate" == "no" ]] ; then
 	echo "Auto Update ON"
 	set +e
 	git pull
-	if [ $? -ne 0 ]; then echo "Do you have local change ?" ; fi
+	if [ $? -ne 0 ]; then echo "Can't pull : do you have local change ?" ; fi
 	set -e
 fi
 
