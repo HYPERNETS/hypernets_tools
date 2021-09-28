@@ -7,7 +7,9 @@ from subprocess import Popen, PIPE
 
 class RainSensor(object):
     def __init__(self):
-        self.module = CDLL(abspath('rain_sensor_module.so'))
+        # FIXME :
+        self.module = CDLL(abspath('hypernets/rain_sensor/rain_sensor_module.so'))
+        # self.module = CDLL("rain_sensor_module.so")
 
         if self.module.check_gpio_access() < 0:  # If no write access to GPIO
             del self.module
@@ -20,7 +22,7 @@ class RainSensor(object):
         if hasattr(self, 'module'):
             value = self.module.read_value()
         else:
-            read_command = ["./rain_sensor", "--python"]
+            read_command = ["./hypernets/rain_sensor/rain_sensor", "--python"]
             return_value = Popen(read_command, stdout=PIPE)
             value = int(return_value.stdout.read())
         return value

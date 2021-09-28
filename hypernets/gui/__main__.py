@@ -10,6 +10,7 @@ from hypernets.gui.frame_pantilt import FramePanTilt
 from hypernets.gui.frame_yoctopuce import FrameYoctopuce
 from hypernets.gui.frame_webcam import FrameWebcam
 from hypernets.gui.frame_console import FrameConsole
+from hypernets.gui.frame_rainsensor import FrameRainSensor
 
 from importlib import resources
 from hypernets.resources import img
@@ -23,6 +24,7 @@ class Guied(Tk):
         self.pantilt = True
         self.yoctopuce = True
         self.output = True
+        self.rainsensor = True
 
         self.webcam = False
         self.console = False
@@ -47,15 +49,19 @@ class Guied(Tk):
         if self.radiometer:
             frmRadiometer = FrameRadiometer(self)
             frmRadiometer.grid(sticky=W+E+N+S, column=0, row=1, padx=2, pady=2,
-                               rowspan=2)
+                               rowspan=3)
 
         if self.pantilt:
             frmPanTilt = FramePanTilt(self)
-            frmPanTilt.grid(sticky=W+E+N+S,    column=1, row=2, padx=2, pady=2)
+            frmPanTilt.grid(sticky=W+E+N+S,    column=1, row=3, padx=2, pady=2)
 
         if self.yoctopuce:
             frmYocto = FrameYoctopuce(self)
             frmYocto.grid(sticky=W+E+N+S,      column=1, row=1, padx=2, pady=2)
+
+        if self.rainsensor:
+            frmRain = FrameRainSensor(self)
+            frmRain.grid(sticky=W+E+N+S,       column=1, row=2, padx=2, pady=2)
 
         if self.webcam:
             frmWebcam = FrameWebcam(self)
