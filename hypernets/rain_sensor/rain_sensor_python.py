@@ -1,16 +1,36 @@
 #!/usr/bin/python3.9
 
 from ctypes import CDLL
-# from ctypes import *
-from os import path
+from os.path import abspath
+from subprocess import Popen, PIPE
 
 
-_rain_sensor_module = CDLL(path.abspath('rain_sensor_module.so'))
+class RainSensor(object):
+    def __init__(self):
+        self.module = CDLL(abspath('rain_sensor_module.so'))
 
-# _rain_sensor_module.configure_gpio_port.argtypes = ()
+        if self.module.check_gpio_access() < 0:  # If no write access to GPIO
+            del self.module
+        else:
+            self.module.configure_gpio_port()
 
-_rain_sensor_module.check_gpio_access()
-_rain_sensor_module.configure_gpio_port()
-v = _rain_sensor_module.read_value()
-_rain_sensor_module.release_gpio_port()
-print(v)
+    def read_value(self):
+
+        value = -1
+        if hasattr(self, 'module'):
+            value = self.module.read_value()
+        else:
+            read_command = ["./rain_sensor", "--python"]
+            return_value = Popen(read_command, stdout=PIPE)
+            value = int(return_value.stdout.read())
+        return value
+
+    def __del__(self):
+        if hasattr(self, 'module'):
+            # print("Releasing GPIO port")
+            self.module.release_gpio_port()
+
+
+if __name__ == '__main__':
+    rain_sensor = RainSensor()
+    print(type(rain_sensor.read_value()))

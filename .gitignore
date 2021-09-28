@@ -7,3 +7,5 @@ config_static.ini
 .ipynb_checkpoints/
 hypernets/scripts/libhypstar/
 config.dump
+hypernets/rain_sensor/rain_sensor_module.so
+hypernets/rain_sensor/rain_sensor

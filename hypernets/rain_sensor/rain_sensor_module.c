@@ -12,7 +12,7 @@
 #define DataPort   0x4F
 
 
-void check_gpio_access();
+int check_gpio_access();
 void configure_gpio_port();
 int read_value();
 void release_gpio_port();
@@ -20,37 +20,35 @@ void release_gpio_port();
 
 int main(int argc, char * argv[]){
 
-	// if (iopl(3) < 0)
-	// {
-	// 	printf("Error : no root privileges.\n");
-	//  	return -1;
-	// }
-
-	check_gpio_access();
+	if (check_gpio_access() < 0){
+		return 1;
+	}
 
 	configure_gpio_port();
 
 	int value = 0;
 	value = read_value();
-
 	release_gpio_port();
 
-	if ( value == 1 )
-		printf("Rain is detected\n");
-	else
-		printf("No Rain is detected\n");
-
+	if (argc > 1){
+		printf("%i", value);
+	}
+	else{
+		if ( value == 1 )
+			printf("Rain is detected\n");
+		else
+			printf("No Rain is detected\n");
+	}
 	return 0;
 }
 
 
-void check_gpio_access(){
-	// Best practice to use ioperm ?
+int check_gpio_access(){
 	if ( ioperm( AddrPort, (unsigned long) 3, 1 ) + 
-		 ioperm( DataPort, (unsigned long) 3, 1 ) < 0){
-		printf("Error : no access to GPIO.\n");
-		exit(1);
+	  	 ioperm( DataPort, (unsigned long) 3, 1 ) < 0){
+		return -1;
 	}
+	return 0;
 }
 
 void configure_gpio_port(){
@@ -62,8 +60,9 @@ void configure_gpio_port(){
 	outb( 0x07, AddrPort );
 	outb( 0x06, DataPort ); 
 
-	/* Input Mode Selection GP 74~77 as input mode */
-	/* and set (bit 4~7) = 0 to select */
+	/* Input Mode Selection for GP 74~77 
+	   and set (bit 4~7) = 0 to select  */
+
 	outb( 0x80, AddrPort ); // Select configuration register 80h
 	outb( 0x00, DataPort );
 }
