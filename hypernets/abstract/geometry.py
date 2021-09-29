@@ -1,4 +1,7 @@
 
+from logging import warning, error
+
+
 class Geometry(object):
     """
     Definitions :
@@ -102,10 +105,10 @@ class Geometry(object):
                 reverse_tilt = config["pantilt"]["reverse_tilt"] == "yes"
 
             except KeyError as key:
-                print(f"Warning : {key} default values loaded")
+                warning(f" {key} default values loaded")
 
             except Exception as e:
-                print(f"Config Error : {e}")
+                error(f"Config Error : {e}")
 
             from operator import neg, pos
             reverse_tilt = {True: neg, False: pos}[reverse_tilt]
@@ -120,7 +123,7 @@ class Geometry(object):
         # Get sun position
         if 'sun' in [pan_ref, tilt_ref]:  # pickle me :
             from hypernets.geometry.spa.spa_hypernets import spa_from_datetime
-            azimuth_sun, zenith_sun = spa_from_datetime(verbose=False)
+            azimuth_sun, zenith_sun = spa_from_datetime()
             zenith_sun = 180 - zenith_sun
 
             # Point to the sun

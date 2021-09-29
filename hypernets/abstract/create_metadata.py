@@ -4,6 +4,8 @@ from datetime import datetime
 from configparser import ConfigParser, ExtendedInterpolation
 from configparser import MissingSectionHeaderError
 
+from logging import warning
+
 # TODO : Dump data from pickle for lat:lon
 
 
@@ -39,7 +41,7 @@ def parse_config_metadata(config_file="config_dynamic.ini"):
         metadata_section = config["metadata"]
 
     except (MissingSectionHeaderError, KeyError) as e:
-        print(f"Warning : {config_file} not found or no section {e}")
+        warning(f"{config_file} not found or no section {e}")
         str_metadata = metadata_header_base()
         return str_metadata
 

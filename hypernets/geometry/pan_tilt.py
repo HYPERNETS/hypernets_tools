@@ -11,6 +11,8 @@ from serial import Serial
 from struct import unpack, pack
 from time import sleep  # noqa
 
+from logging import debug, info, warning
+
 
 def pt_time_estimation(position_0, position_1,
                        pan_speed=22.5, tilt_speed=6.5, unit=1e-2):
@@ -37,10 +39,9 @@ def add_checksum(data):
     return data
 
 
-def one_turn_pan(ser, verbose=False):
+def one_turn_pan(ser):
     data = bytearray([0xFF, 0x01, 0x00, 0x04, 0x01, 0x00])  # XXX: CF doc pelco
-    if verbose:
-        print(f"Query one turn pan : {stringifyBinaryToHex(data)}")
+    info(f"Query one turn pan : {stringifyBinaryToHex(data)}")
     send_trame(data, ser)
 
 
@@ -54,13 +55,13 @@ def send_trame(data, ser):
 def check_trame(data):
     if len(data) != 7:
         if len(data) == 0:
-            print("Timeout !")
+            warning("Timeout !")
         else:
-            print("Bad lenght !")
-
+            warning("Bad lenght !")
         return False
+
     if sum(data[1:-1]) % 256 != data[-1]:
-        print("Bad Checksum !")
+        warning("Bad Checksum !")
         return False
     return True
 
@@ -68,8 +69,7 @@ def check_trame(data):
 def query_position(ser, verbose=False):
     data = bytearray([0xFF, 0x01, 0x00, 0x51, 0x00, 0x00])
     send_trame(data, ser)
-    if verbose:
-        print(f"Query pan : {stringifyBinaryToHex(data)}")
+    debug(f"Query pan : {stringifyBinaryToHex(data)}")
 
     data = bytearray()
     for _ in range(7):
@@ -81,8 +81,7 @@ def query_position(ser, verbose=False):
     _, _, _, cmd, pan, _ = unpack('>BBBBHB', data)
 
     data = bytearray([0xFF, 0x01, 0x00, 0x53, 0x00, 0x00])
-    if verbose:
-        print(f"Query tilt : {stringifyBinaryToHex(data)}")
+    debug(f"Query tilt : {stringifyBinaryToHex(data)}")
     send_trame(data, ser)
 
     data = bytearray()
@@ -97,7 +96,7 @@ def query_position(ser, verbose=False):
     return pan, tilt
 
 
-def move_to(ser, pan, tilt, wait=False, verbose=False):
+def move_to(ser, pan, tilt, wait=False):
 
     if ser is None:
         ser = open_serial()
@@ -105,27 +104,23 @@ def move_to(ser, pan, tilt, wait=False, verbose=False):
     # Conversion FIXME : here modulo should fit pan/tilt range specification
     pan, tilt = int(pan*100) % 36000, int(tilt*100) % 36000
 
-    if verbose:
-        print(f"Requested Position :\t({pan}, {tilt})\t(10^-2 degrees)")
+    info(f"Requested Position :\t({pan}, {tilt})\t(10^-2 degrees)")
 
     if wait:
         initial_position = query_position(ser)
         estimated_time = pt_time_estimation(initial_position, (pan, tilt))
 
-        if verbose:
-            print(f"Initial position :\t{initial_position}\t(10^-2 degrees)")
-            print(f"Estimated Time : \t{estimated_time}s")
+        debug(f"Initial position :\t{initial_position}\t(10^-2 degrees)")
+        debug(f"Estimated Time : \t{estimated_time}s")
 
     # Sync Byte + address + cmd1 + pan
     data = bytearray([0xFF, 0x01, 0x00, 0x4b]) + pack(">H", pan)
-    if verbose:
-        print("Pan Request :\t%s" % stringifyBinaryToHex(data))
+    debug("Pan Request :\t%s" % stringifyBinaryToHex(data))
     send_trame(data, ser)
 
     # Sync Byte + address + cmd1 + tilt
     data = bytearray([0xFF, 0x01, 0x00, 0x4d]) + pack(">H", tilt)
-    if verbose:
-        print("Tilt Request :\t%s" % stringifyBinaryToHex(data))
+    debug("Tilt Request :\t%s" % stringifyBinaryToHex(data))
     send_trame(data, ser)
 
     if wait:
@@ -137,14 +132,13 @@ def move_to(ser, pan, tilt, wait=False, verbose=False):
             position_0 = query_position(ser)
             sleep(.5)
             position_1 = query_position(ser)
-            if verbose and position_0 is not None and position_1 is not None:
-                print(f"Position 0 : {position_0[0]/100}, {position_0[1]/100}\n"  # noqa
+            if position_0 is not None and position_1 is not None:
+                debug(f"Position 0 : {position_0[0]/100}, {position_0[1]/100}\n"  # noqa
                       f"Position 1 : {position_1[0]/100}, {position_1[1]/100}\n"  # noqa
                       "Estimated velocity : "
                       f"pan : {.02 * (position_1[0] - position_0[0])}, "
                       f"tilt : {.02 * (position_1[1] - position_0[1])} "
-                      "(degrees.s^-1)")
-                print("-"*60)
+                      "(degrees.s^-1)" + "\n" + "-"*60)
 
             if position_0 is not None and position_1 is not None and (
                     position_0 == position_1 or
@@ -154,17 +148,13 @@ def move_to(ser, pan, tilt, wait=False, verbose=False):
                 break
 
         final_position = query_position(ser)
-        if verbose:
-            print(f"Final position :\t{final_position}\t(10^-2 degrees)")
+        info(f"Final position :\t{final_position}\t(10^-2 degrees)")
         ser.close()
         return final_position
 
 
-def move_to_geometry(geometry, wait=False, verbose=False):
-    if geometry.reference == "Sun":
-        pass
-    return move_to(None, geometry.pan_abs, geometry.tilt_abs, wait=wait,
-                   verbose=verbose)
+def move_to_geometry(geometry, wait=False):
+    return move_to(None, geometry.pan_abs, geometry.tilt_abs, wait=wait)
 
 
 def open_serial():

@@ -1,8 +1,10 @@
 from hypernets.geometry.spa.spa_py import spa_calc
 from datetime import datetime
 
+from logging import info, debug
 
-def spa_from_datetime(now=datetime.utcnow(), verbose=False):
+
+def spa_from_datetime(now=datetime.utcnow()):
     from configparser import ConfigParser
     config = ConfigParser()
     config.read("config_dynamic.ini")
@@ -15,9 +17,8 @@ def spa_from_datetime(now=datetime.utcnow(), verbose=False):
     latitude = float(config["GPS"]["latitude"])
     longitude = float(config["GPS"]["longitude"])
 
-    if verbose:
-        print(f"Latitude from config : {latitude}")
-        print(f"Longitude from config : {longitude}")
+    debug(f"Latitude from config : {latitude}")
+    debug(f"Longitude from config : {longitude}")
 
     spa = spa_calc(year=now.year, month=now.month, day=now.day,
                    hour=now.hour, minute=now.minute, second=now.second,
@@ -28,9 +29,9 @@ def spa_from_datetime(now=datetime.utcnow(), verbose=False):
                    pressure=820,
                    temperature=11,
                    delta_t=67)
-    if verbose:
-        print(f"Sun Position  (azimuth : {spa['azimuth']:.2f}, "
-              f"zenith : {spa['zenith']:.2f})")
+
+    info(f"Sun Position  (azimuth : {spa['azimuth']:.2f}, "
+         f"zenith : {spa['zenith']:.2f})")
 
     return spa['azimuth'], spa['zenith']
 
@@ -55,7 +56,7 @@ def spa_from_gps():
 
 if __name__ == '__main__':
     print("From datetime + fixed coords in config_dynamic.ini : ")
-    azimuth_sun, zenith_sun = spa_from_datetime(verbose=True)
+    azimuth_sun, zenith_sun = spa_from_datetime()
     print(f"Azimuth Sun  : {azimuth_sun} ; Zenith Sun : {zenith_sun}")
     print("From GPS")
     azimuth_sun, zenith_sun = spa_from_gps()

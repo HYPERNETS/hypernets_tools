@@ -7,6 +7,8 @@ from hypernets.abstract.request import Request
 from hypernets.abstract.request import RadiometerExt, EntranceExt
 from hypernets.hypstar.libhypstar.python.data_structs.spectrum_raw import RadiometerType # noqa
 
+from logging import debug, info, warning, error # noqa
+
 
 class Protocol(list[(Geometry, list[Request])]):
     def __init__(self, filename):
@@ -33,7 +35,7 @@ class Protocol(list[(Geometry, list[Request])]):
         for flag, (var, op, val) in self.flags.items():
             flags_str += f"{flag} := {var} [{op.__name__}] {val}\n\t\t"
 
-        return f"==== Protocol version : {self.version} ====\n" + \
+        return f"\n==== Protocol version : {self.version} ====\n" + \
             "-"*len(self.name) + f"\n{self.name}\n" + "-"*len(self.name) + \
             f"{protocol_str}" + f"{flags_str}"
 
@@ -64,11 +66,11 @@ class Protocol(list[(Geometry, list[Request])]):
                 ref = 4
 
             request = Request.from_line(measurement)
-            print(request)
+            info(request)
             pan, tilt = float(pan), float(tilt)
             self.append((Geometry(ref, pan=pan, tilt=tilt), [request]))
 
-    def read_protocol_v2(self, lines, print_comment=False):
+    def read_protocol_v2(self, lines):
 
         # Some regex defintions :
         def split_lines(lines):
@@ -92,7 +94,7 @@ class Protocol(list[(Geometry, list[Request])]):
 
             # Print / Log Comments
             elif line[0] == "#":
-                print_comment and print(f"{line}")
+                info(f"Comment : {line}")
 
             else:
                 # Remove spaces
@@ -119,9 +121,9 @@ class Protocol(list[(Geometry, list[Request])]):
             for request in request_list:
                 if request.radiometer != RadiometerExt.NONE or\
                         request.entrance == EntranceExt.PICTURE:
-                    print("Note : This protocol requests instrument.")
+                    info("This protocol requests instrument.")
                     return True
-        print("Note : This protocol doesn't request instrument.")
+        info("This protocol doesn't request instrument.")
         return False
 
     def check_if_swir_requested(self):
@@ -129,9 +131,9 @@ class Protocol(list[(Geometry, list[Request])]):
             for request in request_list:
                 if request.radiometer == RadiometerType.SWIR or\
                         request.radiometer == RadiometerType.BOTH:
-                    print("Note : This protocol has SWIR request.\n")
+                    info("This protocol has SWIR request.\n")
                     return True
-        print("Note : This protocol doesn't have SWIR request.\n")
+        info("This protocol doesn't have SWIR request.\n")
         return False
 
     @staticmethod

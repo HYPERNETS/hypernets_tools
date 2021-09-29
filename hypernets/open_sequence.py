@@ -12,6 +12,8 @@ from hypernets.abstract.create_metadata import parse_config_metadata
 from hypernets.hypstar.handler import HypstarHandler
 from hypernets.hypstar.libhypstar.python.hypstar_wrapper import HypstarLogLevel
 
+from logging import debug, info, warning, error # noqa
+
 
 def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                       instrument_loglvl, instrument_boot_timeout,
@@ -20,7 +22,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                       DATA_DIR="DATA"):
 
     protocol = Protocol(sequence_file)
-    print(protocol)
+    info(protocol)
 
     # check if this protocol wants to use instrument
     instrument_is_requested = protocol.check_if_instrument_requested()
@@ -74,12 +76,12 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                                              instrument_port=instrument_port,
                                              expect_boot_packet=except_boot,
                                              boot_timeout=instrument_boot_timeout)   # noqa
-    # Useless ?
-    # instrument, visible, swir = instrument_instance.get_serials()
-    # print(f"SN : * instrument -> {instrument}")
-    # print(f"     * visible    -> {visible}")
-    # if swir != 0:
-    #     print(f"     * swir       -> {swir}")
+
+    instrument, visible, swir = instrument_instance.get_serials()
+    debug(f"SN : * instrument -> {instrument}")
+    debug(f"     * visible    -> {visible}")
+    if swir != 0:
+        debug(f"     * swir       -> {swir}")
 
     mdfile = open(path.join(seq_path, "metadata.txt"), "w")
     mdfile.write(parse_config_metadata())
@@ -90,17 +92,17 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     # power, one has to remember, that during initial thermal regulation
     # TEC consumes 5x more current + does it for longer.
     if swir_is_requested:
-        print(f"Cooling SWIR module to {instrument_swir_tec}°C...")
+        info(f"Cooling SWIR module to {instrument_swir_tec}°C...")
         instrument_instance.set_SWIR_module_temperature(instrument_swir_tec)
-        print("Done!")
+        info("Done!")
 
     iter_line, nb_error = 0, 0
     for i, (geometry, requests) in enumerate(protocol, start=1):
 
         flags_dict["$elapsed_time"] = time() - start_time
 
-        print(f"== [Line {i}] " + 60*"=")
-        print(f"--> {len(geometry.flags)} flags for this geometry")
+        info(f"== [Line {i}] " + 60*"=")
+        info(f"--> {len(geometry.flags)} flags for this geometry")
         # TODO : LOG
         # if len(geometry.flags) != 0:
         #     print("    With :")
@@ -111,34 +113,34 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         for j, flag in enumerate(geometry.flags, start=1):
             try:
                 variable, operator, value = protocol.flags[flag]
-                print(f"\n {j}) {variable} [{operator.__name__}] {value}")
+                info(f"\n {j}) {variable} [{operator.__name__}] {value}")
 
                 try:
                     flag_condition = operator(flags_dict[variable], value)
-                    print(f" --> {flags_dict[variable]} [{operator.__name__}]"
-                          f" {value} => {flag_condition}")
+                    info(f" --> {flags_dict[variable]} [{operator.__name__}]"
+                         f" {value} => {flag_condition}")
 
                 except Exception as e:
-                    print(f" {j}) Error : {e}")
+                    error(f" {j}) Error : {e}")
 
             except KeyError:
-                print(f" {j}) Error : {flag} must be defined first !")
+                warning(f" {j}) (ignored) {flag} must be defined first !")
 
         if not flag_condition:
-            print(f" --> Skipping this Geometry because of the flag : {flag}")
+            info(f" --> Skipping this Geometry because of the flag : {flag}")
             continue
 
-        print("-"*72)
+        info("-"*72)
         if not instrument_standalone:
             geometry.get_absolute_pan_tilt()
-            print(f"--> Requested Position : {geometry}")
+            info(f"--> Requested Position : {geometry}")
             try:
                 pan_real, tilt_real = move_to_geometry(geometry, wait=True,
                                                        verbose=False)
                 pan_real = float(pan_real) / 100
                 tilt_real = float(tilt_real) / 100
-                print(f"--> final pan : {pan_real} ; final tilt : {tilt_real}")
-                print("-"*72)
+                info(f"--> final pan : {pan_real} ; final tilt : {tilt_real}")
+                info("-"*72)
 
             except TypeError:
                 pan_real, tilt_real = -999, -999
@@ -149,7 +151,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             block_position = geometry.create_block_position_name(iter_line)
             now_str = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
 
-            print(f"{iter_line}) {request} : {now_str}")
+            info(f"{iter_line}) {request} : {now_str}")
 
             filename = request.spectra_name_convention(prefix=block_position)
             output = path.join(filepath, filename)
@@ -158,7 +160,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                 instrument_instance.take_request(request, path_to_file=output)
 
             except Exception as e:
-                print(f"Error : {e}")
+                error(f"Error : {e}")
                 nb_error += 1
 
             flags_dict[f"$spectra_file{iter_line}.it_vnir"] = request.it_vnir
@@ -198,6 +200,12 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
 if __name__ == '__main__':
 
+    from logging import DEBUG, INFO, basicConfig # noqa
+
+    log_fmt = '[%(levelname)s]\t[%(asctime)s] (%(module)s) %(message)s'
+    dt_fmt = '%Y-%m-%dT:%H:%M:%S'
+    basicConfig(level=INFO, format=log_fmt, datefmt=dt_fmt)
+
     parser = ArgumentParser()
 
     parser.add_argument("-f", "--file", type=str,
@@ -232,7 +240,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    print(80*"-" + f"\n{args}\n" + 80*"-")
+    info("\n" + 80*"-" + f"\n{args}\n" + 80*"-")
 
     run_sequence_file(args.file,
                       instrument_port=args.port, instrument_br=args.baudrate,

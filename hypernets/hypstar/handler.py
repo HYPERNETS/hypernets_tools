@@ -11,6 +11,8 @@ from hypernets.hypstar.libhypstar.python.hypstar_wrapper import Hypstar, \
 from hypernets.hypstar.libhypstar.python.data_structs.hardware_info import \
     HypstarSupportedBaudRates
 
+from logging import debug, info, error
+
 
 class HypstarHandler(Hypstar):
     def __init__(self, instrument_port="/dev/radiometer0",
@@ -24,19 +26,19 @@ class HypstarHandler(Hypstar):
                 super().__init__(instrument_port)
 
             except IOError as e:
-                print(f"Error : {e}")
-                print("[ERROR] Did not get instrument BOOTED packet in {}s".format(boot_timeout)) # noqa
+                error(f"{e}")
+                error("Did not get instrument BOOTED packet in {}s".format(boot_timeout)) # noqa
                 exit(27)
 
             except Exception as e:
-                print(f"Error : {e}")
+                error(f"{e}")
 
         else:  # Got the boot packet or boot packet is not expected (gui mode)
             try:
                 super().__init__(instrument_port)
 
             except Exception as e:
-                print(f"Error : {e}")
+                error(f"{e}")
                 exit(6)
 
         try:
@@ -50,22 +52,22 @@ class HypstarHandler(Hypstar):
             # only workaround and that's done in run_sequence bash script so we
             # signal it that it's all bad
             if not self.hw_info.optical_multiplexer_available:
-                print("[ERROR] MUX+SWIR+TEC hardware not available")
+                error("MUX+SWIR+TEC hardware not available")
                 exit(27)  # SIGABORT
 
         except IOError as e:
-            print(f"Error : {e}")
+            error(f"{e}")
             exit(6)
 
         except Exception as e:
-            print(e)
+            error(e)
             # if instrument does not respond, there's no point in doing
             # anything, so we exit with ABORTED signal so that shell script can
             # catch exception
             exit(6)  # SIGABRT
 
         env_log = self.get_env_log()
-        print(env_log)
+        debug(env_log)
 
     def take_request(self, request, path_to_file=None, gui=False):
 
@@ -94,13 +96,13 @@ class HypstarHandler(Hypstar):
             with open(path_to_file, 'wb') as f:
                 f.write(stream)
 
-            print(f"Saved to {path_to_file}.")
+            debug(f"Saved to {path_to_file}.")
             if return_stream:
                 return stream
             return True
 
         except Exception as e:
-            print(f"Error : {e}")
+            error(f"{e}")
             return e
 
     def take_spectra(self, request, path_to_file, overwrite_IT=True):
@@ -123,10 +125,8 @@ class HypstarHandler(Hypstar):
             spectra = b''
             for n, spectrum in enumerate(cap_list):
                 spectra += spectrum.getBytes()
-                print_extra_log = False
 
-                if print_extra_log:
-                    print(spectrum)
+                debug(spectrum)
 
                 if overwrite_IT:
                     if spectrum.spectrum_header.spectrum_config.vnir:
@@ -140,24 +140,24 @@ class HypstarHandler(Hypstar):
             with open(path_to_file, "wb") as f:
                 f.write(spectra)
 
-            print(f"Saved to {path_to_file}.")
+            info(f"Saved to {path_to_file}.")
 
         except Exception as e:
-            print(f"Error (in take_spectra): {e}")
+            error(f"(in take_spectra) {e}")
             return e
 
         return True
 
     def get_serials(self):
         try:
-            print("Getting SN")  # LOGME
+            debug("Getting SN")
             instrument = self.hw_info.instrument_serial_number
             visible = self.hw_info.vis_serial_number
             swir = self.hw_info.swir_serial_number
             return instrument, visible, swir
 
         except Exception as e:
-            print(f"Error : {e}")
+            error(f"{e}")
             return e
 
 
