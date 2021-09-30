@@ -77,12 +77,12 @@ if [[ "$bypassYocto" == "no" ]] ; then
 	else
 		# Else check  if VirtualHub is running
 		set +e
-		systemctl is-active yvirtualhub.service
+		systemctl is-active yvirtualhub.service > /dev/null
 		set -e
 		if [[ $? -eq 0 ]] ; then
-			echo "VirtualHub is running"
+			echo "[INFO]  VirtualHub is running."
 		else
-			echo "VirtualHub is starting"
+			echo "[INFO]  Starting VirtualHub..."
 			/usr/bin/VirtualHub
 			sleep 2
 			echo "ok"

@@ -66,7 +66,7 @@ def check_trame(data):
     return True
 
 
-def query_position(ser, verbose=False):
+def query_position(ser):
     data = bytearray([0xFF, 0x01, 0x00, 0x51, 0x00, 0x00])
     send_trame(data, ser)
     debug(f"Query pan : {stringifyBinaryToHex(data)}")
@@ -133,10 +133,10 @@ def move_to(ser, pan, tilt, wait=False):
             sleep(.5)
             position_1 = query_position(ser)
             if position_0 is not None and position_1 is not None:
-                debug(f"Position 0 : {position_0[0]/100}, {position_0[1]/100}\n"  # noqa
-                      f"Position 1 : {position_1[0]/100}, {position_1[1]/100}\n"  # noqa
-                      "Estimated velocity : "
-                      f"pan : {.02 * (position_1[0] - position_0[0])}, "
+                debug(f"Position 0 : {position_0[0]/100}, {position_0[1]/100}\n")  # noqa
+                debug(f"Position 1 : {position_1[0]/100}, {position_1[1]/100}\n")  # noqa
+                debug("Estimated velocity : ")
+                debug(f"pan : {.02 * (position_1[0] - position_0[0])}, "
                       f"tilt : {.02 * (position_1[1] - position_0[1])} "
                       "(degrees.s^-1)" + "\n" + "-"*60)
 

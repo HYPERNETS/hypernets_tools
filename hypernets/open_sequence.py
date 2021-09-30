@@ -135,8 +135,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             geometry.get_absolute_pan_tilt()
             info(f"--> Requested Position : {geometry}")
             try:
-                pan_real, tilt_real = move_to_geometry(geometry, wait=True,
-                                                       verbose=False)
+                pan_real, tilt_real = move_to_geometry(geometry, wait=True)
                 pan_real = float(pan_real) / 100
                 tilt_real = float(tilt_real) / 100
                 info(f"--> final pan : {pan_real} ; final tilt : {tilt_real}")
@@ -202,9 +201,9 @@ if __name__ == '__main__':
 
     from logging import DEBUG, INFO, basicConfig # noqa
 
-    log_fmt = '[%(levelname)s]\t[%(asctime)s] (%(module)s) %(message)s'
-    dt_fmt = '%Y-%m-%dT:%H:%M:%S'
-    basicConfig(level=INFO, format=log_fmt, datefmt=dt_fmt)
+    log_fmt = '[%(levelname)-7s %(asctime)s] (%(module)s) %(message)s'
+    dt_fmt = '%Y-%m-%dT%H:%M:%S'
+    basicConfig(level=DEBUG, format=log_fmt, datefmt=dt_fmt)
 
     parser = ArgumentParser()
 
