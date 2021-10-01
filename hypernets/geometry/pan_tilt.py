@@ -133,12 +133,13 @@ def move_to(ser, pan, tilt, wait=False):
             sleep(.5)
             position_1 = query_position(ser)
             if position_0 is not None and position_1 is not None:
-                debug(f"Position 0 : {position_0[0]/100}, {position_0[1]/100}\n")  # noqa
-                debug(f"Position 1 : {position_1[0]/100}, {position_1[1]/100}\n")  # noqa
+                debug(f"Position 0 : {position_0[0]/100}, {position_0[1]/100}")
+                debug(f"Position 1 : {position_1[0]/100}, {position_1[1]/100}")
                 debug("Estimated velocity : ")
                 debug(f"pan : {.02 * (position_1[0] - position_0[0])}, "
                       f"tilt : {.02 * (position_1[1] - position_0[1])} "
-                      "(degrees.s^-1)" + "\n" + "-"*60)
+                      "(degrees.s^-1)")
+                debug("-"*60)
 
             if position_0 is not None and position_1 is not None and (
                     position_0 == position_1 or

@@ -6,9 +6,10 @@ from struct import unpack, calcsize
 from hypernets.hypstar.libhypstar.python.data_structs.spectrum import \
     Spectrum as HySpectrum
 
+from logging import info
 
 class Spectrum(object):
-    def __init__(self, data, verbose=True):
+    def __init__(self, data):
         self.headerDef = [("Total Dataset Length", 'H', None),
                           ("Spectrum Type Information", 'B', self.read_spectrum_info),  # noqa
                           ("Timestamp", 'Q', self.read_timestamp),
@@ -37,8 +38,7 @@ class Spectrum(object):
                 value = post_process(value)
             self.str += f"{definition[0]} : {value}\n"
 
-        if verbose:
-            print(f"{self}" + "-" * 80)
+        info(f"{self}" + "-" * 80)
 
         # Header expansion
         self.total, self.spec_type, self.timestamp, self.exposure_time,\

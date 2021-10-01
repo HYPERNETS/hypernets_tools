@@ -6,16 +6,18 @@ from yoctopuce.yocto_gps import YGps
 from yoctopuce.yocto_latitude import YLatitude
 from yoctopuce.yocto_longitude import YLongitude
 
+from logging import debug
 
-def get_gps(print_value=True, return_float=True):
+
+def get_gps(return_float=True):
     config = init()
     if config["yoctopuce"]["yoctopuce_ip"] == "usb":
-        return _get_gps_usb(print_value, return_float)
+        return _get_gps_usb(return_float)
     else:
-        return _get_gps_ip(print_value, return_float)
+        return _get_gps_ip(return_float)
 
 
-def _get_gps_usb(print_value, return_float):
+def _get_gps_usb(return_float):
     from urllib.request import urlopen
     url_base = get_url_gps()
 
@@ -34,19 +36,17 @@ def _get_gps_usb(print_value, return_float):
     return latitude, longitude, datetime
 
 
-def _get_gps_ip(print_value, return_float):
+def _get_gps_ip(return_float):
     config = init()
     yocto_prefix = config["yoctopuce"]["yocto_gps"]
 
     gps = YGps.FindGps(yocto_prefix + '.gps')
     values = list()
 
-    if print_value or not return_float:
+    if not return_float:
         values = f"Position : {gps.get_latitude()} {gps.get_longitude()}"\
             f"\nDatetime : {gps.get_dateTime()}"
-
-        if print_value:
-            print(values)
+        debug(values)
 
         if not return_float:
             return values
@@ -70,4 +70,4 @@ def _get_gps_ip(print_value, return_float):
 
 if __name__ == "__main__":
     # TODO : Make CLI
-    print(get_gps(print_value=True, return_float=True))
+    print(get_gps(return_float=True))

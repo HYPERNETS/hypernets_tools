@@ -1,16 +1,17 @@
 from time import sleep
 from hypernets.yocto.init import init, get_url_base_prefixed
 
+from logging import debug
 
-def get_meteo(count=1, interval=1, print_value=False):
+def get_meteo(count=1, interval=1):
     config = init()
     if config["yoctopuce"]["yoctopuce_ip"] == "usb":
-        return _get_meteo_usb(count, interval, print_value)
+        return _get_meteo_usb(count, interval)
     else:
-        return _get_meteo_ip(count, interval, print_value)
+        return _get_meteo_ip(count, interval)
 
 
-def _get_meteo_usb(count, interval, print_value):
+def _get_meteo_usb(count, interval):
     from urllib.request import urlopen
     url_base = get_url_base_prefixed()
 
@@ -35,7 +36,7 @@ def _get_meteo_usb(count, interval, print_value):
     return values
 
 
-def _get_meteo_ip(count, interval, print_value):
+def _get_meteo_ip(count, interval):
     from yoctopuce.yocto_api import YAPI
     from yoctopuce.yocto_temperature import YTemperature
     from yoctopuce.yocto_humidity import YHumidity
@@ -59,8 +60,7 @@ def _get_meteo_ip(count, interval, print_value):
             if sensor.isOnline():
                 current = tuple([sensor.get_currentValue(), sensor.get_unit()])
                 values.append(current)
-                if print_value:
-                    print(current)
+                debug(current)
 
     YAPI.FreeAPI()
     return values
@@ -68,5 +68,4 @@ def _get_meteo_ip(count, interval, print_value):
 
 if __name__ == "__main__":
     # TODO : make CLI
-    print(get_meteo(count=1000, interval=.5, print_value=True))
-    # print(get_meteo())
+    print(get_meteo(count=1000, interval=.5))

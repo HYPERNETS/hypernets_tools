@@ -7,6 +7,7 @@ from urllib.request import urlopen
 from time import sleep
 
 from hypernets.yocto.init import init, get_url_base_prefixed
+from logging import info, warning, debug
 
 
 # -----------------------------------------------------------------------------
@@ -38,7 +39,7 @@ def set_at_power_on(*args, force=False):
 # -----------------------------------------------------------------------------
 
 
-def _get_state_relay_usb(id_relay, verbose):
+def _get_state_relay_usb(id_relay):
 
     url_base = get_url_base_prefixed()
 
@@ -53,8 +54,7 @@ def _get_state_relay_usb(id_relay, verbose):
         state = urlopen(url)
         state = {b"B": True, b"A": False}[state.read()]
         relay_states.append(state)
-        if verbose:
-            print(f"Relay #{i} is {state}.")
+        debug(f"Relay #{i} is {state}.")
 
     return relay_states
 
@@ -63,7 +63,7 @@ def _set_state_relay_usb(id_relay, state, force=False):
 
     # Display a warning and ask to use "--force" if relay 1 is turned off
     if 1 in id_relay and state in ["off", "reset"] and not force:
-        print("""Warning : if your rugged pc is connected throught this
+        warning("""If your rugged pc is connected throught this
           relay, this action could switch it off. (use --force [-f]
           to enable this functionality)""")
         return
@@ -92,7 +92,7 @@ def _set_at_power_on_usb(id_relay, state, force):
     urlopen(url)
 
     if not force:
-        print("""Warning : You need to use --force [-f] to write on flash
+        warning("""You need to use --force [-f] to write on flash
               memory, else modifications will be lost""")
     else:
         get = "api?ctx=module&persistentSettings=1"
@@ -103,7 +103,7 @@ def _set_at_power_on_usb(id_relay, state, force):
 # -----------------------------------------------------------------------------
 
 
-def _get_state_relay_ip(id_relay, verbose):
+def _get_state_relay_ip(id_relay):
     # TODO : Parse Y_STATE_INVALID
     config = init()
     yocto_prefix = config["yoctopuce"]["yocto_prefix1"]
@@ -117,21 +117,20 @@ def _get_state_relay_ip(id_relay, verbose):
         state = YRelay.FindRelay(yocto_prefix + '.relay' + str(i))
         relay_states.append(state.get_state())
 
-    if verbose is True:
-        for id_relay, state in enumerate(relay_states):
-            print(f"Relay #{id_relay+1} is {state}")
+    for id_relay, state in enumerate(relay_states):
+        debug(f"Relay #{id_relay+1} is {state}")
 
     YAPI.FreeAPI()
     return relay_states
 
 
 def _set_state_relay_ip(id_relay, state, force=False):
-    print(id_relay)
+    info(id_relay)
     config = init()
     yocto_prefix = config["yoctopuce"]["yocto_prefix1"]
 
     if 1 in id_relay and state in ["off", "reset"] and not force:
-        print("""Warning : if your rugged pc is connected throught this
+        warning("""If your rugged pc is connected throught this
           relay, this action could switch it off. (use --force [-f]
           to enable this functionality)""")
         return
@@ -173,12 +172,12 @@ def _set_at_power_on_ip(id_relay, state, force):
         relay.set_stateAtPowerOn(YRelay.STATEATPOWERON_UNCHANGED)
 
     if not force:
-        print("""Warning : You need to use --force [-f] to write on flash
+        warning("""You need to use --force [-f] to write on flash
               memory, else modifications will be lost""")
     else:
         module = YModule.FindModule(yocto_prefix)
-        print("Module Save : ")
-        print(module.saveToFlash())
+        info("Module Save : ")
+        info(module.saveToFlash())
 
     YAPI.FreeAPI()
 

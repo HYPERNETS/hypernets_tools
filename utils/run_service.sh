@@ -26,12 +26,12 @@ fi
 
 source utils/configparser.sh
 
-baudrate=$(parse_config "baudrate" config_static.ini)
-hypstarPort=$(parse_config "'hypstar_port" config_static.ini)
+baudrate=$(parse_config "baudrate" config_dynamic.ini)
+hypstarPort=$(parse_config "'hypstar_port" config_dynamic.ini)
 bypassYocto=$(parse_config "bypass_yocto" config_static.ini)
-loglevel=$(parse_config "loglevel" config_static.ini)
-bootTimeout=$(parse_config "boot_timeout" config_static.ini)
-swirTec=$(parse_config "swir_tec" config_static.ini)
+loglevel=$(parse_config "loglevel" config_dynamic.ini)
+bootTimeout=$(parse_config "boot_timeout" config_dynamic.ini)
+swirTec=$(parse_config "swir_tec" config_dynamic.ini)
 
 startSequence=$(parse_config "start_sequence" config_dynamic.ini)
 

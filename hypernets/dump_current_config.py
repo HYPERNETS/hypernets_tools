@@ -5,6 +5,8 @@ from hypernets.hypstar.handler import HypstarHandler
 from hypernets.yocto.gps import get_gps
 from hypernets.yocto.relay import set_state_relay
 
+from logging import info
+
 if __name__ == "__main__":
 
     output_file = "config.dump"
@@ -17,8 +19,8 @@ if __name__ == "__main__":
     coef_cal = instrument.get_calibration_coeficients_basic()
     serials = instrument.get_serials()
 
-    print(coef_cal)
-    print(serials)
+    info(coef_cal)
+    info(serials)
 
     del instrument
     set_state_relay([2], "off")
