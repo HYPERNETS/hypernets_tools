@@ -1,6 +1,7 @@
 __pycache__/
 DATA/
 LOGS/
+OTHER/
 config_hypernets.ini
 config_dynamic.ini
 config_static.ini

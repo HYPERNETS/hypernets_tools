@@ -88,6 +88,9 @@ rsync -e "ssh -p $sshPort" -rt --exclude "CUR*" "DATA" "$ipServer:$remoteDir"
 echo "Syncing Logs..."
 rsync -e "ssh -p $sshPort" -rt "LOGS" "$ipServer:$remoteDir"
 
-# Set up the reverse ssh
-# source utils/reverse_ssh.sh
-# reverse_ssh $ipServer $sshPort "$remoteDir/ssh_ports"
+if [ -d "OTHER" ]; then
+	echo "Syncing Directory OTHER..."
+	rsync -e "ssh -p $sshPort" -rt "OTHER" "$ipServer:$remoteDir"
+fi
+
+echo "End."
