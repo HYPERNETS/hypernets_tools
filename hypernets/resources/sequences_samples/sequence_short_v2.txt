@@ -7,8 +7,7 @@ HypernetsProtocol v2.0
 
 
 @[ 90.0, sun, 180.0, hyper ]
-	+ 3.vnir.irr.0.0
-	+ 1.vnir.rad.0.0
+	+ 1.vnir.irr.0.0
 
 
 # Picture of the Sun only if sequence is < 2 minutes
