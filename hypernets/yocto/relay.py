@@ -39,7 +39,7 @@ def set_at_power_on(*args, force=False):
 # -----------------------------------------------------------------------------
 
 
-def _get_state_relay_usb(id_relay):
+def _get_state_relay_usb(id_relay, verbose=False):
 
     url_base = get_url_base_prefixed()
 
