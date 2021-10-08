@@ -96,7 +96,7 @@ class FrameYoctopuce(LabelFrame):
         self.meteo_data.set(meteo_data)
 
     def update_gps(self):
-        gps_data = get_gps(print_value=False, return_float=False)
+        gps_data = get_gps(return_float=False)
         self.gps_data.set(gps_data)
 
 
