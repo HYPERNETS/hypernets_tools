@@ -1,6 +1,6 @@
 
 [yoctopuce]
-yoctopuce_ip  = 10.42.0.X
+yoctopuce_ip  = usb
 yocto_prefix1 = OBSVLFR1-XXXXXX
 yocto_prefix2 = OBSVLFR2-XXXXXX
 yocto_gps = YGNSSMK2-XXXXXX
