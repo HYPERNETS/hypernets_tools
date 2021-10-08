@@ -67,6 +67,7 @@ systemctl start yvirtualhub.service
 systemctl enable yvirtualhub.service
 
 rm -rf Yoctopuce "$last_virtualhub"
+cd -
 echo "Installation  VirtualHub done."
 echo "---------------------------------------------------------------"
 
