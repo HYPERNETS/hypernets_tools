@@ -67,13 +67,12 @@ systemctl start yvirtualhub.service
 systemctl enable yvirtualhub.service
 
 rm -rf Yoctopuce "$last_virtualhub"
-
-echo
+echo "Installation  VirtualHub done."
 echo "---------------------------------------------------------------"
-# echo "Try to run the VirtualHub with /usr/sbin/VirtualHub"
-# echo "Try to go to this webpage : :4444"
 
-midori -e win-new -e goto "http://localhost:4444" &
-journalctl -eu yvirtualhub --follow
+# echo "Try to run the VirtualHub with /usr/sbin/VirtualHub"
+# echo "and go to this webpage"
+# midori -e win-new -e goto "http://localhost:4444" &
+# journalctl -eu yvirtualhub --follow
 
 # Note previous used version of VirtualHub : 40924
