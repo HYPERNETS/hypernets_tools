@@ -9,9 +9,9 @@ a copy of the file *config_hypernets.ini.template* that you will name *config_hy
 Edit the new file according to your configuration. The most important section is *yoctopuce*. 
 
 ```sh
-cd hypernets_tools 
-cp config_hypernets.ini.template config_hypernets.ini
-mousepad config_hypernets.ini
+wget https://raw.githubusercontent.com/HYPERNETS/hypernets_tools/beta/install/EE_hypernets_installer.sh
+chmod +x EE_hypernets_installer.sh
+sudo ./EE_hypernets_installer.sh
 ```
 
 
