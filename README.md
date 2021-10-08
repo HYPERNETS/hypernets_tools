@@ -1,19 +1,12 @@
 ![Hypernets Logo](hypernets/resources/img/logo.png)
   
 ## Instructions :
-First download this repository (as a zip file under the tab *code*) or using
-*git clone*.
-  
-After unzipping (or cloning), go to the folder *hypernets_tools-main* and make
-a copy of the file *config_hypernets.ini.template* that you will name *config_hypernets.ini*.
-Edit the new file according to your configuration. The most important section is *yoctopuce*. 
 
 ```sh
 wget https://raw.githubusercontent.com/HYPERNETS/hypernets_tools/beta/install/EE_hypernets_installer.sh
 chmod +x EE_hypernets_installer.sh
 sudo ./EE_hypernets_installer.sh
 ```
-
 
 Note : by default instrument uses baudrate of 115200. Setting instrument baud rate to higher value will reduce acquisition time, 
 but instrument becomes more sensitive to electronic noise. CRC errors are reported if noise is detected on communications line.
