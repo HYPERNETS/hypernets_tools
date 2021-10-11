@@ -38,6 +38,7 @@ startSequence=$(parse_config "start_sequence" config_dynamic.ini)
 extra_args=""
 if [[ "$startSequence" == "no" ]] ; then
 	echo "Start sequence = no"
+	sleep 120
 	shutdown_sequence;
 fi
 
