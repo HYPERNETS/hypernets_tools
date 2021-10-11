@@ -38,7 +38,7 @@ startSequence=$(parse_config "start_sequence" config_dynamic.ini)
 extra_args=""
 if [[ "$startSequence" == "no" ]] ; then
 	echo "Start sequence = no"
-	exit 1
+	shutdown_sequence;
 fi
 
 if [[ -n $hypstarPort ]] ; then
