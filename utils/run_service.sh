@@ -58,7 +58,8 @@ shutdown_sequence() {
 extra_args=""
 if [[ "$startSequence" == "no" ]] ; then
 	echo "Start sequence = no"
-	sleep 120
+	echo "5 minutes sleep..."
+	sleep 500
 	shutdown_sequence;
 fi
 
