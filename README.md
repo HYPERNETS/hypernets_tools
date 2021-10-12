@@ -12,7 +12,7 @@ sudo ./EE_hypernets_installer.sh
 You should be able to connect to the Yocto-Hub Webpage :
 > localhost:4444
 
-And disable the Wi-Fi (Airplane mode).
+Update the firmware and disable the Wi-Fi (Airplane mode).
 
 
 
