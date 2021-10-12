@@ -23,9 +23,9 @@ if [[ ${PWD##*/} != "hypernets_tools" ]]; then
 	exit 1
 fi
 
-
 source utils/configparser.sh
 
+# Hypstar Configuration
 baudrate=$(parse_config "baudrate" config_dynamic.ini)
 hypstarPort=$(parse_config "'hypstar_port" config_dynamic.ini)
 bypassYocto=$(parse_config "bypass_yocto" config_static.ini)
@@ -33,6 +33,8 @@ loglevel=$(parse_config "loglevel" config_dynamic.ini)
 bootTimeout=$(parse_config "boot_timeout" config_dynamic.ini)
 swirTec=$(parse_config "swir_tec" config_dynamic.ini)
 
+
+checkWakeUpReason=$(parse_config "check_wakeup_reason" config_dynamic.ini)
 startSequence=$(parse_config "start_sequence" config_dynamic.ini)
 
 
@@ -44,22 +46,32 @@ shutdown_sequence() {
     keepPc=$(parse_config "keep_pc" config_dynamic.ini)
 
     if [[ "$keepPc" == "off" ]]; then
-	    echo "Option : Keep PC OFF"
+	    echo "[INFO]  Option : Keep PC OFF"
 	    # Send Yoctopuce To sleep (or not)
 	    python -m hypernets.yocto.sleep_monitor
 	    exit 0
     else
 	    # Cause service exit 1 and doesnt execute SuccessAction=poweroff
-	    echo "Option : Keep PC ON"
+	    echo "[INFO]  Option : Keep PC ON"
 	    exit 1
     fi
 }
 
+if [[ "$checkWakeUpReason" == "yes" ]] ; then
+	echo "[INFO]  Check Wake up reason..."
+	wakeupreason=$(python -m hypernets.yocto.wakeupreason)
+	echo "[INFO]  Wake up reason is : $wakeupreason."
+	if [[ ! "$wakeupreason" == "schedule1" ]] ; then
+		shutdown_sequence;
+	fi
+fi
+
+
 extra_args=""
 if [[ "$startSequence" == "no" ]] ; then
-	echo "Start sequence = no"
-	echo "5 minutes sleep..."
-	sleep 500
+	echo "[INFO]  Start sequence = no"
+	echo "[INFO]  5 minutes sleep..."
+	sleep 300
 	shutdown_sequence;
 fi
 
@@ -90,12 +102,12 @@ if [[ "$bypassYocto" == "no" ]] ; then
 
 	if [[ ! "$yoctopuceIP" == "usb" ]] ; then
 		# We ping it if there is an IP address
-		echo "Waiting for yoctopuce..."
+		echo "[INFO]  Waiting for yoctopuce..."
 		while ! timeout 2 ping -c 1 -n $yoctopuceIP &>/dev/null
 		do
 			echo -n '.'
 		done
-		echo "Ok !"
+		echo "[INFO]  Ok !"
 	else
 		# Else check  if VirtualHub is running
 		set +e
@@ -107,14 +119,14 @@ if [[ "$bypassYocto" == "no" ]] ; then
 			echo "[INFO]  Starting VirtualHub..."
 			/usr/bin/VirtualHub
 			sleep 2
-			echo "ok"
+			echo "[INFO]  ok"
 		fi
 	fi
 
 	python -m hypernets.yocto.relay -son -n2 -n3
 
 else
-	echo "Bypassing Yocto"
+	echo "[INFO]  Bypassing Yocto"
     extra_args="$extra_args --noyocto"
 fi
 
@@ -124,10 +136,10 @@ sequence_file=$(parse_config "sequence_file" config_dynamic.ini)
 exit_actions() {
     return_value=$?
     if [ $return_value -eq 0 ] ; then
-        echo "Success"
+        echo "[INFO]  Success"
     else
-    	echo "Hysptar scheduled job exited with code $return_value";
-		echo "Second try : "
+    	echo "[INFO]  Hysptar scheduled job exited with code $return_value";
+		echo "[INFO]  Second try : "
 		set +e
 		python3 -m hypernets.open_sequence -f $sequence_file $extra_args
 		set -e

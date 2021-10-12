@@ -1,4 +1,3 @@
-# TODO :  log output + --verbose mode
 
 from argparse import ArgumentParser
 from yoctopuce.yocto_relay import YRelay
@@ -12,12 +11,12 @@ from logging import info, warning, debug
 
 # -----------------------------------------------------------------------------
 
-def get_state_relay(*args, verbose=False):
+def get_state_relay(*args):
     config = init()
     if config["yoctopuce"]["yoctopuce_ip"] == "usb":
-        return _get_state_relay_usb(*args, verbose)
+        return _get_state_relay_usb(*args)
     else:
-        return _get_state_relay_ip(*args, verbose)
+        return _get_state_relay_ip(*args)
 
 
 def set_state_relay(*args):
@@ -39,7 +38,7 @@ def set_at_power_on(*args, force=False):
 # -----------------------------------------------------------------------------
 
 
-def _get_state_relay_usb(id_relay, verbose=False):
+def _get_state_relay_usb(id_relay):
 
     url_base = get_url_base_prefixed()
 
@@ -219,7 +218,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.get:
-        get_state_relay(args.id_relay, verbose=True)
+        get_state_relay(args.id_relay)
 
     elif args.set:
         set_state_relay(args.id_relay, args.set, args.force)
