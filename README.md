@@ -1,21 +1,30 @@
 ![Hypernets Logo](hypernets/resources/img/logo.png)
   
-## Instructions :
+## Instructions - for USB:
 
+
+Plug the USB cable between the rugged PC and the "config port" of the Yocto-Pictor, then:
 ```sh
 wget https://raw.githubusercontent.com/HYPERNETS/hypernets_tools/beta/install/EE_hypernets_installer.sh
 chmod +x EE_hypernets_installer.sh
 sudo ./EE_hypernets_installer.sh
 ```
+You should be able to connect to the Yocto-Hub Webpage :
+> localhost:4444
 
-Note : by default instrument uses baudrate of 115200. Setting instrument baud rate to higher value will reduce acquisition time, 
+And disable the Wi-Fi (Airplane mode).
+
+
+
+## Note about instrument baudrate :
+Instrument uses baudrate of 115200. Setting instrument baud rate to higher value will reduce acquisition time, 
 but instrument becomes more sensitive to electronic noise. CRC errors are reported if noise is detected on communications line.
 Driver will retry command 5 times before failing. Generally we would suggest trying higher baud rates while observing
 if there are no CRC errors reported in log file. Frequent CRC errors should not be a problem unless same packet fails 5 times in a row.
 Then we would suggest reducing baud rate until such failures stop. Top-end baud rate use requires shielded cabling.
 
 
-## New set of commands :
+## New set of commands:
 
 ```sh
 # Launch the GUI
@@ -36,7 +45,10 @@ python -m hypernets.hypstar.handler -p
 
 ```
 
-  
+## Wakeup Conditions :
+Please refer to the Yoctopuce User Manual to set up Wakeup conditions for the system :  
+http://www.yoctopuce.com/EN/products/yoctohub-wireless/doc/YHUBWLN1.usermanual.html#CHAP9SEC1
+
 
 ## Autonomous Mode
 
@@ -59,46 +71,5 @@ sudo systemctl start hypernets-sequence
 journalctl -u hypernets-sequence --follow
 ```
 
-### Wakeup Conditions :
-Please refer to the Yoctopuce User Manual to set up Wakeup conditions for the system :  
-http://www.yoctopuce.com/EN/products/yoctohub-wireless/doc/YHUBWLN1.usermanual.html#CHAP9SEC1
-   
-   
-## Optional :
-### Jupyter Notebook
-If you want to connect (ssh or python) on the host system from any web browser via Wi-Fi, 
-you should install first *jupyter notebook* :
 
-```sh
-cd hypernets/install  
-bash 03_install_jupyter.sh
-```
-
-You can then launch the notebook :
-
-```sh
-jupyter notebook --no-browser
-```
-
-Then connect to the Wi-Fi hotspot of the rugged PC (from any laptop) and you should be able
-to access the address :
-
-> 10.42.0.1:8888
-
-More information about jupyter notbook : https://jupyter.org/
-
-### Helpful *(draft!)* webpage for field deployment :
-From documentation : *Voilà allows you to convert a Jupyter Notebook into an interactive dashboard*
-(more information : https://voila.readthedocs.io/en/stable/)
-
-ssh to the rugged pc and start *voilà* :
-```sh
-voila installation_on_site.ipynb --no-browser
-```
-
-Connect to the Wi-Fi hotspot of the rugged PC (from any laptop) and you should be able
-to access the address :
-
-> 10.42.0.1:8866
-
-Notes : any comments or suggestions are welcomed here :) 
+  
