@@ -4,6 +4,8 @@ from yoctopuce.yocto_api import YAPI
 from configparser import ConfigParser
 from yoctopuce.yocto_wakeupmonitor import YWakeUpMonitor
 
+from logging import debug
+
 
 if __name__ == '__main__':
     config = init()

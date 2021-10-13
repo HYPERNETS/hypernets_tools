@@ -23,8 +23,11 @@ echo $ipServer:$sshPort
 # ssh -g -N -T -o ServerAliveInterval 10 -o "ExitOnForwardFailure yes" \
 # 	-R4444:10.42.0.184:4444 $ipServer
 
+# ssh -v -p $sshPort -g -N -T -o "ServerAliveInterval 10" -o "ExitOnForwardFailure yes" \
+# 	-R5555:127.0.0.1:4444 $ipServer
+
 ssh -v -p $sshPort -g -N -T -o "ServerAliveInterval 10" -o "ExitOnForwardFailure yes" \
-	-R5555:127.0.0.1:4444 $ipServer
+	-R5555:10.42.0.76:4444 $ipServer
 
 # ssh -g -N -T -o "ServerAliveInterval 10" -o "ExitOnForwardFailure yes" \
 # 	-R8888:127.0.0.1:8888 $ipServer
