@@ -9,25 +9,83 @@ fi
 
 
 source utils/configparser.sh
-ipServer=$(parse_config "credentials" config_static.ini)
 
+ipServer=$(parse_config "credentials" config_static.ini)
 sshPort=$(parse_config "ssh_port" config_static.ini)
+forwardPort=$(parse_config "forward_port" config_static.ini)
 
 if [ -z $sshPort ]; then
 	sshPort="22"
 fi
 
-echo $ipServer:$sshPort
+if [ -z $forwardPort ]; then
+	forwardPort="5555"
+fi
 
-# TODO : replace by yocto_ip here :
-# ssh -g -N -T -o ServerAliveInterval 10 -o "ExitOnForwardFailure yes" \
-# 	-R4444:10.42.0.184:4444 $ipServer
+ipYocto=$(parse_config "yoctopuce_ip" config_static.ini) 
 
-# ssh -v -p $sshPort -g -N -T -o "ServerAliveInterval 10" -o "ExitOnForwardFailure yes" \
-# 	-R5555:127.0.0.1:4444 $ipServer
+webcamSite=$(parse_config "webcam_site" config_static.ini)
+webcamSky=$(parse_config "webcam_sky" config_static.ini)
+
+ipSky=$(echo $webcamSky | cut -d "@" -f2)
+ipSite=$(echo $webcamSite | cut -d "@" -f2)
+
+echo "[DEBUG]  $ipServer:$sshPort --> [$forwardPort]"
+echo "[DEBUG]  IP Yocto-Pictor : $ipYocto" 
+echo "[DEBUG]  IP Webcam Site  : $ipSite" 
+echo "[DEBUG]  IP Webcam Sky   : $ipSky"
+
+
+
+PS3="Select the service that you want to forward : "
+options=("Yocto-Pictor" "VirtualHub" "Camera Site" "Camera Sky" 
+	"Jupyter Notebook" "Quit")
+
+select opt in "${options[@]}"
+do
+	case $opt in
+		"Yocto-Pictor")
+			echo "You choose : $opt"
+			service="$ipYocto:4444"
+			break
+			;;
+		"VirtualHub")
+			echo "You choose : $opt"
+			service="127.0.0.1:4444"
+			break
+			;;
+		"Camera Site")
+			echo "You choose : $opt"
+			service="$ipSite:553"
+			break
+			;;
+		"Camera Sky")
+			echo "You choose : $opt"
+			service="$ipSky:553"
+			break
+			;;
+		"Jupyter Notebook")
+			echo "You choose : $opt"
+			service="127.0.0.1:8888"
+			break
+			;;
+
+
+		"Quit")
+			break
+			;;
+		*) echo "Invalid option $REPLY";;
+	esac
+done
+
+# TODO : ping before ?
+
+echo "[DEBUG] service : $service"
 
 ssh -v -p $sshPort -g -N -T -o "ServerAliveInterval 10" -o "ExitOnForwardFailure yes" \
-	-R5555:10.42.0.76:4444 $ipServer
+	-R$forwardPort:$service $ipServer
+
+exit 0
 
 # ssh -g -N -T -o "ServerAliveInterval 10" -o "ExitOnForwardFailure yes" \
 # 	-R8888:127.0.0.1:8888 $ipServer
