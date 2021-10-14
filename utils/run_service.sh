@@ -25,7 +25,7 @@ fi
 
 source utils/configparser.sh
 
-# Hypstar Configuration
+# Hypstar Configuration:
 baudrate=$(parse_config "baudrate" config_dynamic.ini)
 hypstarPort=$(parse_config "'hypstar_port" config_dynamic.ini)
 bypassYocto=$(parse_config "bypass_yocto" config_static.ini)
@@ -33,6 +33,8 @@ loglevel=$(parse_config "loglevel" config_dynamic.ini)
 bootTimeout=$(parse_config "boot_timeout" config_dynamic.ini)
 swirTec=$(parse_config "swir_tec" config_dynamic.ini)
 
+# Starting Conditions:
+sequence_file=$(parse_config "sequence_file" config_dynamic.ini)
 checkWakeUpReason=$(parse_config "check_wakeup_reason" config_dynamic.ini)
 startSequence=$(parse_config "start_sequence" config_dynamic.ini)
 keepPc=$(parse_config "keep_pc" config_dynamic.ini)
@@ -64,56 +66,7 @@ shutdown_sequence() {
     fi
 }
 
-
-if [[ "$checkWakeUpReason" == "yes" ]] ; then
-	echo "[INFO]  Check Wake up reason..."
-	set +e
-	wakeupreason=$(python -m hypernets.yocto.wakeupreason)
-	set -e
-
-	echo "[INFO]  Wake up reason is : $wakeupreason."
-
-	if [[ ! "$wakeupreason" == "schedule1" ]]; then
-		echo "[WARNING]  $wakeupreason is not a reason to start the sequence."
-		startSequence="no"
-	    echo "[DEBUG]  Security sleep 2 minutes..."
-		sleep 120
-		shutdown_sequence;
-	fi
-fi
-
-
-if [[ "$startSequence" == "no" ]] ; then
-	echo "[INFO]  Start sequence = no"
-	echo "[INFO]  5 minutes sleep..."
-	sleep 300
-	shutdown_sequence;
-fi
-
-extra_args=""
-
-if [[ -n $hypstarPort ]] ; then
-	extra_args="$extra_args -p $hypstarPort"
-fi
-
-if [[ -n $baudrate ]] ; then
-	extra_args="$extra_args -b $baudrate"
-fi
-
-if [[ -n $loglevel ]] ; then
-	extra_args="$extra_args -l $loglevel"
-fi
-
-if [[ -n $bootTimeout ]] ; then
-	extra_args="$extra_args -t $bootTimeout"
-fi
-
-if [[ -n $swirTec ]] ; then
-	extra_args="$extra_args -T $swirTec"
-fi
-
-if [[ "$bypassYocto" == "no" ]] ; then
-
+if [[ ! "$bypassYocto" == "yes" ]] ; then
 	# Ensure Yocto is online
 	yoctopuceIP=$(parse_config "yoctopuce_ip" config_static.ini)
 
@@ -140,6 +93,61 @@ if [[ "$bypassYocto" == "no" ]] ; then
 		fi
 	fi
 
+	if [[ "$checkWakeUpReason" == "yes" ]] ; then
+		echo "[INFO]  Check Wake up reason..."
+		set +e
+		wakeupreason=$(python -m hypernets.yocto.wakeupreason)
+		set -e
+
+		echo "[DEBUG]  Wake up reason is : $wakeupreason."
+
+		if [[ ! "$wakeupreason" == "schedule1" ]]; then
+			echo "[WARNING]  $wakeupreason is not a reason to start the sequence."
+			startSequence="no"
+			if [[ ! "$keepPc" == "on" ]]; then
+				echo "[DEBUG]  Security sleep 2 minutes..."
+				sleep 120
+			fi
+			shutdown_sequence;
+		fi
+	fi
+fi
+
+
+if [[ "$startSequence" == "no" ]] ; then
+	echo "[INFO]  Start sequence = no"
+	if [[ ! "$keepPc" == "on" ]]; then
+		echo "[INFO]  5 minutes sleep..."
+		sleep 300
+	fi
+	shutdown_sequence;
+fi
+
+
+extra_args=""
+
+if [[ -n $hypstarPort ]] ; then
+	extra_args="$extra_args -p $hypstarPort"
+fi
+
+if [[ -n $baudrate ]] ; then
+	extra_args="$extra_args -b $baudrate"
+fi
+
+if [[ -n $loglevel ]] ; then
+	extra_args="$extra_args -l $loglevel"
+fi
+
+if [[ -n $bootTimeout ]] ; then
+	extra_args="$extra_args -t $bootTimeout"
+fi
+
+if [[ -n $swirTec ]] ; then
+	extra_args="$extra_args -T $swirTec"
+fi
+
+
+if [[ ! "$bypassYocto" == "yes" ]] ; then
 	echo "[INFO]  Set relays #2 and #3 to ON."
 	python -m hypernets.yocto.relay -son -n2 -n3
 
@@ -148,7 +156,6 @@ else
     extra_args="$extra_args --noyocto"
 fi
 
-sequence_file=$(parse_config "sequence_file" config_dynamic.ini)
 
 
 exit_actions() {
