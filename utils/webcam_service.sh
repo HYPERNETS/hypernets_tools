@@ -28,20 +28,21 @@ webcam_site(){
 	credent_site=$(echo $config_site | cut -d "@" -f1)
 	ip_site=$(echo $config_site | cut -d "@" -f2)
 	./utils/webcam_get_image.sh -c "$credent_site" -i "$ip_site" -d "OTHER/WEBCAM_SITE/" -wv
-	echo $PWD
+	echo "Sleeping 30s"
+	sleep 30
 	python -m hypernets.yocto.relay -n5 -soff
 	echo "Closing relay 5"
 }
 
 webcam_sky(){
-	echo "Sleeping 75s"
+	echo "Sleeping 60s"
 	sleep 60 # empirical
 	config_sky=$(awk -F "[ =]+" '/webcam_sky/ {print $2; exit}' config_static.ini)
 	credent_sky=$(echo $config_sky | cut -d "@" -f1)
 	ip_sky=$(echo $config_sky | cut -d "@" -f2)
-	echo $PWD
 	./utils/webcam_get_image.sh -c "$credent_sky" -i "$ip_sky" -d "OTHER/WEBCAM_SKY/" -wv
-
+	echo "Sleeping 30s"
+	sleep 30
 	python -m hypernets.yocto.relay -n6 -soff
 	echo "Closing relay 6"
 }
