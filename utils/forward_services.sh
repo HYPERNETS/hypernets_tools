@@ -56,12 +56,12 @@ do
 			;;
 		"Camera Site")
 			echo "You choose : $opt"
-			service="$ipSite:553"
+			service="$ipSite:554"
 			break
 			;;
 		"Camera Sky")
 			echo "You choose : $opt"
-			service="$ipSky:553"
+			service="$ipSky:554"
 			break
 			;;
 		"Jupyter Notebook")
