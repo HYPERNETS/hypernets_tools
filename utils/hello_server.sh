@@ -26,10 +26,7 @@ set -euo pipefail                           # Bash Strict Mode
 
 # We ping Google DNS to check if network is up
 echo "Waiting for network..."
-while ! timeout 2 ping -c 1 -n 8.8.8.8 &>/dev/null
-do
-	echo -n '.'
-done
+nm-online
 echo "Ok !"
 
 
