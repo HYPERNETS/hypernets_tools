@@ -199,17 +199,27 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
 if __name__ == '__main__':
 
-    from logging import DEBUG, INFO, basicConfig # noqa
+    from logging import ERROR, WARNING, INFO, DEBUG, basicConfig
 
     log_fmt = '[%(levelname)-7s %(asctime)s] (%(module)s) %(message)s'
     dt_fmt = '%Y-%m-%dT%H:%M:%S'
-    basicConfig(level=DEBUG, format=log_fmt, datefmt=dt_fmt)
+
+    # from logging import CRITICAL
+    # log_levels = {"CRITICAL": CRITICAL, "ERROR": ERROR, "WARNING": WARNING,
+    #               "INFO": INFO, "DEBUG": DEBUG}
+
+    log_levels = {"ERROR": ERROR, "WARNING": WARNING, "INFO": INFO,
+                  "DEBUG": DEBUG}
 
     parser = ArgumentParser()
 
     parser.add_argument("-f", "--file", type=str,
                         help="Select input sequence file",
                         required=True)
+
+    parser.add_argument("-v", "--verbosity", type=str,
+                        help="Verbosity of the sequence maker log.",
+                        choices=log_levels.keys(), default="INFO")
 
     parser.add_argument("--noyocto", action="store_true",
                         help="Run using instrument alone, no meteo or yocto stuff") #noqa
@@ -238,6 +248,8 @@ if __name__ == '__main__':
                         default=0)
 
     args = parser.parse_args()
+
+    basicConfig(level=log_levels[args.verbosity], format=log_fmt, datefmt=dt_fmt) # noqa
 
     info("\n" + 80*"-" + f"\n{args}\n" + 80*"-")
 

@@ -32,6 +32,7 @@ bypassYocto=$(parse_config "bypass_yocto" config_static.ini)
 loglevel=$(parse_config "loglevel" config_dynamic.ini)
 bootTimeout=$(parse_config "boot_timeout" config_dynamic.ini)
 swirTec=$(parse_config "swir_tec" config_dynamic.ini)
+verbosity=$(parse_config "verbosity" config_dynamic.ini)
 
 # Starting Conditions:
 sequence_file=$(parse_config "sequence_file" config_dynamic.ini)
@@ -144,6 +145,10 @@ fi
 
 if [[ -n $swirTec ]] ; then
 	extra_args="$extra_args -T $swirTec"
+fi
+
+if [[ -n $verbosity ]] ; then
+	extra_args="$extra_args -v $verbosity"
 fi
 
 
