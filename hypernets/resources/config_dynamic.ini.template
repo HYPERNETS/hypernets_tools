@@ -5,6 +5,10 @@ start_sequence = no
 sequence_file = hypernets/resources/sequences_samples/your_sequence.csv
 auto_update = no
 
+# Verbosity levels are : ERROR, WARNING, INFO, or DEBUG
+verbosity = INFO
+
+
 [GPS] 
 # In case of no GPS signal
 latitude = 0.0
