@@ -40,7 +40,7 @@ class Spectra(list[Spectrum]):
 
         index = 0
         while index < len(spectra_file):
-            current_spectrum = Spectrum(spectra_file[index:], verbose=True)
+            current_spectrum = Spectrum(spectra_file[index:])
             self.append(current_spectrum)
             index += current_spectrum.total
 
