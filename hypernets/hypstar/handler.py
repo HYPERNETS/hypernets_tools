@@ -8,6 +8,8 @@ from hypernets.abstract.request import Request, EntranceExt, RadiometerExt
 from hypernets.hypstar.libhypstar.python.hypstar_wrapper import Hypstar, \
     wait_for_instrument
 
+from hypernets.hypstar.libhypstar.python.hypstar_wrapper import HypstarLogLevel
+
 from hypernets.hypstar.libhypstar.python.data_structs.hardware_info import \
     HypstarSupportedBaudRates
 
@@ -192,6 +194,17 @@ if __name__ == '__main__':
     parser.add_argument("-o", "--output", type=str, default=None,
                         help="Specify output file name")
 
+    parser.add_argument("-l", "--loglevel", type=str,
+                        help="Verbosity of the instrument driver log",
+                        choices=[HypstarLogLevel.ERROR.name,
+                                 HypstarLogLevel.INFO.name,
+                                 HypstarLogLevel.DEBUG.name,
+                                 HypstarLogLevel.TRACE.name], default="ERROR")
+
+    parser.add_argument("-b", "--baudrate", type=int,
+                    help="Serial port baud rate used for communications with instrument", # noqa
+                    default=115200)
+
     args = parser.parse_args()
 
     if args.radiometer and not args.entrance:
@@ -200,8 +213,10 @@ if __name__ == '__main__':
     if args.entrance and not args.radiometer:
         parser.error(f"Please select a radiometer for {args.entrance}.")
 
-    # TODO : more args for hypstar options ? (i.e. : baudate, etc..)
-    instrument_instance = HypstarHandler(expect_boot_packet=False)
+    instrument_instance = \
+        HypstarHandler(expect_boot_packet=False,
+                       instrument_loglevel=HypstarLogLevel[args.loglevel.upper()], # noqa
+                       instrument_baudrate=args.baudrate)
 
     if args.picture:
         request = Request.from_params(args.count, "picture")
