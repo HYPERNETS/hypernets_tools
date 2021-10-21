@@ -215,6 +215,9 @@ if __name__ == '__main__':
                         help="forces relay #1 to switch off, and allows to"
                         " write in memory for the state at power-on option")
 
+    from logging import basicConfig, DEBUG
+    basicConfig(level=DEBUG)
+
     args = parser.parse_args()
 
     if args.get:
