@@ -71,6 +71,7 @@ class Protocol(list[(Geometry, list[Request])]):
             self.append((Geometry(ref, pan=pan, tilt=tilt), [request]))
 
     def read_protocol_v2(self, lines):
+        # FIXME :
 
         # Some regex defintions :
         def split_lines(lines):
@@ -87,7 +88,7 @@ class Protocol(list[(Geometry, list[Request])]):
 
         # Split line with '+' as separation character
         for line in split_lines(lines):
-
+            debug(f"Parsing line : {line}")
             # Ignore new lines
             if line.isspace():
                 continue

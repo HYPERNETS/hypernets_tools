@@ -77,11 +77,11 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                                              expect_boot_packet=except_boot,
                                              boot_timeout=instrument_boot_timeout)   # noqa
 
-    instrument, visible, swir = instrument_instance.get_serials()
-    debug(f"SN : * instrument -> {instrument}")
-    debug(f"     * visible    -> {visible}")
-    if swir != 0:
-        debug(f"     * swir       -> {swir}")
+        instrument, visible, swir = instrument_instance.get_serials()
+        debug(f"SN : * instrument -> {instrument}")
+        debug(f"     * visible    -> {visible}")
+        if swir != 0:
+            debug(f"     * swir       -> {swir}")
 
     mdfile = open(path.join(seq_path, "metadata.txt"), "w")
     mdfile.write(parse_config_metadata())
