@@ -170,6 +170,7 @@ exit_actions() {
     else
     	echo "[INFO]  Hysptar scheduled job exited with code $return_value";
 		echo "[INFO]  Second try : "
+		sleep 1
 		set +e
 		python3 -m hypernets.open_sequence -f $sequence_file $extra_args
 		set -e
