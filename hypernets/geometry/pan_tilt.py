@@ -127,10 +127,11 @@ def move_to(ser, pan, tilt, wait=False):
         # sleep(estimated_time)
         # for _ in range(int(estimated_time) * 2):
         # FIXME : if problem, low up the precision
+        time_to_wait = 1
         for _ in range(34):  # Wait MAX in second) (TODO : time the max)
-            sleep(.5)
+            sleep(time_to_wait / 2)
             position_0 = query_position(ser)
-            sleep(.5)
+            sleep(time_to_wait / 2)
             position_1 = query_position(ser)
             if position_0 is not None and position_1 is not None:
                 debug(f"Position 0 : {position_0[0]/100}, {position_0[1]/100}")

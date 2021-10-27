@@ -71,7 +71,7 @@ class Protocol(list[(Geometry, list[Request])]):
             self.append((Geometry(ref, pan=pan, tilt=tilt), [request]))
 
     def read_protocol_v2(self, lines):
-        # FIXME :
+        # FIXME : special caracter in comment leads
 
         # Some regex defintions :
         def split_lines(lines):

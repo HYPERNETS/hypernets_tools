@@ -21,10 +21,7 @@ set -o nounset                              # Treat unset variables as an error
 set -euo pipefail                           # Bash Strict Mode	
 
 
-# echo "Sleep 30 sec"
-# sleep 30
-
-# We ping Google DNS to check if network is up
+# We check if network is on
 echo "Waiting for network..."
 nm-online
 echo "Ok !"
@@ -56,9 +53,12 @@ journalctl -b-1 -u hypernets-sequence --no-pager > LOGS/$logNameBase-sequence.lo
 journalctl -b-1 -u hypernets-hello --no-pager > LOGS/$logNameBase-hello.log
 journalctl -b-1 -u hypernets-access --no-pager > LOGS/$logNameBase-access.log
 
-# journalctl -eu hypernets-sequence -n 15000 --no-pager > LOGS/hypernets-sequence.log
-# journalctl -eu hypernets-hello -n 150 --no-pager > LOGS/hypernets-hello.log
-# journalctl -eu hypernets-access -n 150 --no-pager > LOGS/hypernets-access.log
+set +e
+systemctl is-alive hypernets-webcam.service > /dev/null
+set -e
+if [[ $? -q 0 ]] ; then
+	journalctl -b-1 -u hypernets-webcam --no-pager > LOGS/$logNameBase-webcam.log
+fi
 
 
 # Update the datetime flag on the server
