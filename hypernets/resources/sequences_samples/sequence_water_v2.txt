@@ -14,7 +14,7 @@ HypernetsProtocol v2.0
 
 # Radiance Water (Lu)
 @[ 90.0, sun, 040.0, hyper ] 
-	+ 3.vnir.rad.0.0 
+	+ 6.vnir.rad.0.0 
 	+ 3.vnir.dark.0.0 
 	+ 1.picture
 
