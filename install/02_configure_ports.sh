@@ -58,4 +58,6 @@ rm -rf /dev/radiometer*
 udevadm control --reload-rules
 udevadm trigger
 sleep 1
+set +e
 ls -l /dev/radiometer*
+set -e
