@@ -49,8 +49,10 @@ wget "$virtualhub_link" # Script will stop here if E404 is raised
 mkdir Yoctopuce
 unzip "$last_virtualhub" -d Yoctopuce/
 
+set +e
 systemctl stop yvirtualhub.service
 systemctl disable yvirtualhub.service
+set -e
 
 # udev rules :
 sudo cp Yoctopuce/udev_conf/51-yoctopuce_all.rules /etc/udev/rules.d/
