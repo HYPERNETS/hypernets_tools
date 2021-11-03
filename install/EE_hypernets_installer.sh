@@ -69,9 +69,9 @@ echo
 echo 
 echo "Yocto IDs are : $yocto_id1, $yocto_id2 and $yocto_gps" 
 
-sudo -u $user sed -i -e '/OBSVLFR1/s/XXXXXX/'${yocto_gps:9:6}'/' config_static.ini
-sudo -u $user sed -i -e '/OBSVLFR2/s/XXXXXX/'${yocto_id1:9:6}'/' config_static.ini
-sudo -u $user sed -i -e '/YGNSSMK2/s/XXXXXX/'${yocto_id2:9:6}'/' config_static.ini
+sudo -u $user sed -i -e '/OBSVLFR1/s/XXXXXX/'${yocto_id1:9:6}'/' config_static.ini
+sudo -u $user sed -i -e '/OBSVLFR2/s/XXXXXX/'${yocto_id2:9:6}'/' config_static.ini
+sudo -u $user sed -i -e '/YGNSSMK2/s/XXXXXX/'${yocto_gps:9:6}'/' config_static.ini
 
 echo 
 echo 
