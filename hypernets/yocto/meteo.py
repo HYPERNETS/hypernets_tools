@@ -3,6 +3,7 @@ from hypernets.yocto.init import init, get_url_base_prefixed
 
 from logging import debug
 
+
 def get_meteo(count=1, interval=1):
     config = init()
     if config["yoctopuce"]["yoctopuce_ip"] == "usb":
@@ -12,6 +13,7 @@ def get_meteo(count=1, interval=1):
 
 
 def _get_meteo_usb(count, interval):
+    from html import unescape
     from urllib.request import urlopen
     url_base = get_url_base_prefixed()
 
@@ -26,8 +28,8 @@ def _get_meteo_usb(count, interval):
         get = "/".join(["api", sensor, "unit"])
         url = "/".join([url_base, get])
         unit = urlopen(url).read()
-        return tuple([value, unit.decode("utf-8")])
-        # return value
+        print(unit)
+        return tuple([value, unescape(unit.decode("utf-8"))])
 
     values = list()
     for sensor in ["temperature", "humidity", "pressure", "lightSensor"]:
