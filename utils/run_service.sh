@@ -169,8 +169,19 @@ exit_actions() {
         echo "[INFO]  Success"
     else
     	echo "[INFO]  Hysptar scheduled job exited with code $return_value";
-		echo "[INFO]  Second try : "
+
+		# FIXME : sudo issue
+		# if [ $return_value -eq 27 ]; then
+		# 	echo "[INFO] Trying to reload and trigger USB rules..."
+		# 	sudo udevadm control --reload
+		# 	echo $?
+		# 	sudo udevadm trigger
+		# 	echo $?
+		# fi
+
 		sleep 1
+
+		echo "[INFO]  Second try : "
 		set +e
 		python3 -m hypernets.open_sequence -f $sequence_file $extra_args
 		set -e
