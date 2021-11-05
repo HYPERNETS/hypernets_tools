@@ -54,9 +54,9 @@ journalctl -b-1 -u hypernets-hello --no-pager > LOGS/$logNameBase-hello.log
 journalctl -b-1 -u hypernets-access --no-pager > LOGS/$logNameBase-access.log
 
 set +e
-systemctl is-alive hypernets-webcam.service > /dev/null
+systemctl is-active hypernets-webcam.service > /dev/null
 set -e
-if [[ $? -q 0 ]] ; then
+if [[ $? -eq 0 ]] ; then
 	journalctl -b-1 -u hypernets-webcam --no-pager > LOGS/$logNameBase-webcam.log
 fi
 
