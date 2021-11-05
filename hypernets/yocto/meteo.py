@@ -28,13 +28,13 @@ def _get_meteo_usb(count, interval):
         get = "/".join(["api", sensor, "unit"])
         url = "/".join([url_base, get])
         unit = urlopen(url).read()
-        print(unit)
         return tuple([value, unescape(unit.decode("utf-8"))])
 
     values = list()
     for sensor in ["temperature", "humidity", "pressure", "lightSensor"]:
         values.append((get_value_and_unit(sensor)))
 
+    debug(values)
     return values
 
 
