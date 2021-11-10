@@ -51,6 +51,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     if not instrument_standalone:
         from hypernets.geometry.pan_tilt import move_to_geometry
         from hypernets.yocto.meteo import get_meteo
+        except_boot = True
 
         # mkdir(path.join(seq_path, "METEO"))
         # Write one line meteo file
@@ -64,11 +65,8 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
             except Exception as e:
                 meteo.write(e)
-
-    if instrument_standalone:
-        except_boot = False
     else:
-        except_boot = True
+        except_boot = False
 
     if instrument_is_requested:
         instrument_instance = HypstarHandler(instrument_loglevel=instrument_loglvl,  # noqa

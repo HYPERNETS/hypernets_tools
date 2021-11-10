@@ -44,6 +44,7 @@ if [ -z $autoUpdate ]; then
 fi
 
 # Make Logs
+echo "Making Logs..."
 mkdir -p LOGS
 
 
@@ -54,12 +55,16 @@ journalctl -b-1 -u hypernets-hello --no-pager > LOGS/$logNameBase-hello.log
 journalctl -b-1 -u hypernets-access --no-pager > LOGS/$logNameBase-access.log
 
 set +e
-systemctl is-active hypernets-webcam.service > /dev/null
-set -e
+systemctl is-enabled hypernets-webcam.service > /dev/null
 if [[ $? -eq 0 ]] ; then
 	journalctl -b-1 -u hypernets-webcam --no-pager > LOGS/$logNameBase-webcam.log
 fi
 
+systemctl is-enabled hypernets-rain.service> /dev/null
+if [[ $? -eq 0 ]] ; then
+	journalctl -b-1 -u hypernets-rain --no-pager > LOGS/$logNameBase-rain.log
+fi
+set -e
 
 # Update the datetime flag on the server
 echo "Touching $ipServer:$remoteDir/system_is_up"

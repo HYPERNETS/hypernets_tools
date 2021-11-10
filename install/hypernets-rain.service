@@ -1,0 +1,11 @@
+[Unit]
+Description=Hypernets Rain Monitor
+Wants=network-online.target
+
+[Service]
+User=
+ExecStart=
+WorkingDirectory=
+
+[Install]
+WantedBy=multi-user.target
