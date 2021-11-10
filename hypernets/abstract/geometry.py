@@ -134,7 +134,8 @@ class Geometry(object):
                 self.tilt_abs += zenith_sun
 
         self.tilt_abs = reverse_tilt(self.tilt_abs)
-        self.pan_abs = reverse_tilt(self.pan_abs)
+        if reverse_tilt is neg:
+            self.pan_abs = self.pan_abs + 180
 
 
 if __name__ == '__main__':

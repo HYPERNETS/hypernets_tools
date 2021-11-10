@@ -102,7 +102,9 @@ def move_to(ser, pan, tilt, wait=False):
         ser = open_serial()
 
     # Conversion FIXME : here modulo should fit pan/tilt range specification
+    debug(f"Before modulo: {pan}, {tilt}")
     pan, tilt = int(pan*100) % 36000, int(tilt*100) % 36000
+    debug(f"After modulo: {pan}, {tilt}")
 
     info(f"Requested Position :\t({pan}, {tilt})\t(10^-2 degrees)")
 
