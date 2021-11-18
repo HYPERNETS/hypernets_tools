@@ -62,5 +62,4 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
 else
 	echo "Exit"
-	exit 1
 fi

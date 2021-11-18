@@ -13,7 +13,8 @@ remote_dir = ~
 ssh_port = 22
 remote_ssh_port = 20213
 
-webcam_sky = user:pass@ip_cam_sky
+# Webcam relay 5:
 webcam_site = user:pass@ip_cam_site
 
-
+# Webcam relay 6:
+webcam_sky = user:pass@ip_cam_sky

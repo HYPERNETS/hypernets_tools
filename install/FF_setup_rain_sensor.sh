@@ -14,15 +14,22 @@ if [[ ${PWD##*/} != "hypernets_tools" ]]; then
 	exit 1
 fi
 
-user="$SUDO_USER"
-path_to_service=$(echo "$PWD/utils/rain_sensor_service.sh" | sed 's/\//\\\//g')
-path_to_h_tools=$(echo "$PWD" | sed 's/\//\\\//g')
-service_file="/etc/systemd/system/hypernets-rain.service"
+cd hypernets/rain_sensor/
+sudo make
+cd -
 
-cp "./install/hypernets-rain.service" $service_file
+read -p "Install Measurement at Boot? (y/n)"
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+	user="$SUDO_USER"
+	path_to_service=$(echo "$PWD/utils/rain_sensor_service.sh" | sed 's/\//\\\//g')
+	path_to_h_tools=$(echo "$PWD" | sed 's/\//\\\//g')
+	service_file="/etc/systemd/system/hypernets-rain.service"
 
-sed -i '/User=$/s/$/'$user'/' $service_file
-sed -i '/ExecStart=$/s/$/'$path_to_service'/' $service_file
-sed -i '/WorkingDirectory=$/s/$/'$path_to_h_tools'\//' $service_file
+	cp "./install/hypernets-rain.service" $service_file
 
-systemctl enable hypernets-rain
+	sed -i '/User=$/s/$/'$user'/' $service_file
+	sed -i '/ExecStart=$/s/$/'$path_to_service'/' $service_file
+	sed -i '/WorkingDirectory=$/s/$/'$path_to_h_tools'\//' $service_file
+
+	systemctl enable hypernets-rain
+fi
