@@ -21,12 +21,13 @@ if [ -d "hypernets_tools" ]; then
 	exit 1
 fi
 
-timeout 3 ping -c 1 -n 8.8.8.8 &>/dev/null
-
+set +e
+nm-online
 if [ $? -ne 0 ]; then
 	echo "Error : please connect to internet."
 	exit 1
 fi
+set +e
 
 echo 
 echo 
