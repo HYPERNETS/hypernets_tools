@@ -1,5 +1,7 @@
 
 from sys import exit
+from time import sleep
+from os.path import exists, islink
 
 from argparse import ArgumentParser
 
@@ -20,6 +22,8 @@ class HypstarHandler(Hypstar):
     def __init__(self, instrument_port="/dev/radiometer0",
                  instrument_baudrate=115200, instrument_loglevel=3,
                  expect_boot_packet=True, boot_timeout=30):
+
+        HypstarHandler.wait_for_instrument_port(instrument_port)
 
         if expect_boot_packet and not wait_for_instrument(instrument_port, boot_timeout): # noqa
             # just in case instrument sent BOOTED packet while we were
@@ -71,13 +75,29 @@ class HypstarHandler(Hypstar):
         env_log = self.get_env_log()
         debug(env_log)
 
+    @staticmethod
+    def wait_for_instrument_port(instrument_port):
+        info(f"Waiting for {instrument_port}...")
+        timeout = 5
+        while not exists(instrument_port):
+            sleep(1)
+            timeout -= 1
+            debug(f"Timeout remaining value: {timeout}s")
+            if timeout <= 0:
+                raise Exception(f"{instrument_port} timed out!")
+                exit(27)
+
+        if not islink(instrument_port):
+            raise ValueError(f"{instrument_port} is not a link!")
+            exit(27)
+
     def take_request(self, request, path_to_file=None, gui=False):
 
         if path_to_file is None:
             from os import path, mkdir
             path_to_file = path.join("DATA", request.spectra_name_convention())
 
-            if not path.exists("DATA"):
+            if not exists("DATA"):
                 mkdir("DATA")
 
         if request.entrance == EntranceExt.PICTURE:
@@ -204,6 +224,9 @@ if __name__ == '__main__':
     parser.add_argument("-b", "--baudrate", type=int,
                     help="Serial port baud rate used for communications with instrument", # noqa
                     default=115200)
+
+    from logging import basicConfig, DEBUG
+    basicConfig(level=DEBUG)
 
     args = parser.parse_args()
 
