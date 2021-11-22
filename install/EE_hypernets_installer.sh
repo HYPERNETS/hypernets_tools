@@ -78,7 +78,7 @@ echo
 echo 
 echo "Step 3 -- Installation of python dependencies..."
 echo "------------------------------------------------"
-sudo ./install/01_dependencies.sh
+sudo -u $user ./install/01_dependencies.sh
 
 echo 
 echo 
