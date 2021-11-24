@@ -1,5 +1,5 @@
 
-from logging import warning, error
+from logging import info, warning, error
 
 
 class Geometry(object):
@@ -85,33 +85,34 @@ class Geometry(object):
         return block_position
 
     def get_absolute_pan_tilt(self):
+        try:  # FIXME
+            from configparser import ConfigParser
+            config_file = "config_dynamic.ini"
+            config = ConfigParser()
+            config.read(config_file)
+            offset_pan = int(config["pantilt"]["offset_pan"])
+            offset_tilt = int(config["pantilt"]["offset_tilt"])
+            reverse_tilt = config["pantilt"]["reverse_tilt"] == "yes"
+            azimuth_switch = int(config["pantilt"]["azimuth_switch"])
+
+        except KeyError as key:
+            warning(f" {key} default values loaded")
+            # Default values :
+            # offset_tilt = 0
+            offset_pan, reverse_tilt = 0, False
+            azimuth_switch = 360
+
+        except Exception as e:
+            error(f"Config Error : {e}")
+
+        from operator import neg, pos
+        reverse_tilt = {True: neg, False: pos}[reverse_tilt]
 
         self.pan_abs, self.tilt_abs = self.pan, self.tilt
-
         pan_ref, tilt_ref = Geometry.int_to_reference(self.reference)
-
-        # Default values :
-        offset_pan, offset_tilt, reverse_tilt = 0, 0, False
 
         # Get offset values :
         if 'sun' in [pan_ref, tilt_ref] or 'hyp' in [pan_ref, tilt_ref]:
-            try:
-                from configparser import ConfigParser
-                config_file = "config_dynamic.ini"
-                config = ConfigParser()
-                config.read(config_file)
-                offset_pan = int(config["pantilt"]["offset_pan"])
-                offset_tilt = int(config["pantilt"]["offset_tilt"])
-                reverse_tilt = config["pantilt"]["reverse_tilt"] == "yes"
-
-            except KeyError as key:
-                warning(f" {key} default values loaded")
-
-            except Exception as e:
-                error(f"Config Error : {e}")
-
-            from operator import neg, pos
-            reverse_tilt = {True: neg, False: pos}[reverse_tilt]
 
             # Orientation
             if pan_ref in ['sun', 'hyp']:
@@ -128,7 +129,15 @@ class Geometry(object):
 
             # Point to the sun
             if pan_ref == 'sun':
-                self.pan_abs += azimuth_sun
+                # TODO : move to flag geometry condition
+                if azimuth_sun <= azimuth_switch:
+                    info(f"Azimuth sun ({azimuth_sun}) is less than azimuth "
+                         f"switch ({azimuth_switch}) --> +{self.pan_abs}°")
+                    self.pan_abs = azimuth_sun + self.pan_abs
+                else:
+                    info(f"Azimuth sun ({azimuth_sun}) is more than azimuth "
+                         f"switch ({azimuth_switch}) --> -{self.pan_abs}°")
+                    self.pan_abs = azimuth_sun - self.pan_abs
 
             if tilt_ref == 'sun':
                 self.tilt_abs += zenith_sun
@@ -139,14 +148,22 @@ class Geometry(object):
 
 
 if __name__ == '__main__':
-    print(Geometry.__doc__)
-    print("Ref     Pan    Tilt")
-    for ref in range(Geometry.length):
-        print(f"{ref}  -> {Geometry.int_to_reference(ref)}")
+    from logging import basicConfig, DEBUG
+    log_fmt = '[%(levelname)-7s %(asctime)s] (%(module)s) %(message)s'
+    dt_fmt = '%H:%M:%S'
+    basicConfig(level=DEBUG, format=log_fmt, datefmt=dt_fmt)
 
-    # for ref in range(9):
-    #     reference = Geometry.int_to_reference(ref)
-    #     geometry = Geometry(ref)
-    #     print(geometry)
-    #     geometry.get_absolute_pan_tilt()
-    #     print(geometry)
+    info(Geometry.__doc__)
+
+    for ref in range(9):
+        info(f"[{ref}]  -> {Geometry.int_to_reference(ref)}")
+        reference = Geometry.int_to_reference(ref)
+        geometry = Geometry(ref)
+        info(geometry)
+        geometry.get_absolute_pan_tilt()
+        info(geometry)
+
+    info("")
+    geometry = Geometry(2, pan=90, tilt=40)
+    geometry.get_absolute_pan_tilt()
+    info(geometry)
