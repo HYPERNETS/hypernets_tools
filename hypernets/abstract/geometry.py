@@ -1,5 +1,5 @@
 
-from logging import info, warning, error
+from logging import info, warning, error, debug
 
 
 class Geometry(object):
@@ -53,6 +53,22 @@ class Geometry(object):
         str_output += f" -- {self.flags}"
         return str_output
 
+    def __eq__(self, other):
+
+        if self.reference != other.reference:
+            return False
+
+        if self.pan != other.pan or self.tilt != other.tilt:
+            return False
+
+        if self.flags != other.flags:  # TODO : check if always correct
+            return False
+
+        return True
+
+    def __hash__(self):
+        return hash(str(self))
+
     @classmethod
     def from_references(cls, ref_pan, ref_tilt, pan=0.0, tilt=0.0, flags=[]):
         reference = Geometry.reference_to_int(ref_pan, ref_tilt)
@@ -84,7 +100,7 @@ class Geometry(object):
 
         return block_position
 
-    def get_absolute_pan_tilt(self):
+    def get_absolute_pan_tilt(self, now=None):
         try:  # FIXME
             from configparser import ConfigParser
             config_file = "config_dynamic.ini"
@@ -111,36 +127,37 @@ class Geometry(object):
         self.pan_abs, self.tilt_abs = self.pan, self.tilt
         pan_ref, tilt_ref = Geometry.int_to_reference(self.reference)
 
-        # Get offset values :
-        if 'sun' in [pan_ref, tilt_ref] or 'hyp' in [pan_ref, tilt_ref]:
-
-            # Orientation
-            if pan_ref in ['sun', 'hyp']:
-                self.pan_abs -= reverse_tilt(offset_pan)
-
-            if tilt_ref in ['sun', 'hyp']:
-                self.tilt_abs -= reverse_tilt(offset_tilt)
 
         # Get sun position
         if 'sun' in [pan_ref, tilt_ref]:  # pickle me :
             from hypernets.geometry.spa.spa_hypernets import spa_from_datetime
-            azimuth_sun, zenith_sun = spa_from_datetime()
+            azimuth_sun, zenith_sun = spa_from_datetime(now=now)
             zenith_sun = 180 - zenith_sun
 
             # Point to the sun
             if pan_ref == 'sun':
                 # TODO : move to flag geometry condition
                 if azimuth_sun <= azimuth_switch:
-                    info(f"Azimuth sun ({azimuth_sun}) is less than azimuth "
-                         f"switch ({azimuth_switch}) --> +{self.pan_abs}°")
+                    debug(f"Azimuth sun ({azimuth_sun}) is less than azimuth "
+                          f"switch ({azimuth_switch}) --> +{self.pan_abs}°")
                     self.pan_abs = azimuth_sun + self.pan_abs
                 else:
-                    info(f"Azimuth sun ({azimuth_sun}) is more than azimuth "
-                         f"switch ({azimuth_switch}) --> -{self.pan_abs}°")
+                    debug(f"Azimuth sun ({azimuth_sun}) is more than azimuth "
+                          f"switch ({azimuth_switch}) --> -{self.pan_abs}°")
                     self.pan_abs = azimuth_sun - self.pan_abs
 
             if tilt_ref == 'sun':
                 self.tilt_abs += zenith_sun
+
+        # Get offset values :
+        if 'sun' in [pan_ref, tilt_ref] or 'hyp' in [pan_ref, tilt_ref]:
+            # Orientation
+            if pan_ref in ['sun', 'hyp']:
+                self.pan_abs -= reverse_tilt(offset_pan)
+                # self.pan_abs -= offset_pan
+
+            if tilt_ref in ['sun', 'hyp']:
+                self.tilt_abs -= reverse_tilt(offset_tilt)
 
         self.tilt_abs = reverse_tilt(self.tilt_abs)
         if reverse_tilt is neg:

@@ -11,19 +11,22 @@ from logging import debug, info, warning, error # noqa
 
 
 class Protocol(list[(Geometry, list[Request])]):
-    def __init__(self, filename):
+    def __init__(self, filename=None):
         self.name = filename
         self.version = None
         self.flags = dict()
 
-        with open(filename, 'r') as fd:
-            first_line = fd.readline()
-            if first_line[:17] == "HypernetsProtocol":
-                self.version = first_line[18:-1]
-                self.read_protocol_v2(fd.read())
-            else:
-                self.version = "1"
-                self.read_protocol_v1(fd.readlines())
+        if self.name is not None:
+            with open(filename, 'r') as fd:
+                first_line = fd.readline()
+                if first_line[:17] == "HypernetsProtocol":
+                    self.version = first_line[18:-1]
+                    self.read_protocol_v2(fd.read())
+                else:
+                    self.version = "1"
+                    self.read_protocol_v1(fd.readlines())
+        else:
+            self.name = "On the Fly Protocol"
 
     def __str__(self):
 
@@ -148,13 +151,13 @@ if __name__ == '__main__':
     parser.add_argument("-f", "--filename", type=str, required=True,
                         help="Select a protocol file (txt, csv)")
 
+    from logging import basicConfig, DEBUG
+    log_fmt = '[%(levelname)-7s %(asctime)s] (%(module)s) %(message)s'
+    dt_fmt = '%H:%M:%S'
+    basicConfig(level=DEBUG, format=log_fmt, datefmt=dt_fmt)
+
     args = parser.parse_args()
     protocol = Protocol(args.filename)
-    print(protocol)
     protocol.check_if_instrument_requested()
     protocol.check_if_swir_requested()
-
-    # for i, (geometry, requests) in enumerate(protocol, start=1):
-    #      for request in requests:
-    #          print(request.radiometer, request.entrance)
-    # print("-"*80)
+    info(protocol)
