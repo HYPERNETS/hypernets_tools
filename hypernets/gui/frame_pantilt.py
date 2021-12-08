@@ -51,10 +51,10 @@ class FramePanTilt(LabelFrame):
 
     def callback(self):
         reference = Geometry.reference_to_int(*self.reference.get().split(' '))
+        pan = self.pan.get().replace(",", ".")
+        tilt = self.tilt.get().replace(",", ".")
 
-        geometry = Geometry(pan=self.pan.get(), tilt=self.tilt.get(),
-                            reference=reference)
-
+        geometry = Geometry(pan=pan, tilt=tilt, reference=reference)
         geometry.get_absolute_pan_tilt()
         move_to_geometry(geometry)
 
