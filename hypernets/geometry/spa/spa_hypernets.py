@@ -4,7 +4,11 @@ from datetime import datetime
 from logging import info, debug
 
 
-def spa_from_datetime(now=datetime.utcnow()):
+def spa_from_datetime(now=None):
+
+    if now is None:
+        now = datetime.utcnow()
+
     from configparser import ConfigParser
     config = ConfigParser()
     config.read("config_dynamic.ini")
