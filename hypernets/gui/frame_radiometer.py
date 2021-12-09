@@ -314,6 +314,10 @@ class FrameRadiometer(LabelFrame):
         else:
             showinfo("Thermal Control", "Thermal Control unsetted.")
 
+    def __del__(self):
+        if self.hypstar is not None:
+            del self.hypstar
+
 
 if __name__ == '__main__':
     root = Tk()
