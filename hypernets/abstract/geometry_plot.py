@@ -9,7 +9,7 @@ from logging import info, debug, basicConfig, DEBUG, INFO  # noqa
 from datetime import datetime, timedelta
 
 
-def daterange(start_time="12:00", end_time="20:00", date="2021-12-21", delta=60):  # noqa
+def daterange(start_time, end_time, date, delta=60):
     debug(f"{date}: from {start_time} to {end_time}, every {delta} min.")
 
     start_time = datetime.strptime(date + start_time, '%Y-%m-%d%H:%M')
@@ -105,8 +105,12 @@ if __name__ == '__main__':
     info(f"Protocol has {len(protocol)} lines with different {len(geometries)}"
          f" geometries.")
 
-    dates = list(daterange())
-    debug(list(map(str, dates)))
+    date = "2021-12-21"
+    start_time = "12:00"
+    end_time = "20:00"
+    delta = 60
+    dates = list(daterange(start_time, end_time, date, delta))
+    title = (f"{date}: from {start_time} to {end_time}, every {delta} min.")
 
     fig = plt.figure()
 
@@ -119,5 +123,5 @@ if __name__ == '__main__':
     plot_cartesian_tilt(fig, dates, [tilt for _, tilt in points])
 
     plt.legend([str(geometry) for geometry in geometries])
-
+    plt.suptitle(title)
     plt.show()
