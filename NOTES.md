@@ -3,10 +3,10 @@
 ## TODO : 
 
 ### Software Watchdog 
-* to ensure shutting down before power-cycling
-* should be an option in the config file 
+- [ ] to ensure shutting down before power-cycling
+- [ ] should be an option in the config file 
 
-### Virtual environments for the application
+### [ ] Virtual environments for the application
 * Avoid python update issues
 * pipenv for example
 * Use of requirements.txt
@@ -14,21 +14,20 @@
 
 ## New Ideas : 
 ### Config checker before field deployment
-* A short script that check basics before deployment
-* Network check
-* Required / Optional fields in config file
-* Valid protocol
+- [x] A short script that check basics before deployment
+- [ ] Network check
+- [ ] Required / Optional fields in config file
+- [x] Valid protocol
 * ...
 
 ### Async Download Data
-* While the pan-tilt is moving to the next position
-* At the end of the sequence
-* Using Threads ?
+- [ ] While the pan-tilt is moving to the next position
+- [ ] At the end of the sequence
+- [ ] Using Threads ?
 
 ### Forward useful configuration port using auto-ssh
-* Forward of jupyter
-* Forward of Yoctopuce Config page
-* Security Issues ?
+- [x] Forward of jupyter
+- [x] Forward of Yoctopuce Config page
 
 ### Light measurement during acquisition
-* knowledge about stability of the sky light
+- [x] knowledge about stability of the sky light
