@@ -178,7 +178,9 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
     mdfile.close()
 
-    replace(seq_path, path.join(DATA_DIR, Protocol.create_seq_name(now=start)))
+    final_seq_path = path.join(DATA_DIR, Protocol.create_seq_name(now=start))
+    replace(seq_path, final_seq_path)
+    info(f"Created sequence : {final_seq_path}")
 
     if swir_is_requested is True:
         instrument_instance.shutdown_SWIR_module_thermal_control()
