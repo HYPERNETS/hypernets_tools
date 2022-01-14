@@ -28,6 +28,7 @@ function usage(){
 	printf "  -v  Verbose Mode.\n"
 	printf "  -w  Wait on webcam is up.\n"
 	printf "  -d, OUTPUT_DIR   Specify the output directory.\n"
+	printf "  -f, FILEPREFIX	Specify the file name prefix.\n"
 	printf "  -i, IP_ADDRESS   Specify the ip address of the camera.\n"
 	printf "  -c, USER:PASS    Specify credentials camera.\n"
 	printf "  -h, --help       Diplay this help message.\n"
@@ -40,9 +41,9 @@ function take_picture(){
 	DATE=$(date +"%Y%m%dT%H%M%S") 
 	# touch $OUTPUT_DIR/$DATE.jpg
 	ffmpeg -y -i rtsp://"$CREDENTIALS$IP_ADDRESS":554 -vframes 1 \
-		"$OUTPUT_DIR/$DATE.jpg"
+		"$OUTPUT_DIR/$FILEPREFIX$DATE.jpg"
 	if [ "$VERBOSE" -eq 1 ]; then
-		echo Output File is : "$OUTPUT_DIR/$DATE".jpg 
+		echo Output File is : "$OUTPUT_DIR/$FILEPREFIX$DATE".jpg 
 	fi
 }
 
@@ -86,14 +87,16 @@ VERBOSE=0
 WAIT_UP=0
 CREDENTIALS=""
 
+
 set +o nounset
 
 if [ -z "$1" ] ; then usage ; fi
-while getopts 'hvwd:i:c:' OPTION; do
+while getopts 'hvwf:d:i:c:' OPTION; do
 	case "$OPTION" in
 		v) VERBOSE=1;;
 		w) WAIT_UP=1 ;;
 		d) OUTPUT_DIR="$OPTARG" ;;
+                f) FILEPREFIX="$OPTARG" ;;
 		c) CREDENTIALS="$OPTARG" ;;
 		i) IP_ADDRESS="$OPTARG" ;;
 		?|h) usage ;;
@@ -104,6 +107,7 @@ done
 if [ "$VERBOSE" -eq 1 ] ; then
 	echo "(Verbose Mode On)" 
 	echo "OUTPUT_DIR provided : $OUTPUT_DIR" 
+	echo "FILEPREFIX provided : $FILEPREFIX" 
 	echo "IP_ADDRESS provided : $IP_ADDRESS"
 	echo "CREDENTIALS provided : $CREDENTIALS"
 	echo "WAIT_UP provided : $WAIT_UP"
@@ -128,6 +132,11 @@ if [ $VERBOSE -eq 1 ] ; then
 	echo "OUTPUT_DIR : $OUTPUT_DIR" 
 fi
 
+# FILEPREFIX Parser
+if [ -z "$FILEPREFIX" ] ; then
+        FILEPREFIX=""
+fi
+
 if [ $WAIT_UP -eq 1 ] ; then
 	wait_up
 fi
@@ -137,3 +146,4 @@ take_picture
 set -o nounset
 
 exit 0
+
