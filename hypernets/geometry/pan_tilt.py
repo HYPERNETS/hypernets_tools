@@ -217,5 +217,5 @@ if __name__ == '__main__':
 
     # FIXME
     ser = open_serial()
-    move_to(ser, args.pan, args.tilt, wait=args.wait)
+    print(move_to(ser, args.pan, args.tilt, wait=args.wait))
     ser.close()
