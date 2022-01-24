@@ -183,6 +183,11 @@ if __name__ == '__main__':
 
         return x
 
+    from logging import DEBUG, basicConfig
+
+    log_fmt = '[%(levelname)-7s %(asctime)s] (%(module)s) %(message)s'
+    dt_fmt = '%Y-%m-%dT%H:%M:%S'
+
     parser = ArgumentParser()
 
     # TODO add only request pan or tilt
@@ -207,7 +212,10 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    if args.verbose:
+        basicConfig(level=DEBUG, format=log_fmt, datefmt=dt_fmt) # noqa
+
     # FIXME
     ser = open_serial()
-    move_to(ser, args.pan, args.tilt)
+    move_to(ser, args.pan, args.tilt, wait=args.wait)
     ser.close()
