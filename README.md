@@ -1,14 +1,17 @@
 ![Hypernets Logo](hypernets/resources/img/logo.png)
   
+  
+  
 ## Instructions - for USB:
-
-
 Plug the USB cable between the rugged PC and the "config port" of the Yocto-Pictor, then:
+
 ```sh
-wget https://raw.githubusercontent.com/HYPERNETS/hypernets_tools/beta/install/EE_hypernets_installer.sh
-chmod +x EE_hypernets_installer.sh
-sudo ./EE_hypernets_installer.sh
+git clone https://github.com/hypernets/hypernets_tools
+cd hypernets_tools
+git checkout beta
+sudo ./install/EE_wizard.sh
 ```
+
 You should be able to connect to the Yocto-Hub Webpage :
 > localhost:4444
 
