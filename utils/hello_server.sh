@@ -66,9 +66,21 @@ if [[ $? -eq 0 ]] ; then
 fi
 set -e
 
-# Update the datetime flag on the server
-echo "Touching $ipServer:$remoteDir/system_is_up"
-ssh -p $sshPort -t $ipServer "touch $remoteDir/system_is_up" > /dev/null 2>&1 
+# We first make sure that server is up
+set +e
+for i in {1..30}
+do
+	# Update the datetime flag on the server
+	echo "(attempt #$i) Touching $ipServer:$remoteDir/system_is_up"
+	ssh -p $sshPort -t $ipServer "touch $remoteDir/system_is_up" > /dev/null 2>&1
+	if [[ $? -eq 0 ]] ; then
+		echo "Server is up!"
+		break
+	fi
+	echo "Unsuccessful, sleeping 10s..."
+	sleep 10
+done
+set -e
 
 # Sync Config Files
 source utils/bidirectional_sync.sh
