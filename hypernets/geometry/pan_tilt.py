@@ -61,6 +61,7 @@ def check_trame(data):
         return False
 
     if sum(data[1:-1]) % 256 != data[-1]:
+        debug(f"Pan-Tilt answer: {stringifyBinaryToHex(data)}")
         warning("Bad Checksum !")
         return False
     return True
@@ -76,6 +77,7 @@ def query_position(ser):
         data += ser.read()
 
     if not check_trame(data):
+        sleep(.5)
         return
 
     _, _, _, cmd, pan, _ = unpack('>BBBBHB', data)
@@ -89,6 +91,7 @@ def query_position(ser):
         data += ser.read()
 
     if not check_trame(data):
+        sleep(.5)
         return
 
     _, _, _, cmd, tilt, _ = unpack('>BBBBHB', data)
