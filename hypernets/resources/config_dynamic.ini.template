@@ -34,6 +34,8 @@ baudrate = 3000000
 # TRACE (low level communication bytes are printed to stdout)
 loglevel = ERROR
 swir_tec = 0
+# outputs environmental readings to log before each capture with a single header at the beginning of log
+log_envrionment = no
 
 [metadata]
 principal_investigator = Investigator Name

@@ -11,6 +11,7 @@ from hypernets.abstract.create_metadata import parse_config_metadata
 
 from hypernets.hypstar.handler import HypstarHandler
 from hypernets.hypstar.libhypstar.python.hypstar_wrapper import HypstarLogLevel
+from hypernets.hypstar.libhypstar.python.data_structs.environment_log import EnvironmentLogEntry, get_csv_header
 
 from logging import debug, info, warning, error # noqa
 
@@ -19,6 +20,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                       instrument_loglvl, instrument_boot_timeout,
                       instrument_standalone=False,
                       instrument_swir_tec=0,
+                      dump_environment_logs=False,
                       DATA_DIR="DATA"):
 
     protocol = Protocol(sequence_file)
@@ -94,6 +96,10 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         instrument_instance.set_SWIR_module_temperature(instrument_swir_tec)
         info("Done!")
 
+    # print env log header
+    if dump_environment_logs:
+        info(get_csv_header())
+
     iter_line, nb_error = 0, 0
     for i, (geometry, requests) in enumerate(protocol, start=1):
 
@@ -154,6 +160,10 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             output = path.join(filepath, filename)
 
             try:
+                if dump_environment_logs:
+                    # 0xFF returns live data, 0 returns last captured on FW > 0.15.24
+                    env = instrument_instance.get_env_log(0xff)
+                    info(env.get_csv_line())
                 instrument_instance.take_request(request, path_to_file=output)
 
             except Exception as e:
@@ -247,6 +257,10 @@ if __name__ == '__main__':
                         help="Thermoelectric Cooler Point for the SWIR module",
                         default=0)
 
+    parser.add_argument("-e", "--log-environment", action='store_true',
+                        help="Dumps instrument environmental logs to stdout",
+                        default=False)
+
     args = parser.parse_args()
 
     basicConfig(level=log_levels[args.verbosity], format=log_fmt, datefmt=dt_fmt) # noqa
@@ -258,4 +272,5 @@ if __name__ == '__main__':
                       instrument_loglvl=HypstarLogLevel[args.loglevel.upper()],
                       instrument_boot_timeout=args.timeout,
                       instrument_standalone=args.noyocto,
-                      instrument_swir_tec=args.swir_tec)
+                      instrument_swir_tec=args.swir_tec,
+                      dump_environment_logs=args.log_environment)
