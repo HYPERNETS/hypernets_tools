@@ -33,7 +33,7 @@ loglevel=$(parse_config "loglevel" config_dynamic.ini)
 bootTimeout=$(parse_config "boot_timeout" config_dynamic.ini)
 swirTec=$(parse_config "swir_tec" config_dynamic.ini)
 verbosity=$(parse_config "verbosity" config_dynamic.ini)
-dumpEnvironmentLogs=$(parse_config "log_envrionment" config_dynamic.ini)
+dumpEnvironmentLogs=$(parse_config "log_environment" config_dynamic.ini)
 
 # Starting Conditions:
 sequence_file=$(parse_config "sequence_file" config_dynamic.ini)
