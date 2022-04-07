@@ -44,7 +44,6 @@ function update_repo(){
 	echo 
 	echo "-- Update Hypernets Tools..."
 	echo "------------------------------------------------"
-	sudo -u $SUDO_USER git checkout beta
 	sudo -u $SUDO_USER git pull
 }
 

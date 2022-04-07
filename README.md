@@ -8,7 +8,6 @@ Plug the USB cable between the rugged PC and the "config port" of the Yocto-Pict
 ```sh
 git clone https://github.com/hypernets/hypernets_tools
 cd hypernets_tools
-git checkout beta
 sudo ./install/EE_wizard.sh
 ```
 
