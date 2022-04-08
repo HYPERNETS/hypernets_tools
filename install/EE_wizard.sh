@@ -62,8 +62,9 @@ function auto_config_yocto(){
 	echo "-- Auto-config for YoctoPictor..."
 	echo "------------------------------------------------"
 
-	if [[ -f "config_static.ini" ]] || [[ -f "config_dynamic.ini" ]]; then
-		echo "Error: configuration files found, please remove it first."
+	# if [[ -f "config_static.ini" ]] || [[ -f "config_dynamic.ini" ]]; then
+	if [[ -f "config_static.ini" ]]; then
+		echo "Error: configuration file found, please remove it first."
 		return
 	fi
 
@@ -72,7 +73,7 @@ function auto_config_yocto(){
 
 	echo "Copying configuration files"
 	sudo -u $SUDO_USER cp hypernets/resources/config_static.ini.template config_static.ini
-	sudo -u $SUDO_USER cp hypernets/resources/config_dynamic.ini.template config_dynamic.ini
+	# sudo -u $SUDO_USER cp hypernets/resources/config_dynamic.ini.template config_dynamic.ini
 
 	echo 
 	echo "Running auto config for config_static.ini..."

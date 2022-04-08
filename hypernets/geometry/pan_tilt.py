@@ -11,7 +11,7 @@ from serial import Serial
 from struct import unpack, pack
 from time import sleep  # noqa
 
-from logging import debug, info, warning
+from logging import debug, info, warning, error
 
 
 def pt_time_estimation(position_0, position_1,
@@ -165,10 +165,26 @@ def move_to_geometry(geometry, wait=False):
 
 
 def open_serial():
-    # TODO : Read config before!
-    ser = Serial(port='/dev/ttyS3', baudrate=2400, bytesize=8,
+
+    pantilt_port = "/dev/ttyS3"
+
+    try:
+        from configparser import ConfigParser
+        config = ConfigParser()
+        config.read("config_dynamic.ini")
+        pantilt_port = config["pantilt"]["pantilt_port"]
+
+    except KeyError as key:
+        warning(f" {key} default values loaded ({pantilt_port}.")
+
+    except Exception as e:
+        error(f"Config Error: {e}.")
+
+    debug(f"Initialization serial port communication on: {pantilt_port}...")
+    ser = Serial(port=pantilt_port, baudrate=2400, bytesize=8,
                  parity='N', stopbits=1, timeout=.2, xonxoff=False,
                  rtscts=False, dsrdtr=False)
+
     return ser
 
 

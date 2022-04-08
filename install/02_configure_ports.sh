@@ -8,6 +8,16 @@ if [[ $EUID -ne 0 ]]; then
 	exit 1
 fi
 
+source utils/configparser.sh
+
+pantiltPort=$(parse_config "pantilt_port" config_dynamic.ini)
+
+if [[ -z $pantiltPort ]] ; then
+	pantiltPort="/dev/ttyS3"  # default value
+fi
+
+
+
 ### helper script for finding next available device number
 cat > /usr/local/sbin/unique-num << EOF
 #!/bin/bash
@@ -49,7 +59,7 @@ cat > /etc/udev/rules.d/90-hypstar-ports.rules << EOF
 KERNEL=="ttyUSB*", SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", IMPORT{program}="/usr/local/sbin/unique-num /dev radiometer RADIOMETER_NUM", MODE="0666", SYMLINK+="radiometer%E{RADIOMETER_NUM}"
 
 # allow rw access to pan-tilt port
-KERNEL=="ttyS3", SUBSYSTEM=="tty", MODE="0666"
+KERNEL=="$pantiltPort", SUBSYSTEM=="tty", MODE="0666"
 
 EOF
 
