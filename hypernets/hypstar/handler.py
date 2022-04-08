@@ -75,6 +75,10 @@ class HypstarHandler(Hypstar):
         env_log = self.get_env_log()
         debug(env_log)
 
+    def __del__(self):
+        env_log = self.get_env_log()
+        debug(env_log)
+
     @staticmethod
     def wait_for_instrument_port(instrument_port):
         info(f"Waiting for {instrument_port}...")
