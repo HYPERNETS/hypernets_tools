@@ -16,6 +16,7 @@ if [[ -z $pantiltPort ]] ; then
 	pantiltPort="/dev/ttyS3"  # default value
 fi
 
+pantiltPort=$(echo $pantiltPort | rev | cut -d'/' -f1 | rev)
 
 
 ### helper script for finding next available device number
