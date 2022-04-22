@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 
 
-if [[ ${PWD##*/} != "hypernets_tools" ]]; then
+if [[ ${PWD##*/} != "hypernets_tools"* ]]; then
 	echo "This script must be run from hypernets_tools folder" 1>&2
 	echo "Use : ./utils/${0##*/} instead"
 	exit 1
