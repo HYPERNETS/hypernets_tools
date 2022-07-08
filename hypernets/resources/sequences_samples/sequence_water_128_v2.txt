@@ -1,13 +1,13 @@
 HypernetsProtocol v2.0
 
 # Irradiance Sky (Ed)
-@[ 90.0, sun, 180.0, hyper, #2, #1 ]
+@[ 90.0, sun, 180.0, hyper ]
 	+ 3.vnir.irr.128.0
 	+ 3.vnir.dark.128.0
 	+ 1.picture
 
 # Radiance Sky (Ld)
-@[ 90.0, sun, 140.0, hyper, #ifEnoughTime]
+@[ 90.0, sun, 140.0, hyper ]
 	+ 3.vnir.rad.128.0 
 	+ 3.vnir.dark.128.0 
 	+ 1.picture
