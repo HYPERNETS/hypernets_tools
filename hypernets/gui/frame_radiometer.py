@@ -292,7 +292,10 @@ class FrameRadiometer(LabelFrame):
     def get_instrument_env_log(self):
         if not self.check_if_hypstar_exists():
             return
-        showinfo("Environmental Logs", str(self.hypstar.get_env_log()))
+        output = str(self.hypstar.get_env_log())
+        if isinstance(output, Exception):
+            showerror("Error", str(output))
+        showinfo("Environmental Logs", output)
 
     def set_swir_temperature(self):
         TEC = 0  # TODO : tunable from config / gui ?
