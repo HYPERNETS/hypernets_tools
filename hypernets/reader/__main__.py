@@ -16,6 +16,9 @@ if __name__ == '__main__':
                         action='store_true',
                         help="Don't Display Interactive Plots")
 
+    from logging import basicConfig, DEBUG
+    basicConfig(level=DEBUG)
+
     args = parser.parse_args()
 
     if args.no_display is False:
