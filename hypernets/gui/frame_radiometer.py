@@ -8,6 +8,8 @@ from tkinter.ttk import Combobox, Separator
 
 from tkinter.messagebox import showerror, showinfo
 
+import math
+import numpy as np
 from PIL import Image, ImageTk
 
 from hypernets.hypstar.handler import HypstarHandler
@@ -34,6 +36,7 @@ class FrameRadiometer(LabelFrame):
         self.last_file_path = None
         self.spectra = None
         self.hypstar = None
+        self.calibration_coefficients = None
 
     def configure_items_radiometer(self):
         self.radiometer_var = [StringVar(self) for _ in range(7)]
@@ -103,7 +106,6 @@ class FrameRadiometer(LabelFrame):
                              command=self.unset_swir_temperature)
 
         enable_vm_b = Button(self, textvariable=self.enable_vm_button_text, command=self.enable_vm)
-        get_cal_b = Button(self, text="Read CAL", command=self.read_cal)
 
         # --------------------------------------------------------------------
         # Init Values
@@ -129,7 +131,6 @@ class FrameRadiometer(LabelFrame):
         set_tec_b.grid(sticky=W+E+S+N,   column=0, row=9, padx=2, pady=2)
         unset_tec_b.grid(sticky=W+E+S+N, column=1, row=9, padx=2, pady=2)
         enable_vm_b.grid(sticky=W+E+S+N, column=0, row=10, padx=2, pady=2)
-        get_cal_b.grid(sticky=W+E+S+N, column=1, row=10, padx=2, pady=2)
 
         # --------------------------------------------------------------------
         # Some labels :
@@ -156,6 +157,7 @@ class FrameRadiometer(LabelFrame):
                 self.hypstar = HypstarHandler(expect_boot_packet=False)
                 self.hypstar.set_log_level(int(HypstarLogLevel[self.master.loglevel]))
                 self.hypstar.set_baud_rate(HypstarSupportedBaudRates(self.master.baudrate))
+                self.calibration_coefficients = self.hypstar.get_calibration_coeficients_basic()
 
             except Exception as e:
                 showerror("Error", str(e))
@@ -263,6 +265,7 @@ class FrameRadiometer(LabelFrame):
         if self.last_file_path is None:
             return
 
+        # image processing separately
         if self.last_file_path.endswith('.jpg'):
             img = ImageTk.PhotoImage(Image.open(self.last_file_path).reduce(3))
             win = tkinter.Toplevel()
@@ -276,7 +279,7 @@ class FrameRadiometer(LabelFrame):
         self.figure, self.axes = plt.subplots()
         plt.subplots_adjust(bottom=0.2)
         self.spectra = Spectra(self.last_file_path, figure=self.figure,
-                               axes=self.axes)
+                               axes=self.axes, cc=self.calibration_coefficients)
         self.update_output()
 
     def update_output(self):
