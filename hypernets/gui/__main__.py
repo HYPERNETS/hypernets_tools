@@ -49,7 +49,7 @@ class Guied(Tk):
         if self.radiometer:
             frmRadiometer = FrameRadiometer(self)
             frmRadiometer.grid(sticky=W+E+N+S, column=0, row=1, padx=2, pady=2,
-                               rowspan=3)
+                               rowspan=4)
 
         if self.pantilt:
             frmPanTilt = FramePanTilt(self)

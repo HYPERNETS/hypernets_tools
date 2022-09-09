@@ -23,6 +23,9 @@ class FrameRadiometer(LabelFrame):
         super().__init__(parent, relief="groove", labelanchor='nw',
                          text="Radiometer", padx=2, pady=10)
 
+        self.enable_vm_button_text = StringVar()
+        self.enable_vm_button_text.set("Turn VM on")
+        self.vm_enabled = False
         self.configure_items_radiometer()
         self.configure_items_output()
         self.last_file_path = None
@@ -96,6 +99,9 @@ class FrameRadiometer(LabelFrame):
         unset_tec_b = Button(self, text="Unset Thermal Control",
                              command=self.unset_swir_temperature)
 
+        enable_vm_b = Button(self, textvariable=self.enable_vm_button_text, command=self.enable_vm)
+        get_cal_b = Button(self, text="Read CAL", command=self.read_cal)
+
         # --------------------------------------------------------------------
         # Init Values
         # --------------------------------------------------------------------
@@ -119,6 +125,8 @@ class FrameRadiometer(LabelFrame):
         get_hw_b.grid(sticky=W+E+S+N,    column=1, row=8, padx=2, pady=2)
         set_tec_b.grid(sticky=W+E+S+N,   column=0, row=9, padx=2, pady=2)
         unset_tec_b.grid(sticky=W+E+S+N, column=1, row=9, padx=2, pady=2)
+        enable_vm_b.grid(sticky=W+E+S+N, column=0, row=10, padx=2, pady=2)
+        get_cal_b.grid(sticky=W+E+S+N, column=1, row=10, padx=2, pady=2)
 
         # --------------------------------------------------------------------
         # Some labels :
@@ -172,7 +180,7 @@ class FrameRadiometer(LabelFrame):
 
     def configure_items_output(self):
         output_frame = LabelFrame(self, text="Output")
-        output_frame.grid(sticky=W+E+S+N,  column=0, row=10,  columnspan=2)
+        output_frame.grid(sticky=W+E+S+N,  column=0, row=11,  columnspan=2)
 
         separator = Separator(output_frame, orient=HORIZONTAL)
 
@@ -316,6 +324,24 @@ class FrameRadiometer(LabelFrame):
             showerror("Error", str(output))
         else:
             showinfo("Thermal Control", "Thermal Control unsetted.")
+
+    def enable_vm(self):
+        if not self.check_if_hypstar_exists():
+            return
+
+        self.vm_enabled = not self.vm_enabled
+        if self.vm_enabled:
+            self.enable_vm_button_text.set("Turn VM off")
+        else:
+            self.enable_vm_button_text.set("Turn VM on")
+
+        output = self.hypstar.VM_enable(self.vm_enabled)
+        if isinstance(output, Exception):
+            showerror("Error", str(output))
+        pass
+
+    def read_cal(self):
+        pass
 
     def __del__(self):
         if self.hypstar is not None:
