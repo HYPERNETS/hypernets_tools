@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 # coding: utf-8
-
-
+import tkinter
 from tkinter import E, W, N, S, HORIZONTAL
 from tkinter import Label, LabelFrame, Spinbox, StringVar
 from tkinter import Tk, Button
@@ -9,9 +8,13 @@ from tkinter.ttk import Combobox, Separator
 
 from tkinter.messagebox import showerror, showinfo
 
+from PIL import Image, ImageTk
+
 from hypernets.hypstar.handler import HypstarHandler
 
 from hypernets.abstract.request import Request
+from hypernets.hypstar.libhypstar.python.data_structs.hardware_info import HypstarSupportedBaudRates
+from hypernets.hypstar.libhypstar.python.hypstar_wrapper import HypstarLogLevel
 
 from hypernets.reader.spectrum import Spectrum
 from hypernets.reader.spectra import Spectra, show_interactive_plots
@@ -151,6 +154,8 @@ class FrameRadiometer(LabelFrame):
         if self.hypstar is None:
             try:
                 self.hypstar = HypstarHandler(expect_boot_packet=False)
+                self.hypstar.set_log_level(int(HypstarLogLevel[self.master.loglevel]))
+                self.hypstar.set_baud_rate(HypstarSupportedBaudRates(self.master.baudrate))
 
             except Exception as e:
                 showerror("Error", str(e))
@@ -256,6 +261,16 @@ class FrameRadiometer(LabelFrame):
 
     def make_output(self):
         if self.last_file_path is None:
+            return
+
+        if self.last_file_path.endswith('.jpg'):
+            img = ImageTk.PhotoImage(Image.open(self.last_file_path).reduce(3))
+            win = tkinter.Toplevel()
+            win.wm_title("Image")
+            l = tkinter.Label(win, image=img)
+            # need to set image once again (PILTk bug? IDK)
+            l.image = img
+            l.pack()
             return
 
         self.figure, self.axes = plt.subplots()
