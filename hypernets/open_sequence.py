@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 from datetime import datetime
 from time import time
 from os import mkdir, replace, path
+
 from shutil import copy
 
 from hypernets.abstract.protocol import Protocol
@@ -11,7 +12,7 @@ from hypernets.abstract.create_metadata import parse_config_metadata
 
 from hypernets.hypstar.handler import HypstarHandler
 from hypernets.hypstar.libhypstar.python.hypstar_wrapper import HypstarLogLevel
-from hypernets.hypstar.libhypstar.python.data_structs.environment_log import EnvironmentLogEntry, get_csv_header
+from hypernets.hypstar.libhypstar.python.data_structs.environment_log import EnvironmentLogEntry, get_csv_header # noqa
 
 from logging import debug, info, warning, error # noqa
 
@@ -42,7 +43,25 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     seq_name = Protocol.create_seq_name(now=start, prefix="CUR")
 
     seq_path = path.join(DATA_DIR, seq_name)
+    final_seq_path = path.join(DATA_DIR, Protocol.create_seq_name(now=start))
+
+    suffix = ""
+
+    n = 0
+    while path.isdir(seq_path + suffix) or path.isdir(final_seq_path + suffix):
+        n += 1
+        error(f"Directory [{seq_path+suffix} or "
+              f"{final_seq_path+suffix}] already exists!")
+        suffix = f"-{n:03d}"
+
+    # XXX Draft!
+    seq_path = seq_path + suffix
+    seq_name = seq_name + suffix
     filepath = path.join(seq_path, "RADIOMETER")
+    final_seq_path = path.join(DATA_DIR, Protocol.create_seq_name(now=start,
+                               suffix=suffix))
+
+    info(f"Creating directories: {seq_path} and {filepath}...")
 
     mkdir(seq_path)
     mkdir(filepath)
@@ -188,7 +207,6 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
     mdfile.close()
 
-    final_seq_path = path.join(DATA_DIR, Protocol.create_seq_name(now=start))
     replace(seq_path, final_seq_path)
     info(f"Created sequence : {final_seq_path}")
 
