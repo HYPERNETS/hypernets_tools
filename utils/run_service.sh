@@ -74,7 +74,7 @@ shutdown_sequence() {
 # YOCTO DEBUG ------------------------------------------------------------------
 # ------------------------------------------------------------------------------
 
-sleep 60
+# sleep 60
 
 echo "[DEBUG]  Check if Yocto-Pictor is in (pseudo) deep-sleep mode..."
 
