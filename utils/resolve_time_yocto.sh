@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 
 
-# systemctl status yvirtualhub --no-pager
+systemctl status yvirtualhub --no-pager
 # sleep 15
 echo "Date/Time of the computer:"
 date +"%Y/%m/%d %H:%M:%S%z"
