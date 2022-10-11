@@ -1,6 +1,11 @@
 [Unit]
 Description=Hypernets Sync Config Server and Send Data
+Requires=hypernets-time.service
+After=hypernets-time.service
+
+Wants=network-online.target
 After=network-online.target
+
 Wants=network-online.target
 
 [Service]

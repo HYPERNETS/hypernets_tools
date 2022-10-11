@@ -1,5 +1,9 @@
 [Unit]
 Description=Hypernets Sequence Service
+
+Requires=hypernets-time.service
+After=hypernets-time.service
+
 Wants=network-online.target
 After=network-online.target
 SuccessAction=poweroff
