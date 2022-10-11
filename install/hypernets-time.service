@@ -4,7 +4,9 @@ After=yvirtualhub.service
 Requires=yvirtualhub.service
 
 [Service]
-ExecStart=[TOEDIT]/.../resolve_time_yocto.sh
+User=
+ExecStart=
+WorkingDirectory=
 
 [Install]
 WantedBy=multi-user.target
