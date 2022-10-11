@@ -81,9 +81,9 @@ echo "[DEBUG]  Check if Yocto-Pictor is in (pseudo) deep-sleep mode..."
 set +e
 
 yocto_prefix2=$(parse_config "yocto_prefix2" config_static.ini)
-yoctoState=$(wget -O- \
-"http://127.0.0.1:4444/bySerial/$yocto_prefix2/api/wakeUpMonitor/wakeUpState" \
-2> /dev/null)
+
+url=$(echo "http://127.0.0.1:4444/bySerial/"$yocto_prefix2"/api/wakeUpMonitor/wakeUpState")
+yoctoState=$(wget -O- $url > /dev/null)
 
 if [[ ! $? -eq 0 ]] ; then
 	echo "[DEBUG]  Fail to get Yocto-Pictor wake-up state !"
@@ -94,9 +94,9 @@ echo "[DEBUG]  Yocto-Pictor wake-up state : $yoctoState"
 
 if [[ $yoctoState == "SLEEPING" ]] ; then
 	echo "[DEBUG]  Awaking Yocto-Pictor..."
-	yoctoState=$(wget -O- \
-	"http://127.0.0.1:4444/bySerial/$yocto_prefix2/api/wakeUpMonitor?wakeUpState=1" \
-	2> /dev/null)
+
+	url=$(echo "http://127.0.0.1:4444/bySerial/"$yocto_prefix2"/api/wakeUpMonitor?wakeUpState=1")
+	yoctoState=$(wget -O- $url 2> /dev/null)
 	if [[ ! $? -eq 0 ]] ; then
 		echo "[DEBUG]  Fail to wake-up the Yocto-Pictor !"
 		exit 1
@@ -126,12 +126,11 @@ if [ -f "OTHER/$logNameBase-log.txt" ] || [ -f "OTHER/$logNameBase-api.txt" ] ; 
 	echo "[DEBUG]  Error the log already exists!"
 fi
 
+url=$(echo "http://127.0.0.1:4444/bySerial/$yocto_prefix2/api.txt")
+wget -O- $url > "OTHER/$logNameBase-api.txt" 2> /dev/null
 
-wget -O- "http://127.0.0.1:4444/bySerial/$yocto_prefix2/api.txt" > \
-"OTHER/$logNameBase-api.txt" 2> /dev/null
-
-wget -O- "http://127.0.0.1:4444/bySerial/$yocto_prefix2/logs.txt" > \
-"OTHER/$logNameBase-log.txt" 2> /dev/null
+url=$(echo "http://127.0.0.1:4444/bySerial/$yocto_prefix2/log.txt")
+wget -O- > "OTHER/$logNameBase-log.txt" 2> /dev/null
 
 set -e
 

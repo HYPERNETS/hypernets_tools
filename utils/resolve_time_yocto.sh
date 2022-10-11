@@ -8,8 +8,10 @@ echo "Date/Time of the computer:"
 date +"%Y/%m/%d %H:%M:%S%z"
 
 echo "Getting Yocto-Pictor-WiFi's Date/Time"
+source utils/configparser.sh
 yocto_prefix2=$(parse_config "yocto_prefix2" config_static.ini)
-YoctoRTC=$(wget -O- http://127.0.0.1:4444/bySerial/$yocto_prefix2/api/realTimeClock/dateTime)
+url=$(echo "http://127.0.0.1:4444/bySerial/"$yocto_prefix2"/api/realTimeClock/dateTime")
+YoctoRTC=$(wget -O- $url)
 err=$?
 
 if [ $err -eq 0 ] ; then
