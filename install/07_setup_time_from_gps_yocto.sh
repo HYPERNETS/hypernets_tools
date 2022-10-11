@@ -22,6 +22,7 @@ path_to_h_tools=$(echo "$PWD" | sed 's/\//\\\//g')
 service_file="/etc/systemd/system/hypernets-time.service"
 cp "./install/hypernets-time.service"  $service_file
 
+user="$SUDO_USER"
 sed -i '/User=$/s/$/'$user'/' $service_file
 sed -i '/ExecStart=$/s/$/'$path_to_service'/' $service_file
 sed -i '/WorkingDirectory=$/s/$/'$path_to_h_tools'\//' $service_file
