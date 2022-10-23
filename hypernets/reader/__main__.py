@@ -16,8 +16,12 @@ if __name__ == '__main__':
                         action='store_true',
                         help="Don't Display Interactive Plots")
 
-    from logging import basicConfig, DEBUG
+    from logging import basicConfig, getLogger, INFO, DEBUG
+
     basicConfig(level=DEBUG)
+
+    getLogger('PIL').setLevel(INFO)
+    getLogger('matplotlib').setLevel(INFO)
 
     args = parser.parse_args()
 
