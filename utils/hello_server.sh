@@ -60,18 +60,25 @@ make_log $logNameBase time
 make_log $logNameBase webcam
 make_log $logNameBase rain
 
-# We check if network is on
-echo "Waiting for network..."
-nm-online
-echo "Ok !"
 
 # Read config file :
 source utils/configparser.sh
-
+serverSync=$(parse_config "server_sync" config_static.ini)
 ipServer=$(parse_config "credentials" config_static.ini)
 remoteDir=$(parse_config "remote_dir" config_static.ini)
 sshPort=$(parse_config "ssh_port" config_static.ini)
 autoUpdate=$(parse_config "auto_update" config_dynamic.ini)
+
+if [ -z $serverSync ]; then
+	serverSync="yes"
+fi
+
+# XXX Refactor here
+if [[ "$serverSync" == "no" ]] ; then
+	echo "[INFO ]  Network sync is off."
+	echo "End."
+	exit 0
+fi
 
 if [ -z $sshPort ]; then
 	sshPort="22"
@@ -80,6 +87,12 @@ fi
 if [ -z $autoUpdate ]; then
 	autoUpdate="no"
 fi
+
+# We check if network is on
+echo "Waiting for network..."
+nm-online
+echo "Ok !"
+
 
 # We first make sure that server is up
 set +e

@@ -12,6 +12,7 @@ credentials = user@server
 remote_dir = ~
 ssh_port = 22
 remote_ssh_port = 20213
+server_sync = yes
 
 # Webcam relay 5:
 webcam_site = user:pass@ip_cam_site
