@@ -161,6 +161,8 @@ class FrameRadiometer(LabelFrame):
                  ("Number of captures : ",      0, 4, 2, 2, E),
                  ("Total measurement time : ",  0, 5, 2, 2, E),
                  ("Image Resolution : ",        0, 6, 2, 2, E),
+                 ("VM Light source : ",         0, 7, 2, 2, E),
+                 ("VM Current setting : ",      0, 8, 2, 2, E),
                  ("ms",                         3, 2, 2, 2, W),
                  ("ms",                         3, 3, 2, 2, W),
                  ("ms",                         3, 5, 2, 2, W)]:
