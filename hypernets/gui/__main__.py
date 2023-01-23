@@ -27,6 +27,7 @@ class Guied(Tk):
         self.rainsensor = True
         self.loglevel = "ERROR"
         self.baudrate = 115200
+        self.serial_port = "/dev/radiometer0"
         self.tec_target_temp = 0
         self.webcam = False
         self.console = False
@@ -81,6 +82,7 @@ class Guied(Tk):
         self.loglevel = parser.get('hypstar', 'loglevel')
         self.baudrate = parser.getint('hypstar', 'baudrate')
         self.tec_target_temp = parser.get('hypstar', 'swir_tec')
+        self.serial_port = parser.get('hypstar', 'hypstar_port')
 
 
 if __name__ == '__main__':

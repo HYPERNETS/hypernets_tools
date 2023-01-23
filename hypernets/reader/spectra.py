@@ -22,7 +22,7 @@ def show_interactive_plots(spectra):
 
 
 class Spectra(list[Spectrum]):
-    def __init__(self, filename, figure=None, axes=None, fancy_mode=True, cc=None):
+    def __init__(self, filename, figure=None, axes=None, fancy_mode=True, cc=None, spectrum=None):
 
         if figure is not None and axes is not None and fancy_mode is True:
             self.clim, self.col = make_color_list()
@@ -33,16 +33,18 @@ class Spectra(list[Spectrum]):
         self.cc = cc
         self.index = 0
 
-        # Open the file and create a list of Spectrum
-        with open(filename, 'rb') as fd:
-            spectra_file = fd.read()
+        if spectrum is None:
+            # Open the file and create a list of Spectrum
+            with open(filename, 'rb') as fd:
+                spectra_file = fd.read()
 
-        index = 0
-        while index < len(spectra_file):
-            current_spectrum = Spectrum(spectra_file[index:])
-            self.append(current_spectrum)
-            index += current_spectrum.total
-
+            index = 0
+            while index < len(spectra_file):
+                current_spectrum = Spectrum(spectra_file[index:])
+                self.append(current_spectrum)
+                index += current_spectrum.total
+        else:
+            self.append(Spectrum(spectrum))
         print(f"{len(self)} spectra red.")
 
         self.update()
