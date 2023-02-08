@@ -25,7 +25,6 @@ echo "Making Logs..."
 mkdir -p LOGS
 
 logNameBase=$(date +"%Y-%m-%d-%H%M")
-
 suffixeName=""
 for i in {001..999}; do
 	if [ -f "LOGS/$logNameBase$suffixeName-sequence.log" ]; then 
@@ -59,6 +58,21 @@ make_log $logNameBase access
 make_log $logNameBase time
 make_log $logNameBase webcam
 make_log $logNameBase rain
+
+echo "Disk usage informations:" 
+df -h -text4
+
+diskUsageOuput="LOGS/disk-usage.log"
+if [ -f  LOGS/disk-usage.log ] ; then
+	df -text4 --output=used,avail,pcent | sed 1d >> $diskUsageOuput
+else
+	df -text4 --output=used,avail,pcent > $diskUsageOuput
+fi
+
+# We check if network is on
+echo "Waiting for network..."
+nm-online
+echo "Ok !"
 
 
 # Read config file :
