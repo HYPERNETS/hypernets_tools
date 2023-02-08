@@ -22,15 +22,22 @@ set -euo pipefail                           # Bash Strict Mode
 
 
 
+logNameBase=$(date +"%Y-%m-%d-%H%M")
+
 echo "Disk usage informations:" 
 df -h -text4
 
 diskUsageOuput="LOGS/disk-usage.log"
-if [ -f  LOGS/disk-usage.log ] ; then
-	df -text4 --output=used,avail,pcent | sed 1d >> $diskUsageOuput
-else
-	df -text4 --output=used,avail,pcent > $diskUsageOuput
+dfOutput=$(df -text4 --output=used,avail,pcent)
+
+if [ ! -f  $diskUsageOuput ] ; then
+	echo "Creation of $diskUsageOuput"
+	echo -n "DateTime    " > $diskUsageOuput
+	echo "$dfOutput" | sed 2d >> $diskUsageOuput
 fi
+
+echo -n "$logNameBase " >> $diskUsageOuput
+echo "$dfOutput" | sed 1d >> $diskUsageOuput
 
 # We check if network is on
 echo "Waiting for network..."
@@ -59,7 +66,6 @@ echo "Making Logs..."
 mkdir -p LOGS
 
 
-logNameBase=$(date +"%Y-%m-%d-%H%M")
 
 journalctl -b-1 -u hypernets-sequence --no-pager > LOGS/$logNameBase-sequence.log
 journalctl -b-1 -u hypernets-hello --no-pager > LOGS/$logNameBase-hello.log
