@@ -21,6 +21,17 @@ set -o nounset                              # Treat unset variables as an error
 set -euo pipefail                           # Bash Strict Mode	
 
 
+
+echo "Disk usage informations:" 
+df -h -text4
+
+diskUsageOuput="LOGS/disk-usage.log"
+if [ -f  LOGS/disk-usage.log ] ; then
+	df -text4 --output=used,avail,pcent | sed 1d >> $diskUsageOuput
+else
+	df -text4 --output=used,avail,pcent > $diskUsageOuput
+fi
+
 # We check if network is on
 echo "Waiting for network..."
 nm-online
