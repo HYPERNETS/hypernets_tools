@@ -126,7 +126,7 @@ function configure_port(){
 
 
 function main_menu(){
-
+while true; do
 	echo "------------------------------------------------"
 	PS3='Please select an option:'
 	options=(
@@ -179,6 +179,7 @@ function main_menu(){
 				;;
 		esac
 	done
+done
 }
 
 # TODO: error handler
