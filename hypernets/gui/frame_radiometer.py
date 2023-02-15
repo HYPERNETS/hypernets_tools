@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 # coding: utf-8
-
-
+import tkinter
 from tkinter import E, W, N, S, HORIZONTAL
 from tkinter import Label, LabelFrame, Spinbox, StringVar
 from tkinter import Tk, Button
@@ -9,9 +8,17 @@ from tkinter.ttk import Combobox, Separator
 
 from tkinter.messagebox import showerror, showinfo
 
+import math
+import numpy as np
+from PIL import Image, ImageTk
+
 from hypernets.hypstar.handler import HypstarHandler
 
 from hypernets.abstract.request import Request
+from hypernets.hypstar.libhypstar.python.data_structs.hardware_info import HypstarSupportedBaudRates
+from hypernets.hypstar.libhypstar.python.data_structs.spectrum_raw import RadiometerEntranceType
+from hypernets.hypstar.libhypstar.python.data_structs.varia import ValidationModuleLightType
+from hypernets.hypstar.libhypstar.python.hypstar_wrapper import HypstarLogLevel
 
 from hypernets.reader.spectrum import Spectrum
 from hypernets.reader.spectra import Spectra, show_interactive_plots
@@ -19,15 +26,21 @@ import matplotlib.pyplot as plt
 
 
 class FrameRadiometer(LabelFrame):
+    vm_light_source = ValidationModuleLightType.LIGHT_VIS
+
     def __init__(self, parent):
         super().__init__(parent, relief="groove", labelanchor='nw',
                          text="Radiometer", padx=2, pady=10)
 
+        self.enable_vm_button_text = StringVar()
+        self.enable_vm_button_text.set("Turn VM on")
+        self.vm_enabled = False
         self.configure_items_radiometer()
         self.configure_items_output()
         self.last_file_path = None
         self.spectra = None
         self.hypstar = None
+        self.calibration_coefficients = None
 
     def configure_items_radiometer(self):
         self.radiometer_var = [StringVar(self) for _ in range(7)]
@@ -78,6 +91,14 @@ class FrameRadiometer(LabelFrame):
                               textvariable=self.radiometer_var[6],
                               state="disabled")  # state="readonly")
         # --------------------------------------------------------------------
+        light_source_cb = Combobox(self, width=20,
+                                values=ValidationModuleLightType._member_names_,
+                                textvariable = self.vm_light_source)
+        # --------------------------------------------------------------------
+        self.vm_current = tkinter.DoubleVar(value=1.0)
+        light_source_current_sb = Spinbox(self, from_=0.05, to=3.5, increment=0.01,
+                                          width=10, textvariable=self.vm_current)
+        # --------------------------------------------------------------------
         run = Button(self, text="Acquisition", command=self.general_callback)
         # --------------------------------------------------------------------
         # init_ins = Button(self, text="Hypstar Init",
@@ -96,6 +117,10 @@ class FrameRadiometer(LabelFrame):
         unset_tec_b = Button(self, text="Unset Thermal Control",
                              command=self.unset_swir_temperature)
 
+        enable_vm_b = Button(self, textvariable=self.enable_vm_button_text, command=self.enable_vm)
+
+        capture_vm_b = Button(self, text="Measure VM", command=self.measure_vm)
+
         # --------------------------------------------------------------------
         # Init Values
         # --------------------------------------------------------------------
@@ -105,6 +130,7 @@ class FrameRadiometer(LabelFrame):
         IT_swir.current(0)
         IT_total.current(0)
         resolution.current(0)
+        light_source_cb.current(ValidationModuleLightType.LIGHT_VIS.value)
         # --------------------------------------------------------------------
         radiometer.grid(sticky=E,        column=1, row=0)
         entrance.grid(sticky=E,          column=1, row=1)
@@ -113,12 +139,16 @@ class FrameRadiometer(LabelFrame):
         repeat.grid(sticky=E,            column=1, row=4)
         IT_total.grid(sticky=E,          column=1, row=5)
         resolution.grid(sticky=E,        column=1, row=6)
-        run.grid(sticky=W+E+S+N,         column=1, row=7, padx=2, pady=2)
+        light_source_cb.grid(sticky=E,   column=1, row=7)
+        light_source_current_sb.grid(sticky=E,column=1, row=8)
+        run.grid(sticky=W+E+S+N,         column=1, row=9, padx=2, pady=2)
         # init_ins.grid(sticky=W+E+S+N,    column=0, row=7, padx=2, pady=2)
-        get_env_b.grid(sticky=W+E+S+N,   column=0, row=8, padx=2, pady=2)
-        get_hw_b.grid(sticky=W+E+S+N,    column=1, row=8, padx=2, pady=2)
-        set_tec_b.grid(sticky=W+E+S+N,   column=0, row=9, padx=2, pady=2)
-        unset_tec_b.grid(sticky=W+E+S+N, column=1, row=9, padx=2, pady=2)
+        get_env_b.grid(sticky=W+E+S+N,   column=0, row=10, padx=2, pady=2)
+        get_hw_b.grid(sticky=W+E+S+N,    column=1, row=10, padx=2, pady=2)
+        set_tec_b.grid(sticky=W+E+S+N,   column=0, row=11, padx=2, pady=2)
+        unset_tec_b.grid(sticky=W+E+S+N, column=1, row=11, padx=2, pady=2)
+        enable_vm_b.grid(sticky=W+E+S+N, column=0, row=12, padx=2, pady=2)
+        capture_vm_b.grid(sticky=W+E+S+N, column=1, row=12, padx=2, pady=2)
 
         # --------------------------------------------------------------------
         # Some labels :
@@ -131,6 +161,8 @@ class FrameRadiometer(LabelFrame):
                  ("Number of captures : ",      0, 4, 2, 2, E),
                  ("Total measurement time : ",  0, 5, 2, 2, E),
                  ("Image Resolution : ",        0, 6, 2, 2, E),
+                 ("VM Light source : ",         0, 7, 2, 2, E),
+                 ("VM Current setting : ",      0, 8, 2, 2, E),
                  ("ms",                         3, 2, 2, 2, W),
                  ("ms",                         3, 3, 2, 2, W),
                  ("ms",                         3, 5, 2, 2, W)]:
@@ -142,7 +174,10 @@ class FrameRadiometer(LabelFrame):
     def check_if_hypstar_exists(self):
         if self.hypstar is None:
             try:
-                self.hypstar = HypstarHandler(expect_boot_packet=False)
+                self.hypstar = HypstarHandler(instrument_port=self.master.serial_port, instrument_baudrate=self.master.baudrate, expect_boot_packet=False)
+                self.hypstar.set_log_level(int(HypstarLogLevel[self.master.loglevel]))
+                self.hypstar.set_baud_rate(HypstarSupportedBaudRates(self.master.baudrate))
+                self.calibration_coefficients = self.hypstar.get_calibration_coeficients_basic()
 
             except Exception as e:
                 showerror("Error", str(e))
@@ -172,7 +207,7 @@ class FrameRadiometer(LabelFrame):
 
     def configure_items_output(self):
         output_frame = LabelFrame(self, text="Output")
-        output_frame.grid(sticky=W+E+S+N,  column=0, row=10,  columnspan=2)
+        output_frame.grid(sticky=W+E+S+N,  column=0, row=13,  columnspan=2)
 
         separator = Separator(output_frame, orient=HORIZONTAL)
 
@@ -240,24 +275,42 @@ class FrameRadiometer(LabelFrame):
         self.spectra.next_spectrum(None)
         self.update_output()
 
-    def show_plot(self):
-        if self.last_file_path is None:
+    def show_plot(self, nofile=False):
+        if not nofile and self.last_file_path is None:
             return
         # self.make_output()
         show_interactive_plots(self.spectra)
 
-    def make_output(self):
-        if self.last_file_path is None:
+    def make_output(self, spec=None):
+        if self.last_file_path is None and spec is None:
             return
 
-        self.figure, self.axes = plt.subplots()
-        plt.subplots_adjust(bottom=0.2)
-        self.spectra = Spectra(self.last_file_path, figure=self.figure,
-                               axes=self.axes)
-        self.update_output()
+        if spec is None:
+            # image processing separately
+            if self.last_file_path.endswith('.jpg'):
+                img = ImageTk.PhotoImage(Image.open(self.last_file_path).reduce(3))
+                win = tkinter.Toplevel()
+                win.wm_title("Image")
+                l = tkinter.Label(win, image=img)
+                # need to set image once again (PILTk bug? IDK)
+                l.image = img
+                l.pack()
+                return
 
-    def update_output(self):
-        if self.last_file_path is None:
+            self.figure, self.axes = plt.subplots()
+            plt.subplots_adjust(bottom=0.2)
+            self.spectra = Spectra(self.last_file_path, figure=self.figure,
+                                   axes=self.axes, cc=self.calibration_coefficients)
+            self.update_output()
+        else:
+            self.figure, self.axes = plt.subplots()
+            plt.subplots_adjust(bottom=0.2)
+            self.spectra = Spectra(None, figure=self.figure,
+                                   axes=self.axes, cc=self.calibration_coefficients, spectrum=spec)
+            self.update_output(nofile=True)
+
+    def update_output(self, nofile=False):
+        if not nofile and self.last_file_path is None:
             showerror("Error", "Please take an acquisition")
             return
 
@@ -316,6 +369,34 @@ class FrameRadiometer(LabelFrame):
             showerror("Error", str(output))
         else:
             showinfo("Thermal Control", "Thermal Control unsetted.")
+
+    def enable_vm(self):
+        if not self.check_if_hypstar_exists():
+            return
+
+        self.vm_enabled = not self.vm_enabled
+        if self.vm_enabled:
+            self.enable_vm_button_text.set("Turn VM off")
+        else:
+            self.enable_vm_button_text.set("Turn VM on")
+
+        output = self.hypstar.VM_enable(self.vm_enabled)
+        if isinstance(output, Exception):
+            showerror("Error", str(output))
+        pass
+
+    def measure_vm(self):
+        if not self.check_if_hypstar_exists():
+            return
+        it = int(self.radiometer_var[2].get() if self.vm_light_source.value < 2 else self.radiometer_var[3].get())
+
+        spec = self.hypstar.VM_measure(RadiometerEntranceType[self.radiometer_var[1].get().upper()].value, self.vm_light_source.value, it, self.vm_current.get())
+        spec = spec.getBytes()
+        self.make_output(spec=spec)
+        self.show_plot(nofile=True)
+
+    def read_cal(self):
+        pass
 
     def __del__(self):
         if self.hypstar is not None:

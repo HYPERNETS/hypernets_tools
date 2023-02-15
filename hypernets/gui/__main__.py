@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # coding: utf-8
-
+from configparser import ConfigParser
 from tkinter import E, W, N, S, NE, NW, SE, SW, SE, BOTH, DISABLED, END  # noqa
 from tkinter import PhotoImage, Label
 from tkinter import Tk
@@ -25,10 +25,14 @@ class Guied(Tk):
         self.yoctopuce = True
         self.output = True
         self.rainsensor = True
-
+        self.loglevel = "ERROR"
+        self.baudrate = 115200
+        self.serial_port = "/dev/radiometer0"
+        self.tec_target_temp = 0
         self.webcam = False
         self.console = False
 
+        self.read_config()
         self.create_logo()
         self.configure_frames()
         self.configure_gui()
@@ -49,7 +53,7 @@ class Guied(Tk):
         if self.radiometer:
             frmRadiometer = FrameRadiometer(self)
             frmRadiometer.grid(sticky=W+E+N+S, column=0, row=1, padx=2, pady=2,
-                               rowspan=3)
+                               rowspan=4)
 
         if self.pantilt:
             frmPanTilt = FramePanTilt(self)
@@ -71,6 +75,14 @@ class Guied(Tk):
             frmConsole = FrameConsole(self)
             frmConsole.grid(sticky=W+E+N+S,    column=0, row=3, padx=1, pady=2,
                             columnspan=2)
+
+    def read_config(self):
+        parser = ConfigParser()
+        parser.read('config_dynamic.ini')
+        self.loglevel = parser.get('hypstar', 'loglevel')
+        self.baudrate = parser.getint('hypstar', 'baudrate')
+        self.tec_target_temp = parser.get('hypstar', 'swir_tec')
+        self.serial_port = parser.get('hypstar', 'hypstar_port')
 
 
 if __name__ == '__main__':
