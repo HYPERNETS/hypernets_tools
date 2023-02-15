@@ -33,5 +33,44 @@ fi
 
 wget -qO - https://www.yoctopuce.com/apt/KEY.gpg |  sudo apt-key add -
 echo "deb https://www.yoctopuce.com/ apt/stable/" | sudo tee /etc/apt/sources.list.d/yoctopuce.list 
+
 sudo apt update
 sudo apt install virtualhub
+
+set +e
+# FIXME
+echo "Stop existing Virtualhub service (in case of update)"
+systemctl stop yvirtualhub.service
+systemctl disable yvirtualhub.service
+set -e
+
+echo "Creating user rules for all users.."
+echo 
+
+cat > /etc/udev/rules.d/51-yoctopuce_all.rules << EOF
+# udev rules to allow write access to all users for Yoctopuce USB devices
+SUBSYSTEM=="usb", ATTR{idVendor}=="24e0", MODE="0666"
+EOF
+
+echo "Creating systemd startup script..."
+echo 
+
+cat > /etc/systemd/system/yvirtualhub.service  << EOF
+[Unit]
+Description=Yoctopuce VirtualHub
+After=network.target
+
+[Service]
+ExecStart=/usr/sbin/VirtualHub -c /etc/vhub.byn
+Type=simple
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl start yvirtualhub.service
+systemctl enable yvirtualhub.service
+
+echo "Installation  VirtualHub done."
+echo "---------------------------------------------------------------"
