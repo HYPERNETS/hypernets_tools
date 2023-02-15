@@ -73,7 +73,11 @@ function auto_config_yocto(){
 
 	echo "Copying configuration files"
 	sudo -u $SUDO_USER cp hypernets/resources/config_static.ini.template config_static.ini
-	# sudo -u $SUDO_USER cp hypernets/resources/config_dynamic.ini.template config_dynamic.ini
+
+	if [[ ! -f "config_dynamic.ini" ]]; then
+        echo "Copying the config_dynamic.ini file as it does not exist"
+        sudo -u $SUDO_USER cp hypernets/resources/config_dynamic.ini.template config_dynamic.ini
+    fi
 
 	echo 
 	echo "Running auto config for config_static.ini..."
