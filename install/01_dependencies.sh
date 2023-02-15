@@ -16,11 +16,11 @@ fi
 
 user="$SUDO_USER"
 
-sudo pacman -Sy python-pip tk make gcc
+sudo apt install python3-pip tk make gcc
 
-sudo -u $user python -m pip uninstall serial
-sudo -u $user python -m pip install crcmod pyftdi yoctopuce pyserial
-sudo -u $user python -m pip install matplotlib
+sudo -u $user python3 -m pip uninstall serial
+sudo -u $user python3 -m pip install crcmod pyftdi yoctopuce pyserial
+sudo -u $user python3 -m pip install matplotlib
 
 # Get Access to  /dev/ttySx without 'sudo'
 sudo usermod -a -G uucp $USER
