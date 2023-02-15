@@ -16,7 +16,7 @@ fi
 
 user="$SUDO_USER"
 
-sudo apt install python3-pip tk make gcc
+sudo apt install python3-pip tk make gcc python3-tk
 
 sudo -u $user python3 -m pip uninstall serial
 sudo -u $user python3 -m pip install crcmod pyftdi yoctopuce pyserial
