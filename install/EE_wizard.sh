@@ -68,7 +68,8 @@ function auto_config_yocto(){
 		return
 	fi
 
-	echo "Please connect the Yocto-Pictor from the 'config port' and pressenter to continue"
+	echo "Please connect the Yocto-Pictor from the 'config port' and press
+    'enter' to continue"
 	read
 
 	echo "Copying configuration files"
@@ -114,12 +115,25 @@ function update_libhypstar(){
 	echo 
 	echo "-- Downloading and installing libhypstar..."
 	echo "------------------------------------------------"
-	sudo ./install/03_update_libhypstar.sh 
+    user="$SUDO_USER"
+
+    # Init
+    sudo -u $user git submodule init
+    sudo -u $user git submodule update
+
+    # Update and Install
+    cd hypernets/hypstar/libhypstar/
+    sudo -u $user git checkout main
+    sudo -u $user git pull
+    sudo -u $user make lib
+    sudo make install
+    cd -
+    # sudo ./install/03_update_libhypstar.sh 
 }
 
 
 function configure_port(){
-	echo 
+    echo 
 	echo 
 	echo "-- Configuration of the Hypstar Port..."
 	echo "------------------------------------------------"
@@ -175,10 +189,14 @@ while true; do
 				break
 				;;
 			"${options[6]}")
+                exit 0
+				break
+				;;
+			*)
 				echo "Not implemented!"
 				break
 				;;
-			*) 
+			*)
 				echo "Invalid choice!"
 				;;
 		esac
