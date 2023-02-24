@@ -23,7 +23,7 @@ elevation = 0.0
 offset_pan = 0
 offset_tilt = +60
 reverse_tilt = no
-pantilt_port = /dev/ttyS3
+pantilt_port = /dev/ttyS0
 azimuth_switch = 0
 
 [hypstar]
