@@ -31,6 +31,31 @@ if [ "$VERBOSE" -eq 1 ] ; then
 	echo "(Verbose Mode On)" 
 fi
 
+if [[ ${PWD##*/} != "hypernets_tools"* ]]; then
+	echo "This script must be run from hypernets_tools folder" 1>&2
+	echo "Use : sudo ./install/${0##*/} instead"
+	exit 1
+fi
+
+user="$SUDO_USER"
+
+
+# Detection of what system we are currently running (i.e. debian or manjaro)
+if [ -f /etc/os-release ]; then
+	source /etc/os-release
+else
+	echo "Error: impossible to detect OS system version."
+	echo "Not a systemd freedestkop.org distribution?"
+	exit 1
+fi
+
+if [ ! "$ID"  == "debian" ]; then
+	echo "Linux distribution not supported."
+	echo "Please manually install the Yoctopuce virtualhub."
+	echo "www.yoctopuce.com/EN/virtualhub.php"
+	exit 1
+fi
+
 wget -qO - https://www.yoctopuce.com/apt/KEY.gpg |  sudo apt-key add -
 echo "deb https://www.yoctopuce.com/ apt/stable/" | sudo tee /etc/apt/sources.list.d/yoctopuce.list 
 

@@ -16,7 +16,21 @@ fi
 
 user="$SUDO_USER"
 
-sudo apt install python3-pip tk make gcc python3-tk
+
+# Detection of what system we are currently running (i.e. debian or manjaro)
+if [ -f /etc/os-release ]; then
+	source /etc/os-release
+else
+	echo "Error: impossible to detect OS system version."
+	echo "Not a systemd freedestkop.org distribution?"
+	exit 1
+fi
+
+if [ "$ID"  == "debian" ]; then
+	sudo apt install python3-pip tk make gcc python3-tk
+elif [ "$ID"  == "manjaro" ]; then
+	sudo pacman -Sy python-pip tk make gcc
+fi
 
 sudo -u $user python3 -m pip uninstall serial
 sudo -u $user python3 -m pip install crcmod pyftdi yoctopuce pyserial
