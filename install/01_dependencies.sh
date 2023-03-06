@@ -28,6 +28,7 @@ fi
 
 if [ "$ID"  == "debian" ]; then
 	sudo apt install python3-pip tk make gcc python3-tk
+    [ ! -e /usr/bin/python ] && ln -s /usr/bin/python3 /usr/bin/python
 elif [ "$ID"  == "manjaro" ]; then
 	sudo pacman -Sy python-pip tk make gcc
 fi
