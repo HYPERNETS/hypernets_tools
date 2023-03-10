@@ -20,30 +20,66 @@
 set -o nounset                              # Treat unset variables as an error
 set -euo pipefail                           # Bash Strict Mode	
 
-
+# Make Logs
+echo "Making Logs..."
+mkdir -p LOGS
 
 logNameBase=$(date +"%Y-%m-%d-%H%M")
 
-echo "Disk usage informations:" 
-df -h -text4
+suffixeName=""
+for i in {001..999}; do
+	if [ -f "LOGS/$logNameBase$suffixeName-sequence.log" ]; then 
+		echo "[DEBUG]  Error the log already exists! ($i)"
+		suffixeName=$(echo "-$i")
+	else
+		logNameBase=$(echo $logNameBase$suffixeName)
+		break
+	fi
+done
 
-diskUsageOuput="LOGS/disk-usage.log"
-dfOutput=$(df -text4 --output=used,avail,pcent)
 
-if [ ! -f  $diskUsageOuput ] ; then
-	echo "Creation of $diskUsageOuput"
-	echo -n "DateTime    " > $diskUsageOuput
-	echo "$dfOutput" | sed 2d >> $diskUsageOuput
-fi
+disk_usage() {
+    echo "Disk usage informations:" 
+    df -h -text4
 
-echo -n "$logNameBase " >> $diskUsageOuput
-echo "$dfOutput" | sed 1d >> $diskUsageOuput
+    diskUsageOuput="LOGS/disk-usage.log"
+    dfOutput=$(df -text4 --output=used,avail,pcent)
+
+    if [ ! -f  $diskUsageOuput ] ; then
+        echo "[INFO] Creation of $diskUsageOuput"
+        echo -n "DateTime    " > $diskUsageOuput
+        echo "$dfOutput" | sed 2d >> $diskUsageOuput
+    fi
+    echo -n "$logNameBase " >> $diskUsageOuput
+    echo "$dfOutput" | sed 1d >> $diskUsageOuput
+}
+
+make_log() {
+	logNameBase=$1
+	logName=$2
+
+	set +e
+	systemctl is-enabled hypernets-$logName.service > /dev/null
+	if [[ $? -eq 0 ]] ; then
+		echo "[DEBUG]  Making log: $logName..."
+		journalctl -b-1 -u hypernets-$logName --no-pager > LOGS/$logNameBase-$logName.log
+	else
+		echo "[DEBUG]  Skipping log: $logName."
+	fi
+	set -e
+}
+
+make_log $logNameBase sequence
+make_log $logNameBase hello
+make_log $logNameBase access
+make_log $logNameBase time
+make_log $logNameBase webcam
+make_log $logNameBase rain
 
 # We check if network is on
 echo "Waiting for network..."
 nm-online
 echo "Ok !"
-
 
 # Read config file :
 source utils/configparser.sh
@@ -60,28 +96,6 @@ fi
 if [ -z $autoUpdate ]; then
 	autoUpdate="no"
 fi
-
-# Make Logs
-echo "Making Logs..."
-mkdir -p LOGS
-
-
-
-journalctl -b-1 -u hypernets-sequence --no-pager > LOGS/$logNameBase-sequence.log
-journalctl -b-1 -u hypernets-hello --no-pager > LOGS/$logNameBase-hello.log
-journalctl -b-1 -u hypernets-access --no-pager > LOGS/$logNameBase-access.log
-
-set +e
-systemctl is-enabled hypernets-webcam.service > /dev/null
-if [[ $? -eq 0 ]] ; then
-	journalctl -b-1 -u hypernets-webcam --no-pager > LOGS/$logNameBase-webcam.log
-fi
-
-systemctl is-enabled hypernets-rain.service> /dev/null
-if [[ $? -eq 0 ]] ; then
-	journalctl -b-1 -u hypernets-rain --no-pager > LOGS/$logNameBase-rain.log
-fi
-set -e
 
 # We first make sure that server is up
 set +e
@@ -116,12 +130,15 @@ fi
 # Send data
 echo "Syncing Data..."
 rsync -e "ssh -p $sshPort" -rt --exclude "CUR*" "DATA" "$ipServer:$remoteDir"
+
 echo "Syncing Logs..."
 rsync -e "ssh -p $sshPort" -rt "LOGS" "$ipServer:$remoteDir"
 
 if [ -d "OTHER" ]; then
 	echo "Syncing Directory OTHER..."
-	rsync -e "ssh -p $sshPort" -rt "OTHER" "$ipServer:$remoteDir"
+    # rt -> r XXX
+	rsync --ignore-existing -e "ssh -p $sshPort" -r "OTHER" "$ipServer:$remoteDir"
+	# rsync -e "ssh -p $sshPort" -rt "OTHER" "$ipServer:$remoteDir"
 fi
 
 echo "End."
