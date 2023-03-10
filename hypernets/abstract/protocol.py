@@ -147,8 +147,8 @@ class Protocol(list[(Geometry, list[Request])]):
 
 
     @staticmethod
-    def create_seq_name(now, prefix="SEQ", fmt="%Y%m%dT%H%M%S"):
-        return now.strftime(prefix + fmt)
+    def create_seq_name(now, prefix="SEQ", fmt="%Y%m%dT%H%M%S", suffix=""):
+        return now.strftime(prefix + fmt + suffix)
 
 
 if __name__ == '__main__':

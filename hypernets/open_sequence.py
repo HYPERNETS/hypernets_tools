@@ -42,7 +42,25 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     seq_name = Protocol.create_seq_name(now=start, prefix="CUR")
 
     seq_path = path.join(DATA_DIR, seq_name)
+    final_seq_path = path.join(DATA_DIR, Protocol.create_seq_name(now=start))
+
+    suffix = ""
+
+    n = 0
+    while path.isdir(seq_path + suffix) or path.isdir(final_seq_path + suffix):
+        n += 1
+        error(f"Directory [{seq_path+suffix} or "
+              f"{final_seq_path+suffix}] already exists!")
+        suffix = f"-{n:03d}"
+
+    # XXX Draft!
+    seq_path = seq_path + suffix
+    seq_name = seq_name + suffix
     filepath = path.join(seq_path, "RADIOMETER")
+    final_seq_path = path.join(DATA_DIR, Protocol.create_seq_name(now=start,
+                               suffix=suffix))
+
+    info(f"Creating directories: {seq_path} and {filepath}...")
 
     mkdir(seq_path)
     mkdir(filepath)
@@ -188,7 +206,6 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
     mdfile.close()
 
-    final_seq_path = path.join(DATA_DIR, Protocol.create_seq_name(now=start))
     replace(seq_path, final_seq_path)
     info(f"Created sequence : {final_seq_path}")
 
