@@ -39,6 +39,8 @@ done
 
 
 disk_usage() {
+    logNameBase=$1
+
     echo "Disk usage informations:" 
     df -h -text4
 
@@ -75,6 +77,7 @@ make_log $logNameBase access
 make_log $logNameBase time
 make_log $logNameBase webcam
 make_log $logNameBase rain
+disk_usage $logNameBase
 
 # We check if network is on
 echo "Waiting for network..."
