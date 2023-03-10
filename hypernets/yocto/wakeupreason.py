@@ -2,6 +2,7 @@ from hypernets.yocto.init import init, get_url_base
 from yoctopuce.yocto_api import YAPI
 from configparser import ConfigParser
 from yoctopuce.yocto_wakeupmonitor import YWakeUpMonitor
+from urllib.request import urlopen
 
 
 if __name__ == '__main__':
@@ -9,13 +10,9 @@ if __name__ == '__main__':
     config_dynamic = ConfigParser()
 
     if config["yoctopuce"]["yoctopuce_ip"] == "usb":
-        # from urllib.request import urlopen
-        url_base = "/".join([get_url_base(), "api", "wakeUpMonitor"])
-        # get = "?sleepCountdown=10&."
-        # # print(url_base + get)
-        # url = urlopen(url_base + get)
-        # # print(url.code)
-
+        url_base = "/".join([get_url_base(), "api", "wakeUpMonitor", "wakeUpReason"])
+        str_wakeupreason = urlopen(url_base).read().decode()
+       
     else:
         yocto_prefix = config["yoctopuce"]["yocto_prefix2"]
         monitor = YWakeUpMonitor.FindWakeUpMonitor(yocto_prefix +
@@ -32,6 +29,5 @@ if __name__ == '__main__':
              monitor.WAKEUPREASON_SCHEDULE2: "schedule2",
              monitor.WAKEUPREASON_USBPOWER: "usb power"}[id_wakeupreason]
 
-        print(str_wakeupreason)
-
+    print(str_wakeupreason)
     YAPI.FreeAPI()

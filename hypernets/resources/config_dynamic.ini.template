@@ -2,7 +2,19 @@
 [general]
 keep_pc = on
 start_sequence = no
-sequence_file = hypernets/resources/sequences_samples/your_sequence.csv
+check_wakeup_reason = no
+
+sequence_file = hypernets/resources/sequences_samples/your_sequence.txt
+
+# To enable schedule2 (alternative) set checkup reason to 'yes'
+# and uncomment the 'sequence_file_alt' field
+# This way, the 'alternative' will be read instead of 'sequence_file' 
+# when using the yocto-pictor schedule2
+
+check_wakeup_reason = no
+# sequence_file_alt = hypernets/resources/sequences_samples/sequence_validation_v2.txt
+
+
 auto_update = no
 
 # Verbosity levels are : ERROR, WARNING, INFO, or DEBUG

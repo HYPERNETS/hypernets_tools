@@ -38,6 +38,8 @@ dumpEnvironmentLogs=$(parse_config "log_environment" config_dynamic.ini)
 
 # Starting Conditions:
 sequence_file=$(parse_config "sequence_file" config_dynamic.ini)
+sequence_file_alt=$(parse_config "sequence_file_alt" config_dynamic.ini)
+
 checkWakeUpReason=$(parse_config "check_wakeup_reason" config_dynamic.ini)
 startSequence=$(parse_config "start_sequence" config_dynamic.ini)
 keepPc=$(parse_config "keep_pc" config_dynamic.ini)
@@ -169,8 +171,10 @@ if [[ ! "$bypassYocto" == "yes" ]] ; then
 		set -e
 
 		echo "[DEBUG]  Wake up reason is : $wakeupreason."
+        
 
-		if [[ ! "$wakeupreason" == "schedule1" ]]; then
+
+		if [[ ! "$wakeupreason" == "SCHEDULE"* ]]; then
 			echo "[WARNING]  $wakeupreason is not a reason to start the sequence."
 			startSequence="no"
 			if [[ ! "$keepPc" == "on" ]]; then
@@ -179,9 +183,18 @@ if [[ ! "$bypassYocto" == "yes" ]] ; then
 			fi
 			shutdown_sequence;
 		fi
+
+		if [[ "$wakeupreason" == "SCHEDULE2" ]]; then
+            if [[ ! -n $sequence_file_alt ]] ; then
+                echo "[WARNING ] No alternative sequence file is defined."
+                echo "[WARNING ] $sequence_file will be run instead."
+            else
+                echo "[INFO    ] $sequence_file_alt as alternative sequence file is defined."
+                sequence_file=$sequence_file_alt
+            fi 
+        fi
 	fi
 fi
-
 
 if [[ "$startSequence" == "no" ]] ; then
 	echo "[INFO]  Start sequence = no"
