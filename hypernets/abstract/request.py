@@ -13,6 +13,7 @@ class RadiometerExt(IntEnum):
 class EntranceExt(IntEnum):
     NONE = -1
     PICTURE = 3
+    VM = 4
 
 
 class Request(object):
@@ -30,7 +31,10 @@ class Request(object):
         output_str = f"{self.number_cap}."
 
         if self.radiometer == RadiometerExt.NONE:
-            output_str += "picture"
+            if self.entrance == EntranceExt.PICTURE:
+                output_str += "picture"
+            elif self.entrance == EntranceExt.VM:
+                output_str += "validation"
 
         else:
             output_str += f"{self.radiometer.name}.{self.entrance.name}."
@@ -64,6 +68,11 @@ class Request(object):
         if measurement == ("picture",):
             request.radiometer = RadiometerExt.NONE
             request.entrance = EntranceExt.PICTURE
+            return request
+
+        elif measurement == ("validation",):
+            request.radiometer = RadiometerExt.NONE
+            request.entrance = EntranceExt.VM
             return request
 
         else:
@@ -109,6 +118,7 @@ class Request(object):
                          RadiometerEntranceType.RADIANCE: 0x10,
                          RadiometerEntranceType.IRRADIANCE: 0x08,
                          EntranceExt.PICTURE: 0x02,
+                         EntranceExt.VM: 0x04,
                          EntranceExt.NONE: 0x03}
 
         # EntranceExt.CALIBRATION: 0x01,

@@ -91,7 +91,7 @@ class Protocol(list[(Geometry, list[Request])]):
 
         # Split line with '+' as separation character
         for line in split_lines(lines):
-            debug(f"Parsing line : {line}")
+            debug(f"Parsing line : '{line}'")
             # Ignore new lines
             if line.isspace():
                 continue
@@ -124,7 +124,8 @@ class Protocol(list[(Geometry, list[Request])]):
         for _, request_list in self:
             for request in request_list:
                 if request.radiometer != RadiometerExt.NONE or\
-                        request.entrance == EntranceExt.PICTURE:
+                        request.entrance == EntranceExt.PICTURE or\
+                        request.entrance == EntranceExt.VM:
                     info("This protocol requests instrument.")
                     return True
         info("This protocol doesn't request instrument.")
@@ -139,6 +140,11 @@ class Protocol(list[(Geometry, list[Request])]):
                     return True
         info("This protocol doesn't have SWIR request.\n")
         return False
+
+    # TODO
+    def check_if_vm_requested(self):
+        pass
+
 
     @staticmethod
     def create_seq_name(now, prefix="SEQ", fmt="%Y%m%dT%H%M%S"):

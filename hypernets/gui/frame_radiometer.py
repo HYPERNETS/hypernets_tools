@@ -377,8 +377,10 @@ class FrameRadiometer(LabelFrame):
         self.vm_enabled = not self.vm_enabled
         if self.vm_enabled:
             self.enable_vm_button_text.set("Turn VM off")
+            self.hypstar.VM_enable(True)
         else:
             self.enable_vm_button_text.set("Turn VM on")
+            self.hypstar.VM_enable(False)
 
         output = self.hypstar.VM_enable(self.vm_enabled)
         if isinstance(output, Exception):
@@ -388,9 +390,12 @@ class FrameRadiometer(LabelFrame):
     def measure_vm(self):
         if not self.check_if_hypstar_exists():
             return
+
         it = int(self.radiometer_var[2].get() if self.vm_light_source.value < 2 else self.radiometer_var[3].get())
 
-        spec = self.hypstar.VM_measure(RadiometerEntranceType[self.radiometer_var[1].get().upper()].value, self.vm_light_source.value, it, self.vm_current.get())
+        spec = self.hypstar.VM_measure(RadiometerEntranceType[self.radiometer_var[1].get().upper()].value, 
+                self.vm_light_source.value, it, self.vm_current.get())
+
         spec = spec.getBytes()
         self.make_output(spec=spec)
         self.show_plot(nofile=True)

@@ -15,6 +15,12 @@ from hypernets.hypstar.libhypstar.python.hypstar_wrapper import HypstarLogLevel
 from hypernets.hypstar.libhypstar.python.data_structs.hardware_info import \
     HypstarSupportedBaudRates
 
+from hypernets.hypstar.libhypstar.python.data_structs.varia import \
+        ValidationModuleLightType
+
+from hypernets.hypstar.libhypstar.python.data_structs.spectrum_raw  \
+        import RadiometerEntranceType
+
 from logging import debug, info, error
 
 
@@ -107,6 +113,9 @@ class HypstarHandler(Hypstar):
         if request.entrance == EntranceExt.PICTURE:
             self.take_picture(path_to_file)
 
+        elif request.entrance == EntranceExt.VM:
+            self.take_validation(request, path_to_file)
+
         elif request.radiometer != RadiometerExt.NONE:
             self.take_spectra(request, path_to_file)
 
@@ -173,6 +182,25 @@ class HypstarHandler(Hypstar):
             return e
 
         return True
+
+    def take_validation(self, request, path_to_file):
+        try:
+            self.VM_enable(True)
+
+            spectrum = self.VM_measure(RadiometerEntranceType.IRRADIANCE, 
+                    ValidationModuleLightType.LIGHT_VIS, 0, 1.0)
+
+            info("{spectra}")
+
+            spectrum = spectrum.getBytes()
+            with open(path_to_file, "wb") as f:
+                f.write(spectrum)
+
+            self.VM_enable(False)
+
+        except Exception as e:
+            error(f"(in take validation) {e}")
+
 
     def get_serials(self):
         try:
