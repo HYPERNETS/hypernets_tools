@@ -2,7 +2,6 @@
 [general]
 keep_pc = on
 start_sequence = no
-check_wakeup_reason = no
 
 sequence_file = hypernets/resources/sequences_samples/your_sequence.txt
 
