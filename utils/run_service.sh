@@ -43,6 +43,7 @@ sequence_file_alt=$(parse_config "sequence_file_alt" config_dynamic.ini)
 checkWakeUpReason=$(parse_config "check_wakeup_reason" config_dynamic.ini)
 startSequence=$(parse_config "start_sequence" config_dynamic.ini)
 keepPc=$(parse_config "keep_pc" config_dynamic.ini)
+debugYocto=$(parse_config "debug_yocto" config_static.ini)
 
 shutdown_sequence() {
     if [[ "$bypassYocto" == "no" ]] && [[ "$startSequence" == "yes" ]] ; then
@@ -72,71 +73,72 @@ shutdown_sequence() {
 }
 
 
-# ------------------------------------------------------------------------------
-# YOCTO DEBUG ------------------------------------------------------------------
-# ------------------------------------------------------------------------------
 
-# echo "[DEBUG]  Check if Yocto-Pictor is in (pseudo) deep-sleep mode..."
-# 
-# set +e
-# yoctoState=$(wget -O- \
-# 'http://127.0.0.1:4444/bySerial/OBSVLFR2-13F9AE/api/wakeUpMonitor/wakeUpState' \
-# 2> /dev/null)
-# 
-# if [[ ! $? -eq 0 ]] ; then
-# 	echo "[DEBUG]  Fail to get Yocto-Pictor wake-up state !"
-# 	exit 1
-# fi
-# 
-# echo "[DEBUG]  Yocto-Pictor wake-up state : $yoctoState"
-# 
-# if [[ $yoctoState == "SLEEPING" ]] ; then
-# 	echo "[DEBUG]  Awaking Yocto-Pictor..."
-# 	yoctoState=$(wget -O- \
-# 	'http://127.0.0.1:4444/bySerial/OBSVLFR2-13F9AE/api/wakeUpMonitor?wakeUpState=1' \
-# 	2> /dev/null)
-# 	if [[ ! $? -eq 0 ]] ; then
-# 		echo "[DEBUG]  Fail to wake-up the Yocto-Pictor !"
-# 		exit 1
-# 	fi
-# 	sleep 2
-# fi
-# 
-# 
-# logNameBase=$(date +"%Y-%m-%d-%H%M")
-# 
-# suffixeName=""
-# for i in {001..999}; do
-# 	if [ -f "OTHER/$logNameBase$suffixeName-log.txt" ] || 
-# 		[ -f "OTHER/$logNameBase$suffixeName-api.txt" ]; then 
-# 		echo "[DEBUG]  Error the log already exists! ($i)"
-# 		suffixeName=$(echo "-$i")
-# 	else
-# 		logNameBase=$(echo $logNameBase$suffixeName)
-# 		break
-# 	fi
-# done
-# 
-# echo "[DEBUG]  Getting LOGS.txt and API.txt (prefix: $logNameBase)..."
-# 
-# if [ -f "OTHER/$logNameBase-log.txt" ] || [ -f "OTHER/$logNameBase-api.txt" ] ; then
-# 	logNameBase=$(echo "$logNameBase-$RANDOM")
-# 	echo "[DEBUG]  Error the log already exists!"
-# fi
-# 
-# wget -O- 'http://127.0.0.1:4444/bySerial/OBSVLFR2-13F9AE/api.txt' > \
-# "OTHER/$logNameBase-api.txt" 2> /dev/null
-# 
-# wget -O- 'http://127.0.0.1:4444/bySerial/OBSVLFR2-13F9AE/logs.txt' > \
-# "OTHER/$logNameBase-log.txt" 2> /dev/null
+debug_yocto(){
+    # ------------------------------------------------------------------------------
+    # YOCTO DEBUG ------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
+    echo "[DEBUG]  Check if Yocto-Pictor is in (pseudo) deep-sleep mode..."
+    yoctoPrefix2=$(parse_config "yocto_prefix2" config_static.ini)
+    set +e
+    yoctoState=$(wget -O- \
+        'http://127.0.0.1:4444/bySerial/$yoctoPrefix2/api/wakeUpMonitor/wakeUpState' \
+        2> /dev/null)
 
-set -e
+    if [[ ! $? -eq 0 ]] ; then
+        echo "[DEBUG]  Fail to get Yocto-Pictor wake-up state !"
+        return 1
+    fi
 
-# ------------------------------------------------------------------------------
-# \ YOCTO DEBUG ----------------------------------------------------------------
-# ------------------------------------------------------------------------------
+    echo "[DEBUG]  Yocto-Pictor wake-up state : $yoctoState"
+
+    if [[ $yoctoState == "SLEEPING" ]] ; then
+        echo "[DEBUG]  Awaking Yocto-Pictor..."
+        yoctoState=$(wget -O- \
+            'http://127.0.0.1:4444/bySerial/$yoctoPrefix2/api/wakeUpMonitor?wakeUpState=1' \
+            2> /dev/null)
+                    if [[ ! $? -eq 0 ]] ; then
+                        echo "[DEBUG]  Fail to wake-up the Yocto-Pictor !"
+                        return 1
+                    fi
+                    sleep 2
+    fi
+
+    logNameBase=$(date +"%Y-%m-%d-%H%M")
+
+    suffixeName=""
+    for i in {001..999}; do
+        if [ -f "OTHER/$logNameBase$suffixeName-log.txt" ] ||
+            [ -f "OTHER/$logNameBase$suffixeName-api.txt" ]; then
+                    echo "[DEBUG]  Error the log already exists! ($i)"
+                    suffixeName=$(echo "-$i")
+                else
+                    logNameBase=$(echo $logNameBase$suffixeName)
+                    break
+        fi
+    done
+
+    echo "[DEBUG]  Getting LOGS.txt and API.txt (prefix: $logNameBase)..."
+
+    wget -O- 'http://127.0.0.1:4444/bySerial/$yoctoPrefix2/api.txt' > \
+        "OTHER/$logNameBase-api.txt" 2> /dev/null
+
+    wget -O- 'http://127.0.0.1:4444/bySerial/$yoctoPrefix2/logs.txt' > \
+        "OTHER/$logNameBase-log.txt" 2> /dev/null
+
+    set -e
+    # ------------------------------------------------------------------------------
+    # \ YOCTO DEBUG ----------------------------------------------------------------
+    # ------------------------------------------------------------------------------
+}
+
 
 if [[ ! "$bypassYocto" == "yes" ]] ; then
+
+    if [[ "$debugYocto" == "yes" ]] ; then
+        debug_yocto
+    fi
+
 	# Ensure Yocto is online
 	yoctopuceIP=$(parse_config "yoctopuce_ip" config_static.ini)
 
