@@ -208,12 +208,30 @@ class HypstarHandler(Hypstar):
             instrument = self.hw_info.instrument_serial_number
             visible = self.hw_info.vis_serial_number
             swir = self.hw_info.swir_serial_number
-            return instrument, visible, swir
+            vm = self.hw_info.vm_serial_number
+            return instrument, visible, swir, vm
 
         except Exception as e:
             error(f"{e}")
             return e
 
+
+    def get_firmware_versions(self):
+        try:
+            debug("Getting FW versions")
+            instrument_FW_major = self.hw_info.firmware_version_major
+            instrument_FW_minor = self.hw_info.firmware_version_minor
+            instrument_FW_rev = self.hw_info.firmware_version_revision
+            vm_FW_major = self.hw_info.vm_firmware_version_major
+            vm_FW_minor = self.hw_info.vm_firmware_version_minor
+            vm_FW_rev = self.hw_info.vm_firmware_version_revision
+             
+            return (instrument_FW_major, instrument_FW_minor, 
+                    instrument_FW_rev, vm_FW_major, vm_FW_minor, vm_FW_rev)
+
+        except Exception as e:
+            error(f"{e}")
+            return e
 
 if __name__ == '__main__':
 
