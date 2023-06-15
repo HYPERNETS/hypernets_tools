@@ -8,12 +8,18 @@ from logging import warning
 
 # TODO : Dump data from pickle for lat:lon
 
+instrument_sn = 0
+vm_sn = 0
 
 def special_value(value):
     if value == "{datetime}":
         return datetime.utcnow().strftime("%Y%m%dT%H%M%S")
     elif value == "{v_hypernets_tools}":
         return __version__
+    elif value == "{hypstar_sn}":
+        return instrument_sn
+    elif value == "{led_sn}":
+        return vm_sn
     else:
         return "N/A"
 
@@ -32,7 +38,9 @@ def metadata_header_base(protocol_file="placeholder.csv", now=None,
             f"protocol_filename = {protocol_file}\n")
 
 
-def parse_config_metadata(config_file="config_dynamic.ini"):
+def parse_config_metadata(config_file="config_dynamic.ini", instrument_sn=0, vm_sn=0):
+    globals()["instrument_sn"] = instrument_sn
+    globals()["vm_sn"] = vm_sn
 
     config = ConfigParser(interpolation=ExtendedInterpolation())
 
@@ -57,7 +65,6 @@ def parse_config_metadata(config_file="config_dynamic.ini"):
 
 def create_metadata():
     pass
-
 
 if __name__ == '__main__':
     print(parse_config_metadata())
