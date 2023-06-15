@@ -188,7 +188,12 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             try:
                 if dump_environment_logs:
                     # 0xFF returns live data, 0 returns last captured on FW > 0.15.24
-                    env = instrument_instance.get_env_log(0xff)
+                    if (instrument_FW_major, instrument_FW_minor, instrument_FW_rev) > (0, 15, 24):
+                        env_request = 0xff 
+                    else:
+                        env_request = 0
+
+                    env = instrument_instance.get_env_log(env_request)
                     info(env.get_csv_line())
                 instrument_instance.take_request(request, path_to_file=output)
 
