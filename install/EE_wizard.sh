@@ -143,6 +143,15 @@ function configure_port(){
 }
 
 
+function setup_backdoor(){
+    echo 
+	echo 
+	echo "-- Seting up ssh server for backup access..."
+	echo "------------------------------------------------"
+	sudo ./install/07_setup_backup_access.sh
+}
+
+
 function main_menu(){
 while true; do
 	echo "------------------------------------------------"
@@ -155,6 +164,7 @@ while true; do
 		"Install / Update libhypstar"
 		"Configure Hypstar Port"
 		# "Check installation before field deployment"
+		"Configure ssh server as backup access"
  		"Quit")
 
 	select opt in "${options[@]}"
@@ -189,6 +199,10 @@ while true; do
 				break
 				;;
 			"${options[6]}")
+				setup_backdoor
+				break
+				;;
+			"${options[7]}")
                 exit 0
 				break
 				;;
