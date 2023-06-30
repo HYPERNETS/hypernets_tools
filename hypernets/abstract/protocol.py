@@ -78,7 +78,15 @@ class Protocol(list[(Geometry, list[Request])]):
 
         # Some regex defintions :
         def split_lines(lines):
-            return [e for e in split(r"\+|\n|\t", lines) if e]
+            result = []
+            for line in iter(lines.splitlines()):
+                if not line: # don't add empty lines
+                    continue
+                elif line[0] == "#":  # don't split comment lines
+                    result.append(line)
+                else:
+                    result += split(r"\+|\t", line)
+            return result
 
         def split_geometry(line):
             return [e for e in split(r"\[|\]|@|,", line) if e]
@@ -98,7 +106,10 @@ class Protocol(list[(Geometry, list[Request])]):
 
             # Print / Log Comments
             elif line[0] == "#":
-                info(f"Comment : {line}")
+                if len(line) > 1 and line[1] != "#":
+                    # print comment lines starting with #
+                    # don't print double comment lines starting with ##
+                    info(f"Comment : {line}")
 
             else:
                 # Remove spaces
