@@ -99,10 +99,26 @@ def query_position(ser):
     return pan, tilt
 
 
+def print_position(ser):
+
+    if ser is None:
+        ser = open_serial()
+
+    position = query_position(ser)
+    print(f"Absolute positions: pan {position[0]/100}, "
+        f"tilt {position[1]/100}")
+
 def move_to(ser, pan, tilt, wait=False):
 
     if ser is None:
         ser = open_serial()
+
+    if pan is None or tilt is None:
+        initial_position = query_position(ser)
+        if pan is None:
+            pan = initial_position[0] / 100
+        if tilt is None:
+            tilt = initial_position[1] / 100
 
     # Conversion FIXME : here modulo should fit pan/tilt range specification
     debug(f"Before modulo: {pan}, {tilt}")
@@ -112,7 +128,6 @@ def move_to(ser, pan, tilt, wait=False):
     info(f"Requested Position :\t({pan}, {tilt})\t(10^-2 degrees)")
 
     if wait:
-        initial_position = query_position(ser)
         estimated_time = pt_time_estimation(initial_position, (pan, tilt))
 
         debug(f"Initial position :\t{initial_position}\t(10^-2 degrees)")
@@ -214,13 +229,14 @@ if __name__ == '__main__':
 
     parser.add_argument("-p", "--pan", type=restricted_float,
                         help="set pan (azimuth angle in degrees)",
-                        required=True,
                         metavar="{0..360}")
 
     parser.add_argument("-t", "--tilt", type=restricted_float,
                         help="set tilt (zenith angle in degrees)",
-                        required=True,
                         metavar="{0..360}")
+
+    parser.add_argument("-g", "--get", action="store_true",
+                        help="read and print pan/tilt real position")
 
     parser.add_argument("-w", "--wait", action="store_true",
                         help="wait for pan/tilt end of move and return"
@@ -236,5 +252,10 @@ if __name__ == '__main__':
 
     # FIXME
     ser = open_serial()
-    print(move_to(ser, args.pan, args.tilt, wait=args.wait))
+
+    if args.get:
+        print_position(ser)
+    else:
+        print(move_to(ser, args.pan, args.tilt, wait=args.wait))
+  
     ser.close()
