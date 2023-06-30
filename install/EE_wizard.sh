@@ -64,7 +64,7 @@ function auto_config_yocto(){
 
 	# if [[ -f "config_static.ini" ]] || [[ -f "config_dynamic.ini" ]]; then
 	if [[ -f "config_static.ini" ]]; then
-		echo "Error: configuration file found, please remove it first."
+		echo "Error: config_static.ini file found, please remove it first."
 		return
 	fi
 
