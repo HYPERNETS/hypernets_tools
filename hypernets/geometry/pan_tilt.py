@@ -128,6 +128,7 @@ def move_to(ser, pan, tilt, wait=False):
     info(f"Requested Position :\t({pan}, {tilt})\t(10^-2 degrees)")
 
     if wait:
+        initial_position = query_position(ser)
         estimated_time = pt_time_estimation(initial_position, (pan, tilt))
 
         debug(f"Initial position :\t{initial_position}\t(10^-2 degrees)")
