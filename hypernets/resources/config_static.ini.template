@@ -18,6 +18,7 @@ remote_ssh_port = 20213
 # enp1s0 is eth port 1, enp2s0 is eth port 2
 backup_ssh_interface = enp2s0
 backup_ssh_ip = 192.168.123.123
+dhcp_server = yes
 
 # Webcam relay 5:
 webcam_site = user:pass@ip_cam_site

@@ -28,6 +28,7 @@ source utils/configparser.sh
 
 sshIf=$(parse_config "backup_ssh_interface" config_static.ini)
 sshIp=$(parse_config "backup_ssh_ip" config_static.ini)
+dhcpServer=$(parse_config "dhcp_server" config_static.ini)
 
 if [ -z $sshIf ]; then
 	sshIf="enp2s0"
@@ -71,6 +72,46 @@ EOF
 		systemctl start sshd
 	fi
 
+	## Set up DHCP server
+	if [[ $dhcpServer == "yes" ]]; then
+		apt install isc-dhcp-server
+
+		sed -i "/INTERFACESv4=/s/.*/INTERFACESv4=\"$sshIf\"/" /etc/default/isc-dhcp-server
+
+		mv -f /etc/dhcp/dhcpd.conf /etc/dhcp/dhcpd.conf.bak
+		subnet=$(awk -F "." '{print $1"."$2"."$3".0"}' <<< $sshIp)
+		last_octet=$(sed -e 's/.*\.//' <<< $sshIp)
+
+		if (( "$last_octet" < "100" )); then
+			range1=$(awk -F "." '{print $1"."$2"."$3".200"}' <<< $sshIp)
+			range2=$(awk -F "." '{print $1"."$2"."$3".250"}' <<< $sshIp)
+		else
+			range1=$(awk -F "." '{print $1"."$2"."$3".1"}' <<< $sshIp)
+			range2=$(awk -F "." '{print $1"."$2"."$3".50"}' <<< $sshIp)
+		fi
+
+		cat << EOF > /etc/dhcp/dhcpd.conf
+option domain-name-servers ns1.example.org, ns2.example.org;
+
+default-lease-time 7200;
+max-lease-time 86400;
+
+ddns-update-style none;
+
+subnet $subnet netmask 255.255.255.0 {
+  range $range1 $range2;
+}
+
+EOF
+
+		systemctl enable isc-dhcp-server
+		systemctl start isc-dhcp-server
+	elif [[ -f "/etc/default/isc-dhcp-server" ]]; then
+		systemctl stop isc-dhcp-server
+		systemctl disable isc-dhcp-server
+
+		sed -i "/INTERFACESv4=/s/.*/INTERFACESv4=\"\"/" /etc/default/isc-dhcp-server
+	fi
 else
 	echo "Exit"
 	exit 1
