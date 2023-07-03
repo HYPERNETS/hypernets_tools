@@ -39,8 +39,9 @@ if [ -z $sshIp ]; then
 fi
 
 echo "Read from config_static.ini : "
-echo " * Backup SSH access interface : $sshIf"
-echo " * Backup SSH access port      : $sshIp"
+echo " * Backup SSH access interface  : $sshIf"
+echo " * Backup SSH access IP address : $sshIp"
+echo " * DHCP server                  : $dhcpServer"
 read -p "   Confirm (y/n) ?" -rn1
 echo
 
