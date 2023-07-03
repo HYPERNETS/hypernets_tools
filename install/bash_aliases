@@ -1,0 +1,87 @@
+# HYPERNETS_TOOLS=~/hypernets_tools
+
+now() { (
+	cd $HYPERNETS_TOOLS
+
+	echo "System time is $(date)"
+
+	echo "Yocto meteo: $(python -m hypernets.yocto.meteo)"
+
+	if [ ! -f hypernets/rain_sensor/rain_sensor ]; then
+		(cd hypernets/rain_sensor/ && make)
+	fi
+
+	relay_on=$(python -m hypernets.yocto.relay -g -n4 2>&1 | grep -c True)
+
+	## rain sensor relay is off, switch on
+	if [ $relay_on = 0 ]; then
+		python -m hypernets.yocto.relay -son -n4
+		sleep 1
+	fi
+
+	hypernets/rain_sensor/rain_sensor
+
+	## restore rain sensor relay state
+	if [ $relay_on = 0 ]; then
+		python -m hypernets.yocto.relay -soff -n4
+	fi
+
+	echo "Yocto GPS: $(python -m hypernets.yocto.gps)"
+	
+	echo "Wake up reason is $(python -m hypernets.yocto.wakeupreason)"
+	echo "Supply voltage is $(python -m hypernets.yocto.voltage) V"
+) }
+
+relay() { (
+	cd $HYPERNETS_TOOLS
+
+	if [[ $2 == "on" ]] || [[ $2 == "off" ]]; then
+		python -m hypernets.yocto.relay -s $2 -n $1
+	fi
+
+	echo -e "PC\tPT\tHYP\tRS\tCAM1\tCAM2"
+	echo -e  "1\t2\t3\t4\t5\t6"
+	python -m hypernets.yocto.relay -g -n1 -n2 -n3 -n4 -n5 -n6 2>&1 | egrep -o  "(True|False)" | sed -e 's/False/OFF/g;s/True/ON/g' | paste -s
+) }
+
+test-env() { (
+	cd $HYPERNETS_TOOLS
+
+	relay_on=$(python -m hypernets.yocto.relay -g -n3 2>&1 | grep -c True)
+	if [ $relay_on = 0 ]; then
+		echo "Radiometer relay #3 is off"
+		exit
+	fi
+
+	cd $HYPERNETS_TOOLS/hypernets/hypstar/libhypstar/ 
+
+	if [ -f build/test_env ]; then
+		build/test_env
+	else
+		make test_env
+	fi
+) }
+
+test-env-live() { (
+	cd $HYPERNETS_TOOLS
+
+	relay_on=$(python -m hypernets.yocto.relay -g -n3 2>&1 | grep -c True)
+	if [ $relay_on = 0 ]; then
+		echo "Radiometer relay #3 is off"
+		exit
+	fi
+
+	cd $HYPERNETS_TOOLS/hypernets/hypstar/libhypstar/ 
+	
+	if [ ! -f build/test_env ]; then
+		make test_env
+	fi
+
+	watch -n 5 build/test_env
+) }
+
+alias kill_service="sudo systemctl kill --signal=SIGKILL hypernets-sequence"
+alias journal="journalctl -b -u hypernets-sequence -e"
+alias status="sudo systemctl status hypernets-sequence"
+alias gui="(cd $HYPERNETS_TOOLS && python -m hypernets.gui)"
+alias runseq="(cd $HYPERNETS_TOOLS && ./utils/run_service.sh)"

@@ -152,6 +152,12 @@ function setup_backdoor(){
 }
 
 
+function setup_shortcuts(){
+	./install/08_setup_shortcuts.sh
+	echo "------------------------------------------------"
+}
+
+
 function main_menu(){
 while true; do
 	echo "------------------------------------------------"
@@ -165,6 +171,7 @@ while true; do
 		"Configure Hypstar Port"
 		# "Check installation before field deployment"
 		"Configure ssh server as backup access"
+		"Setup shortcut commands for convenience"
  		"Quit")
 
 	select opt in "${options[@]}"
@@ -203,6 +210,10 @@ while true; do
 				break
 				;;
 			"${options[7]}")
+                setup_shortcuts
+				break
+				;;
+			"${options[8]}")
                 exit 0
 				break
 				;;
