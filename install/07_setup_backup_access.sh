@@ -20,7 +20,7 @@ if [ -f /etc/os-release ]; then
 	source /etc/os-release
 else
 	echo "Error: impossible to detect OS system version."
-	echo "Not a systemd freedestkop.org distribution?"
+	echo "Not a systemd freedesktop.org distribution?"
 	exit 1
 fi
 
