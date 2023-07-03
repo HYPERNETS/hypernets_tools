@@ -54,6 +54,25 @@ shutdown_sequence() {
     if [[ "$keepPc" == "off" ]]; then
 	    echo "[INFO]  Option : Keep PC OFF"
 
+		uptime=$(sed -e 's/\..*//' /proc/uptime)
+
+		## minimum allowed uptime is 2 minutes for successful sequence
+		## and 5 minutes for failed sequence
+		if [ $1 -eq 0 ] ; then
+			min_uptime=120
+		else
+			min_uptime=300
+		fi
+
+		## take a nap if necessary
+		if (( $uptime < $min_uptime )); then
+			let sleep_duration=$min_uptime-$uptime
+			echo "[INFO]  Sequence duration was $uptime seconds (min. allowed $min_uptime s)"
+			echo "[INFO]  Sleeping for $sleep_duration s..."
+
+			sleep $sleep_duration
+		fi
+
 	    echo "[INFO]  Send Yoctopuce To sleep (or not)"
 		set +e
 	    python -m hypernets.yocto.sleep_monitor
@@ -272,7 +291,7 @@ exit_actions() {
 		python3 -m hypernets.open_sequence -f $sequence_file $extra_args
 		set -e
     fi
-	shutdown_sequence;
+	shutdown_sequence $return_value
 }
 
 trap "exit_actions" EXIT
