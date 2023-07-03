@@ -51,8 +51,11 @@ fi
 
 if [ ! "$ID"  == "debian" ]; then
 	echo "Linux distribution not supported."
-	echo "Please manually install the Yoctopuce virtualhub."
+	echo "Please manually install the Yoctopuce virtualhub"
 	echo "www.yoctopuce.com/EN/virtualhub.php"
+	echo
+	echo "and Yoctopuce command line API"
+	echo "http://www.yoctopuce.com/EN/libraries.php"
 	exit 1
 fi
 
@@ -61,6 +64,7 @@ echo "deb https://www.yoctopuce.com/ apt/stable/" | sudo tee /etc/apt/sources.li
 
 sudo apt update
 sudo apt install virtualhub
+sudo apt install yoctolib-cmdlines
 
 set +e
 # FIXME
