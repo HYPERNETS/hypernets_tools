@@ -80,10 +80,24 @@ shutdown_sequence() {
 		set -e
 
 		echo "[DEBUG] Yoctosleep status : $yocto_sleep"
-		if [[ ! $yocto_sleep -eq 0 ]]; then
-			 echo "[CRITICAL] Yocto unreachable !!"
+
+		if [[ $yocto_sleep -eq 0 ]]; then
+			# All OK, shuttig down
+			echo "[DEBUG] Shutting down"
+			exit 0
 		fi
-	    exit 0
+
+		# Something went wrong
+	    # Cause service exit 1 and doesn't execute SuccessAction=poweroff
+		if [[ $yocto_sleep -eq 1 ]]; then
+			echo "[CRITICAL] Yocto unreachable !!"
+		elif [[ $yocto_sleep -eq 255 ]]; then
+			echo "[CRITICAL] Yocto scheduled wakeup is disabled !!"
+			echo "[CRITICAL] Waking up is possible ONLY by manually pressing 'WAKE' button !!"
+		fi
+
+		echo "[CRITICAL] NOT shutting down !!"
+	    exit 1
     else
 	    # Cause service exit 1 and doesnt execute SuccessAction=poweroff
 	    echo "[INFO]  Option : Keep PC ON"
