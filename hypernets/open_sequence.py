@@ -11,7 +11,7 @@ from hypernets.abstract.create_metadata import parse_config_metadata
 
 from hypernets.hypstar.handler import HypstarHandler
 from hypernets.hypstar.libhypstar.python.hypstar_wrapper import HypstarLogLevel
-from hypernets.hypstar.libhypstar.python.data_structs.environment_log import EnvironmentLogEntry, get_csv_header
+from hypernets.hypstar.libhypstar.python.data_structs.environment_log import get_csv_header
 
 from logging import debug, info, warning, error # noqa
 
@@ -31,6 +31,9 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
     # we should check if any of the lines want to use SWIR and enable TEC :
     swir_is_requested = protocol.check_if_swir_requested()
+
+    # just print out info about presence or not of VM request
+    protocol.check_if_vm_requested()
 
     if not path.exists(DATA_DIR):  # TODO move management of output folder
         mkdir(DATA_DIR)

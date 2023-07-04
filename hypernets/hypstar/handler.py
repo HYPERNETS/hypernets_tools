@@ -5,7 +5,7 @@ from os.path import exists, islink
 
 from argparse import ArgumentParser
 
-from hypernets.abstract.request import Request, EntranceExt, RadiometerExt
+from hypernets.abstract.request import Request, EntranceExt, RadiometerExt, InstrumentAction
 
 from hypernets.hypstar.libhypstar.python.hypstar_wrapper import Hypstar, \
     wait_for_instrument
@@ -97,9 +97,9 @@ class HypstarHandler(Hypstar):
                 raise Exception(f"{instrument_port} timed out!")
                 exit(27)
 
-        if not islink(instrument_port):
-            raise ValueError(f"{instrument_port} is not a link!")
-            exit(27)
+        # if not islink(instrument_port):
+        #     raise ValueError(f"{instrument_port} is not a link!")
+        #     exit(27)
 
     def take_request(self, request, path_to_file=None, gui=False):
 
@@ -110,13 +110,13 @@ class HypstarHandler(Hypstar):
             if not exists("DATA"):
                 mkdir("DATA")
 
-        if request.entrance == EntranceExt.PICTURE:
+        if request.action == InstrumentAction.PICTURE:
             self.take_picture(path_to_file)
 
-        elif request.entrance == EntranceExt.VM:
+        elif request.action == InstrumentAction.VALIDATION:
             self.take_validation(request, path_to_file)
 
-        elif request.radiometer != RadiometerExt.NONE:
+        elif request.action == InstrumentAction.MEASUREMENT:
             self.take_spectra(request, path_to_file)
 
         return path_to_file
@@ -187,14 +187,17 @@ class HypstarHandler(Hypstar):
         try:
             self.VM_enable(True)
 
-            spectrum = self.VM_measure(RadiometerEntranceType.IRRADIANCE, 
-                    ValidationModuleLightType.LIGHT_VIS, 0, 1.0)
+            spectra = self.VM_measure(request.entrance, request.radiometer, request.it_vnir, int(request.vm_current_ma)/1000, request.number_cap)
+            # spectra = self.VM_measure(request.entrance, ValidationModuleLightType.LIGHT_VIS, request.it_vnir, 1.0, scan_count=request.number_cap)
 
             info("{spectra}")
 
-            spectrum = spectrum.getBytes()
+            spectra_bin = b''
+            for n, spectrum in enumerate(spectra):
+                spectra_bin += spectrum.getBytes()
+
             with open(path_to_file, "wb") as f:
-                f.write(spectrum)
+                f.write(spectra_bin)
 
             self.VM_enable(False)
 
