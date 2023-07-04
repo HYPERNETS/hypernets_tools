@@ -1,9 +1,43 @@
 # HYPERNETS_TOOLS=~/hypernets_tools
 
+bold=`tput bold`
+red=`tput setaf 9`
+green=`tput setaf 10`
+yellow=`tput setaf 11`
+reset=`tput sgr0`
+
 now() { (
 	cd $HYPERNETS_TOOLS
 
-	echo "System time is $(date)"
+	# check if Yocto command line API is installed
+	if [[ $(command -v YRealTimeClock) ]]; then
+		yocto_api_installed=1
+
+		source utils/configparser.sh
+		yocto=$(parse_config "yocto_prefix2" config_static.ini)
+	else
+		yocto_api_installed=0
+	fi
+
+	echo "System time is $(date '+%Y/%m/%d %H:%M:%S %Z')"
+
+	# get yocto time
+	if [[ $yocto_api_installed ]]; then
+		yocto_time=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yocto get_dateTime)
+		yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yocto get_utcOffset)
+
+		if [ $yocto_offset = 0 ]; then
+			utc_offset=""
+		else
+			utc_offset=$(printf "%+d" $(($yocto_offset/3600)))
+		fi
+
+		if [ $yocto_offset = 0 ]; then
+			echo "Yocto time is  $yocto_time UTC$utc_offset"
+		else
+			echo "Yocto time is  $yocto_time UTC$utc_offset (UTC offset is $yocto_offset s)"
+		fi
+	fi
 
 	echo "Yocto meteo: $(python -m hypernets.yocto.meteo)"
 
@@ -11,9 +45,11 @@ now() { (
 		(cd hypernets/rain_sensor/ && make)
 	fi
 
-	relay_on=$(python -m hypernets.yocto.relay -g -n4 2>&1 | grep -c True)
+	set +e
+	relay_on="$(python -m hypernets.yocto.relay -g -n4 2>&1 | grep -c True)"
+	set -e
 
-	## rain sensor relay is off, switch on
+	# rain sensor relay is off, switch on
 	if [ $relay_on = 0 ]; then
 		python -m hypernets.yocto.relay -son -n4
 		sleep 1
@@ -21,19 +57,52 @@ now() { (
 
 	hypernets/rain_sensor/rain_sensor
 
-	## restore rain sensor relay state
+	# restore rain sensor relay state
 	if [ $relay_on = 0 ]; then
 		python -m hypernets.yocto.relay -soff -n4
 	fi
 
 	echo "Yocto GPS: $(python -m hypernets.yocto.gps)"
-	
+
 	echo "Wake up reason is $(python -m hypernets.yocto.wakeupreason)"
 	echo "Supply voltage is $(python -m hypernets.yocto.voltage) V"
-) }
+
+	# get watchdog and wakeup timers
+	if [[ $yocto_api_installed ]]; then
+		next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_nextWakeUp|sed -e 's/[[:space:]].*//')
+		max_wakeup_time=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_powerDuration)
+		sleep_countdown=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_sleepCountdown)
+
+		if [ $max_wakeup_time = 0 ]; then
+			echo "${red}Yocto Auto-Power-Off is disabled${reset}"
+		else
+			echo "${yellow}Yocto Auto-Power-Off set to $max_wakeup_time s, ${red}powering off in $sleep_countdown s${reset}"
+		fi
+
+		if [ $next_wakeup_timestamp = 0 ]; then
+			echo "${red}Yocto scheduled wakeup is disabled${reset}"
+		else
+			delta=$(( $next_wakeup_timestamp - $yocto_offset - $(date -u +%s) ))
+			echo "${yellow}Next Yocto wakeup is scheduled on $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset (in $delta s)${reset}"
+		fi
+	fi
+) } #now()
+
 
 relay() { (
 	cd $HYPERNETS_TOOLS
+
+	if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]; then
+		echo
+		echo "Yocto relays"
+		echo "relay [-h|--help] [relay_number on|off]"
+		echo "relay -h      print this help"
+		echo "relay         print current relay states"
+		echo "relay 3 on    switch on HYPSTAR relay #3"
+		echo "relay 3 off   switch off HYPSTAR relay #3"
+		echo
+		exit 1
+	fi
 
 	if [[ $2 == "on" ]] || [[ $2 == "off" ]]; then
 		python -m hypernets.yocto.relay -s $2 -n $1
@@ -41,46 +110,95 @@ relay() { (
 
 	echo -e "PC\tPT\tHYP\tRS\tCAM1\tCAM2"
 	echo -e  "1\t2\t3\t4\t5\t6"
-	python -m hypernets.yocto.relay -g -n1 -n2 -n3 -n4 -n5 -n6 2>&1 | egrep -o  "(True|False)" | sed -e 's/False/OFF/g;s/True/ON/g' | paste -s
-) }
+	python -m hypernets.yocto.relay -g -n1 -n2 -n3 -n4 -n5 -n6 2>&1 | egrep -o  "(True|False)" | sed -e "s/False/${red}OFF${reset}/g;s/True/${green}ON${reset}/g" | paste -s
+) } # relay()
+
 
 test-env() { (
 	cd $HYPERNETS_TOOLS
 
+	set +e
 	relay_on=$(python -m hypernets.yocto.relay -g -n3 2>&1 | grep -c True)
+	set -e
+
 	if [ $relay_on = 0 ]; then
-		echo "Radiometer relay #3 is off"
+		echo "${red}Radiometer relay #3 is off${reset}"
 		exit
 	fi
 
-	cd $HYPERNETS_TOOLS/hypernets/hypstar/libhypstar/ 
+	cd hypernets/hypstar/libhypstar/ 
 
 	if [ -f build/test_env ]; then
 		build/test_env
 	else
 		make test_env
 	fi
-) }
+) } # test-env()
+
 
 test-env-live() { (
 	cd $HYPERNETS_TOOLS
 
+	set +e
 	relay_on=$(python -m hypernets.yocto.relay -g -n3 2>&1 | grep -c True)
+	set -e
+
 	if [ $relay_on = 0 ]; then
-		echo "Radiometer relay #3 is off"
+		echo "${red}Radiometer relay #3 is off${reset}"
 		exit
 	fi
 
-	cd $HYPERNETS_TOOLS/hypernets/hypstar/libhypstar/ 
-	
+	cd hypernets/hypstar/libhypstar/ 
+
 	if [ ! -f build/test_env ]; then
 		make test_env
 	fi
 
 	watch -n 5 build/test_env
-) }
+) } # test-env-live()
 
-alias kill_service="sudo systemctl kill --signal=SIGKILL hypernets-sequence"
+
+goto-sleep() { (
+	cd $HYPERNETS_TOOLS
+
+	# check if Yocto command line API is installed
+	if [[ $(command -v YWakeUpMonitor) ]]; then
+		source utils/configparser.sh
+		yocto=$(parse_config "yocto_prefix2" config_static.ini)
+
+		next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_nextWakeUp|sed -e 's/[[:space:]].*//')
+
+		if [ $next_wakeup_timestamp = 0 ]; then
+			echo "${red}Yocto scheduled wakeup is disabled!!!"
+			echo "${bold}Waking up is possible ONLY by manually pressing 'WAKE' button!!!${reset}"
+			echo
+
+			# forced sleep
+			if [[ ${1-foo} == "--force" ]]; then
+				echo "${red}Forcing sleep.${reset}"
+			else
+				echo "${red}Use 'goto-sleep --force' to force sleep.${reset}"
+				exit
+			fi
+		fi
+	fi
+
+	set +e
+    python -m hypernets.yocto.sleep_monitor
+	yocto_sleep=$?
+	set -e
+
+	if [[ ! $yocto_sleep -eq 0 ]]; then
+		echo "${red}Yocto unreachable !!${reset}"
+		exit
+    else
+		echo "${red}Powering off${reset}"
+		sudo poweroff
+    fi
+) } # goto-sleep()
+
+
+alias kill-service="sudo systemctl kill --signal=SIGKILL hypernets-sequence"
 alias journal="journalctl -b -u hypernets-sequence -e"
 alias status="sudo systemctl status hypernets-sequence"
 alias gui="(cd $HYPERNETS_TOOLS && python -m hypernets.gui)"
