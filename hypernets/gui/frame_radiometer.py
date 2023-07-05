@@ -33,7 +33,7 @@ class FrameRadiometer(LabelFrame):
                          text="Radiometer", padx=2, pady=10)
 
         self.enable_vm_button_text = StringVar()
-        self.enable_vm_button_text.set("Turn VM on")
+        self.enable_vm_button_text.set("Turn VM electronics on")
         self.vm_enabled = False
         self.configure_items_radiometer()
         self.configure_items_output()
