@@ -187,6 +187,8 @@ class HypstarHandler(Hypstar):
         try:
             self.VM_enable(True)
 
+            sleep(1)
+
             spectra = self.VM_measure(request.entrance, request.radiometer, request.it_vnir, int(request.vm_current_ma)/1000, request.number_cap)
             # spectra = self.VM_measure(request.entrance, ValidationModuleLightType.LIGHT_VIS, request.it_vnir, 1.0, scan_count=request.number_cap)
 

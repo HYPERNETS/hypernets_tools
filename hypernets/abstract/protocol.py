@@ -152,9 +152,9 @@ class Protocol(list[(Geometry, list[Request])]):
             for request in request_list:
                 if request.radiometer == RadiometerType.SWIR or\
                         request.radiometer == RadiometerType.BOTH:
-                    info("This protocol has SWIR request.\n")
+                    info("This protocol has SWIR request.")
                     return True
-        info("This protocol doesn't have SWIR request.\n")
+        info("This protocol doesn't have SWIR request.")
         return False
 
 
@@ -162,9 +162,9 @@ class Protocol(list[(Geometry, list[Request])]):
         for _, request_list in self:
             for request in request_list:
                 if request.action == InstrumentAction.VALIDATION:
-                    info("This protocol requests validation.")
+                    info("This protocol requests validation.\n")
                     return True
-        info("This protocol doesn't request validation.")
+        info("This protocol doesn't request validation.\n")
         return False
 
 

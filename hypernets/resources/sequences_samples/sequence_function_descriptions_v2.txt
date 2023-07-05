@@ -5,6 +5,7 @@ HypernetsProtocol v2.1
 # only exceptions to above are :
     # flag definitions with prepended "~ #";
     # and flag usage in geometry definition, where flag is considered from "#" until closing geometry bracket "]"
+# Comment lines are printed to system log during sequence execution. Use double comment "##" for suppressing the print
 # Whitespace characters (space, tab) are ignored, newline is used for end of valid line (including comment) detection
 
 # Flag definitions :
@@ -18,10 +19,10 @@ HypernetsProtocol v2.1
 @[ 10.0, sun, 180.0, hyper ]
 
 # Actions are prepended with a "+". Action format is as follows:
-# for spectra scan: "count.radiometer.exposure_time_vnir.exposure_time_swir"
+# for spectra scan: "count.radiometer.entrance.exposure_time_vnir_ms.exposure_time_swir_ms"
 # for images: count.picture
-# for validation measurement: "count.validation.radiometer.exposure_time_vnir_ms.exposure_time_swir_ms.vm_current_in_mA"
-# radiometer options: VIS_NIR = "vis, vnir", SWIR = "swi, swir", hyperspectral = "bot, both"
+# for validation measurement: "count.validation.radiometer.entrance.exposure_time_vnir_ms.exposure_time_swir_ms.vm_current_in_mA"
+# radiometer options: VIS_NIR = "vis, vnir", SWIR = "swi, swir", VNIR+SWIR = "bot, both"
 # optical entrance options: RADIANCE = "rad", IRRADIANCE = "irr", DARK = "dark, dar, bla"
     # note, that there are forbidden configurations - both entrances can not be used at the same time
 # 0 integration time setting will force instrument to find most suitable (highest peak value up to 80% of saturation) integration time automatically
@@ -29,8 +30,9 @@ HypernetsProtocol v2.1
     # 3.vnir.irr.0.128 will perform auto-adjustment, since vnir_exposure_time field is 0
     # 3.swir.rad.128.0 will perform auto-adjustment, since swir_exposure_time field is 0
     # 3.both.rad.0.1024 will perform auto adjustment for VIS_NIR, but use fixed 1024 for SWIR
-# validation current setting is limited both in driver and firmware to 2000mA max for visible and 100mA for SWIR.
-# validation request with dark optical entranc will yield an error, since it does not make much sense
+# validation current setting is limited both in driver and firmware to 2000 mA max for visible and 100mA for SWIR.
+# validation current setting is optional parameter and defaults to 1000 mA if omitted
+# validation request with dark optical entrance will yield an error, since it does not make much sense
 # Note, that SWIR light is not implemented yet
     + 3.vnir.irr.128.0
 	+ 3.vnir.dark.128.0
@@ -47,11 +49,11 @@ HypernetsProtocol v2.1
 # or have everything inline. Both are equivalent
 @[ 20.0, sun, 140.0, hyper] + 3.vnir.rad.128.0 + 3.vnir.dark.128.0 #+ 1.picture + 3.validation.vnir.rad.100.0 # here everything after "#+ 1.picture" will be ignored
 
-# 3. VM request (not sure about positioning)
+# 3. VM request (not sure about pan-tilt positioning)
 @[ 30.0, sun, 140.0, hyper ]
 	+ 3.validation.vnir.rad.128.0.800
 
-# dummy geometry with no action
+# dummy geometry with only pan-tilt movement but no radiometer action
 @[ 40.0, sun, 180.0, hyper ]
 #	+ 1.vnir.irr.0.0
 
