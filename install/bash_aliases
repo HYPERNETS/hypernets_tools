@@ -6,6 +6,47 @@ green=$(tput setaf 10)
 yellow=$(tput setaf 11)
 reset=$(tput sgr0)
 
+# print help
+commands() {
+	dupcc=$(df -kh . | tail -n1 | awk '{print $5}') >/dev/null 2>&1
+	duchk="${dupcc//%}"
+
+	echo
+	if [[ $duchk -ge 80 ]]
+	then
+		echo "   Hypstar Commands    ${red}   DISK USAGE: $dupcc${reset}"
+	else
+		echo "   Hypstar Commands       DISK USAGE: $dupcc"
+	fi
+	echo "${yellow} ********************" 
+	echo "${yellow} commands	${reset}to see this list"
+	#echo "${yellow} guide  	${reset}Hypstar cheat sheet "
+	#echo "${yellow} yapo		${reset}yocto auto power off. Args: stop (pc on infinity)  do (off @ maxruntime)  set 180->99999 (sets maxruntime(secs))"
+	#echo "${yellow} schedule	${reset}view/adjust yocto schedules 1 & 2     Set yocto rtc time"
+	echo "${yellow} relay   	${reset}returns states or with args sets relay n state    eg: relay 5 on   relay 6 off ..."
+	#echo "${yellow} pt		${reset}Pan/Tilt position   or move with args:  pt 90 34 ...   pt vm    pt nads  (nadir) "
+	#echo "${yellow} ptpoz   	${white}returns current Pan/Tilt position "
+	#echo "${yellow} vm    	${reset}vm on   vm off "
+	echo "${yellow} now    	${reset}present status of: clock, meteo, rain, GPS, supply, wakeup"
+	#echo "${yellow} webpic  	${reset}takes  webcam photos, Photos stored in ~/hypernets_tools/OTHER/Web-site~sky/  & Server/Sitename/ "
+	#echo "${yellow} hypypic  	${reset}takes photo from hypstar camera. Photos stored in  ~/hypypics/   & Server/Sitename/ "
+	#echo "${yellow} level    	${reset}boom leveling assistant "
+	echo "${yellow} test-env  	${reset}displays hypstar test_env once"
+	echo "${yellow} test-env-live	${reset}displays hypstar test_env live"
+	echo "${yellow} status  	${reset}sudo systemctl status hypernets-sequence"
+	echo "${yellow} kill-service	${reset}kill hypernets-sequence service without going to sleep"
+	echo "${yellow} journal  	${reset}journalctl -b -u hypernets-sequence -e (journal -f to follow)"
+	#echo "${yellow} slog  	${reset}displays a summary log & index to logs of prevoius runs "
+	#echo "${yellow} portal  	${reset}makes a portal via ~/Portal folder to Server/Sitename/ "
+	echo "${yellow} gui		${reset}python -m hypernets.gui (if screen attached)"
+	#echo "${yellow} cp2server	 ${reset}                 ./utils/hello_server.sh   copy sequence data back to NPL server "
+	echo "${yellow} runseq	 	${reset}./utils/run_service.sh    run a sequence"
+	echo "${yellow} goto-sleep	${reset}power off and send yocto to sleep if wakeup is scheduled"
+	echo
+} # commands()
+
+
+# present status of: clock, meteo, rain, GPS, supply, wakeup
 now() { (
 	cd $HYPERNETS_TOOLS
 
@@ -39,7 +80,7 @@ now() { (
 		fi
 	fi
 
-	echo "Yocto meteo: $(python -m hypernets.yocto.meteo)"
+	echo "Yocto meteo: $(python -m hypernets.yocto.meteo | sed -E -e 's/\(|\)|\[|\]|\"//g' | sed -e "s/'//2g" | sed '-es/,//'{7..1..2})"
 
 	if [ ! -f hypernets/rain_sensor/rain_sensor ]; then
 		(cd hypernets/rain_sensor/ && make)
@@ -63,9 +104,8 @@ now() { (
 	fi
 
 	echo "Yocto GPS: $(python -m hypernets.yocto.gps)"
-
-	echo "Wake up reason is $(python -m hypernets.yocto.wakeupreason)"
 	echo "Supply voltage is $(python -m hypernets.yocto.voltage) V"
+	echo "Wake up reason is $(python -m hypernets.yocto.wakeupreason)"
 
 	# get watchdog and wakeup timers
 	if [[ $yocto_api_installed ]]; then
@@ -89,6 +129,7 @@ now() { (
 ) } #now()
 
 
+# returns states or with args sets relay n state    eg: relay 5 on   relay 6 off ...
 relay() { (
 	cd $HYPERNETS_TOOLS
 
@@ -114,6 +155,7 @@ relay() { (
 ) } # relay()
 
 
+# displays hypstar test_env once
 test-env() { (
 	cd $HYPERNETS_TOOLS
 
@@ -136,6 +178,7 @@ test-env() { (
 ) } # test-env()
 
 
+# displays hypstar test_env live
 test-env-live() { (
 	cd $HYPERNETS_TOOLS
 
@@ -158,6 +201,7 @@ test-env-live() { (
 ) } # test-env-live()
 
 
+# power off and send yocto to sleep if wakeup is scheduled
 goto-sleep() { (
 	cd $HYPERNETS_TOOLS
 
@@ -200,3 +244,6 @@ alias journal="journalctl -b -u hypernets-sequence -e"
 alias status="sudo systemctl status hypernets-sequence"
 alias gui="(cd $HYPERNETS_TOOLS && python -m hypernets.gui)"
 alias runseq="(cd $HYPERNETS_TOOLS && ./utils/run_service.sh)"
+
+# print the help
+commands

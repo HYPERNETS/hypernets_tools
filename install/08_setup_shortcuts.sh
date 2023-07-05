@@ -21,6 +21,7 @@ cat << EOF > $home/.bash_aliases
 # This file is generated and installed by hypernets_tools
 #
 # It contains the definitions and aliases of command shortcuts
+# and executes commands() in the end which prints the help text
 
 HYPERNETS_TOOLS=$PWD
 EOF
