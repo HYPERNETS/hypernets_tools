@@ -1,10 +1,10 @@
 # HYPERNETS_TOOLS=~/hypernets_tools
 
-bold=`tput bold`
-red=`tput setaf 9`
-green=`tput setaf 10`
-yellow=`tput setaf 11`
-reset=`tput sgr0`
+bold=$(tput bold)
+red=$(tput setaf 9)
+green=$(tput setaf 10)
+yellow=$(tput setaf 11)
+reset=$(tput sgr0)
 
 now() { (
 	cd $HYPERNETS_TOOLS
@@ -161,40 +161,37 @@ test-env-live() { (
 goto-sleep() { (
 	cd $HYPERNETS_TOOLS
 
-	# check if Yocto command line API is installed
-	if [[ $(command -v YWakeUpMonitor) ]]; then
-		source utils/configparser.sh
-		yocto=$(parse_config "yocto_prefix2" config_static.ini)
+	# dummy sudo for quick elevation of privileges later during poweroff
+	# yocto sleep timer is only 10 s
+	sudo sleep 0
 
-		next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_nextWakeUp|sed -e 's/[[:space:]].*//')
-
-		if [ $next_wakeup_timestamp = 0 ]; then
-			echo "${red}Yocto scheduled wakeup is disabled!!!"
-			echo "${bold}Waking up is possible ONLY by manually pressing 'WAKE' button!!!${reset}"
-			echo
-
-			# forced sleep
-			if [[ ${1-foo} == "--force" ]]; then
-				echo "${red}Forcing sleep.${reset}"
-			else
-				echo "${red}Use 'goto-sleep --force' to force sleep.${reset}"
-				exit
-			fi
-		fi
+	# forced sleep
+	if [[ ${1-} == "--force" ]]; then
+		echo "${red}Forcing sleep${reset}"
+		force="--force"
 	fi
 
 	set +e
-    python -m hypernets.yocto.sleep_monitor
+    python -m hypernets.yocto.sleep_monitor ${force-}
 	yocto_sleep=$?
 	set -e
 
-	if [[ ! $yocto_sleep -eq 0 ]]; then
-		echo "${red}Yocto unreachable !!${reset}"
-		exit
-    else
+	if [[ $yocto_sleep -eq 0 ]]; then
+		# All OK, shuttig down
 		echo "${red}Powering off${reset}"
+		sleep 1
 		sudo poweroff
-    fi
+	fi
+
+	# Something went wrong
+	if [[ $yocto_sleep -eq 1 ]]; then
+		echo "${red}Yocto unreachable !!${reset}"
+	elif [[ $yocto_sleep -eq 255 ]]; then
+		echo "${red}Yocto scheduled wakeup is disabled!!!"
+		echo "${bold}Waking up is possible ONLY by manually pressing 'WAKE' button!!!${reset}"
+		echo
+		echo "${red}Use 'goto-sleep --force' to force sleep${reset}"
+	fi
 ) } # goto-sleep()
 
 

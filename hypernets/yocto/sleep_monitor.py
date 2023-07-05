@@ -1,4 +1,4 @@
-#  from argparse import ArgumentParser
+from argparse import ArgumentParser
 from hypernets.yocto.init import init, get_url_base
 from yoctopuce.yocto_api import YAPI
 from configparser import ConfigParser
@@ -8,6 +8,13 @@ from logging import debug
 
 
 if __name__ == '__main__':
+    parser = ArgumentParser()
+
+    parser.add_argument("-f", "--force", action="store_true",
+                        help="forces sleep if no wakeup is scheduled")
+
+    args = parser.parse_args()
+
     config = init()
     config_dynamic = ConfigParser()
     config_dynamic.read("config_dynamic.ini")
@@ -22,7 +29,7 @@ if __name__ == '__main__':
             next_wakeup = int(url.read())
 
             # Yocto scheduled wakeup is disabled, exit with code 255
-            if next_wakeup == 0:
+            if next_wakeup == 0 and not args.force:
                 YAPI.FreeAPI()
                 exit(255)
 

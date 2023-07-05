@@ -17,6 +17,13 @@ home=$(eval echo "~$user")
 echo
 echo "Setting up shortcuts in $home/.bash_aliases"
 
-echo "HYPERNETS_TOOLS=$PWD" > $home/.bash_aliases
+cat << EOF > $home/.bash_aliases
+# This file is generated and installed by hypernets_tools
+#
+# It contains the definitions and aliases of command shortcuts
+
+HYPERNETS_TOOLS=$PWD
+EOF
+
 cat install/bash_aliases >> $home/.bash_aliases
 
