@@ -16,6 +16,10 @@ home=$(eval echo "~$user")
 
 echo
 echo "Setting up shortcuts in $home/.bash_aliases"
+echo
+echo "Run the following line for importing into active shell instance"
+echo ". $home/.bash_aliases"
+echo
 
 cat << EOF > $home/.bash_aliases
 # This file is generated and installed by hypernets_tools

@@ -21,7 +21,6 @@ commands() {
 	echo "${yellow} ********************" 
 	echo "${yellow} commands	${reset}to see this list"
 	#echo "${yellow} guide  	${reset}Hypstar cheat sheet "
-	#echo "${yellow} yapo		${reset}yocto auto power off. Args: stop (pc on infinity)  do (off @ maxruntime)  set 180->99999 (sets maxruntime(secs))"
 	#echo "${yellow} schedule	${reset}view/adjust yocto schedules 1 & 2     Set yocto rtc time"
 	echo "${yellow} relay   	${reset}returns states or with args sets relay n state    eg: relay 5 on   relay 6 off ..."
 	#echo "${yellow} pt		${reset}Pan/Tilt position   or move with args:  pt 90 34 ...   pt vm    pt nads  (nadir) "
@@ -41,13 +40,14 @@ commands() {
 	echo "${yellow} gui		${reset}python -m hypernets.gui (if screen attached)"
 	#echo "${yellow} cp2server	 ${reset}                 ./utils/hello_server.sh   copy sequence data back to NPL server "
 	echo "${yellow} runseq	 	${reset}./utils/run_service.sh    run a sequence"
+	echo "${yellow} yapo		${reset}yocto auto-power-off.   yapo stop   to disable, see yapo -h for more"
 	echo "${yellow} goto-sleep	${reset}power off and send yocto to sleep if wakeup is scheduled"
 	echo
 } # commands()
 
 
 # present status of: clock, meteo, rain, GPS, supply, wakeup
-now() { (
+now() (
 	cd $HYPERNETS_TOOLS
 
 	# check if Yocto command line API is installed
@@ -126,11 +126,11 @@ now() { (
 			echo "${yellow}Next Yocto wakeup is scheduled on $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset (in $delta s)${reset}"
 		fi
 	fi
-) } #now()
+) #now()
 
 
 # returns states or with args sets relay n state    eg: relay 5 on   relay 6 off ...
-relay() { (
+relay() (
 	cd $HYPERNETS_TOOLS
 
 	if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]; then
@@ -152,11 +152,11 @@ relay() { (
 	echo -e "PC\tPT\tHYP\tRS\tCAM1\tCAM2"
 	echo -e  "1\t2\t3\t4\t5\t6"
 	python -m hypernets.yocto.relay -g -n1 -n2 -n3 -n4 -n5 -n6 2>&1 | egrep -o  "(True|False)" | sed -e "s/False/${red}OFF${reset}/g;s/True/${green}ON${reset}/g" | paste -s
-) } # relay()
+) # relay()
 
 
 # displays hypstar test_env once
-test-env() { (
+test-env() (
 	cd $HYPERNETS_TOOLS
 
 	set +e
@@ -175,11 +175,11 @@ test-env() { (
 	else
 		make test_env
 	fi
-) } # test-env()
+) # test-env()
 
 
 # displays hypstar test_env live
-test-env-live() { (
+test-env-live() (
 	cd $HYPERNETS_TOOLS
 
 	set +e
@@ -198,11 +198,11 @@ test-env-live() { (
 	fi
 
 	watch -n 5 build/test_env
-) } # test-env-live()
+) # test-env-live()
 
 
 # power off and send yocto to sleep if wakeup is scheduled
-goto-sleep() { (
+goto-sleep() (
 	cd $HYPERNETS_TOOLS
 
 	# dummy sudo for quick elevation of privileges later during poweroff
@@ -236,7 +236,107 @@ goto-sleep() { (
 		echo
 		echo "${red}Use 'goto-sleep --force' to force sleep${reset}"
 	fi
-) } # goto-sleep()
+) # goto-sleep()
+
+
+## Yocto-Auto-Power-Off configuration
+yapo() (
+	cd $HYPERNETS_TOOLS
+
+	yoption=$1
+	new_max_runtime=$2
+
+	# check if Yocto command line API is installed
+	if [[ $(command -v YWakeUpMonitor) ]]; then
+		source utils/configparser.sh
+		yocto=$(parse_config "yocto_prefix2" config_static.ini)
+	else
+		echo "${red}Yocto API is not installed${reset}"
+		exit -1
+	fi
+
+	#yocto_time=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yocto get_dateTime)
+
+	if [[ $yoption == "-h" ]] || [[ $yoption == "--help" ]]; then
+		echo
+		echo "Yocto~Auto~Power~Off"
+		echo "yapo			without options returns the time in seconds until yocto turns PC power off"
+		echo "     set 180->99999	sets yocto max run time (in secs)   ${red}(3 minutes minimum!)${reset}"
+		echo "     stop		prevents yocto powering off for   infinity..."
+		echo "     reset		resets the yocto power-off countdown timer"
+		echo "eg:  yapo set 720      yapo stop       yapo reset"
+		echo
+		exit 
+	fi
+	
+	max_wakeup_time=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_powerDuration)
+	next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_nextWakeUp|sed -e 's/[[:space:]].*//')
+	sleep_countdown=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_sleepCountdown)
+	yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yocto get_utcOffset)
+		
+	if [[ $yoption == "" ]]; then ######## display yocto-auto-power-off status ###############
+		if [[ $max_wakeup_time -eq "0" ]]; then
+			echo "${yellow}Yocto Auto-Power-Off is ${red}disabled! ${yellow}PC will run for ${red}infinity...${reset}"
+			echo "Enter:   yapo set    to re-enable yocto-auto-power-off"
+			exit 0
+		else 
+			echo "${yellow}Yocto Auto-Power-Off set to $max_wakeup_time s, ${red}powering off in $sleep_countdown s${reset}"
+			if [ $yocto_offset = 0 ]; then
+				utc_offset=""
+			else
+				utc_offset=$(printf "%+d" $(($yocto_offset/3600)))
+			fi
+			
+			if [ $next_wakeup_timestamp = 0 ]; then
+				echo "${red}Yocto scheduled wakeup is disabled${reset}"
+			else
+				delta=$(( $next_wakeup_timestamp - $yocto_offset - $(date -u +%s) ))
+				echo "${yellow}Next Yocto wakeup is scheduled on $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset (in $delta s)${reset}"
+			fi
+
+			echo "Enter:   yapo stop    to disable yocto-auto-power-off"
+			echo "         yapo reset   to reset the countdown timer"
+		fi
+	elif [[ $yoption == "stop" ]]; then ############ disable yocto-auto-power-off ################
+		if [[ $max_wakeup_time -ne "0" ]]; then
+			echo "${yellow}Auto-Power-Off setting was $max_wakeup_time s${reset}"
+
+			YWakeUpMonitor -r 127.0.0.1 -s $yocto set_powerDuration 0 >/dev/null 2>&1
+			echo "${red}Yocto Auto-Power-Off is now disabled${reset}"
+		else
+			echo "${yellow}Yocto Auto-Power-Off was already ${red}disabled${reset}"
+		fi
+	elif [[ $yoption == "set" ]]; then #################### Set max run time ##########################
+		# check is not empty & is a number
+		set +e
+		[ -n "$new_max_runtime" ] && [ "$new_max_runtime" -eq "$new_max_runtime" ] 2>/dev/null
+		if [ $? -ne 0 ]; then
+			echo "${red}Invalid input, yapo set requires max runtime in seconds as second parameter.${reset}"
+			echo
+			exit -1
+		fi
+		set -e
+
+		if (( $new_max_runtime < 180 )); then  # LIMIT YOCTO MAXRUNTIME TO NO LESS THAN 3 MINS 
+			new_max_runtime=180
+			echo "${red}Requested runtime limit is too short, using minimum allowed value ${new_max_runtime} s${reset}"
+		fi
+
+		YWakeUpMonitor -r 127.0.0.1 -s $yocto set_powerDuration $new_max_runtime >/dev/null 2>&1
+		set_max_wakeup_time=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_powerDuration)
+		echo "${yellow}Auto-Power-Off set to power off after ${red}$set_max_wakeup_time seconds${reset}"
+	elif [[ $yoption == "reset" ]]; then #################### Reset shutdown counter max run time ##########################
+		if [[ $max_wakeup_time -ne "0" ]]; then
+			YWakeUpMonitor -r 127.0.0.1 $yocto set_sleepCountdown $max_wakeup_time >/dev/null 2>&1
+			new_sleep_countdown=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_sleepCountdown)
+			echo "${yellow}Auto-Power-Off reset to power off after ${red}$new_sleep_countdown seconds${reset}"
+		else
+			echo "${yellow}Yocto Auto-Power-Off was already ${red}disabled${reset}"
+		fi
+	else
+		echo "Unknown option, run yapo -h for help"
+	fi
+) # yapo()
 
 
 alias kill-service="sudo systemctl kill --signal=SIGKILL hypernets-sequence"
