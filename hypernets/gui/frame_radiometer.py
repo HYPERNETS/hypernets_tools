@@ -202,7 +202,12 @@ class FrameRadiometer(LabelFrame):
         try:
             self.last_file_path = self.hypstar.take_request(request, gui=True)
             self.make_output()
+
+            self.master.option_add('*Dialog.msg.width', 60)
+            self.master.option_add('*Dialog.msg.wrapLength', 800)
             showinfo("End Acquisition", f"Saved to : {self.last_file_path}")
+            self.option_clear()
+            self.master.option_clear()
 
         except Exception as e:
             showerror("Error", str(e))
