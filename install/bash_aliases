@@ -170,9 +170,9 @@ test-env() (
 	cd hypernets/hypstar/libhypstar/ 
 
 	if [ -f build/test_env ]; then
-		build/test_env
+		build/test_env | grep -v -e "DEBUG" -e "TRACE"
 	else
-		make test_env
+		make test_env | grep -v -e "DEBUG" -e "TRACE"
 	fi
 ) # test-env()
 
@@ -192,11 +192,11 @@ test-env-live() (
 
 	cd hypernets/hypstar/libhypstar/ 
 
-	if [ ! -f build/test_env ]; then
-		make test_env
+	if [ -f build/test_env_live ]; then
+		build/test_env_live | grep -v -e "DEBUG" -e "TRACE"
+	else
+		make test_env_live | grep -v -e "DEBUG" -e "TRACE"
 	fi
-
-	watch -n 5 build/test_env
 ) # test-env-live()
 
 
