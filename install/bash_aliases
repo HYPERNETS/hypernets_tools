@@ -23,8 +23,7 @@ commands() {
 	#echo "${yellow} guide  	${reset}Hypstar cheat sheet "
 	#echo "${yellow} schedule	${reset}view/adjust yocto schedules 1 & 2     Set yocto rtc time"
 	echo "${yellow} relay   	${reset}returns states or with args sets relay n state    eg: relay 5 on   relay 6 off ..."
-	#echo "${yellow} pt		${reset}Pan/Tilt position   or move with args:  pt 90 34 ...   pt vm    pt nads  (nadir) "
-	#echo "${yellow} ptpoz   	${white}returns current Pan/Tilt position "
+	echo "${yellow} pt		${reset}Pan/Tilt position   or move with args:  pt 90 34    see pt -h for more"
 	#echo "${yellow} vm    	${reset}vm on   vm off "
 	echo "${yellow} now    	${reset}present status of: clock, meteo, rain, GPS, supply, wakeup"
 	#echo "${yellow} webpic  	${reset}takes  webcam photos, Photos stored in ~/hypernets_tools/OTHER/Web-site~sky/  & Server/Sitename/ "
@@ -255,8 +254,6 @@ yapo() (
 		exit -1
 	fi
 
-	#yocto_time=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yocto get_dateTime)
-
 	if [[ $yoption == "-h" ]] || [[ $yoption == "--help" ]]; then
 		echo
 		echo "Yocto~Auto~Power~Off"
@@ -308,14 +305,14 @@ yapo() (
 		fi
 	elif [[ $yoption == "set" ]]; then #################### Set max run time ##########################
 		# check is not empty & is a number
-		set +e
+		set +eu
 		[ -n "$new_max_runtime" ] && [ "$new_max_runtime" -eq "$new_max_runtime" ] 2>/dev/null
 		if [ $? -ne 0 ]; then
 			echo "${red}Invalid input, yapo set requires max runtime in seconds as second parameter.${reset}"
 			echo
 			exit -1
 		fi
-		set -e
+		set -eu
 
 		if (( $new_max_runtime < 180 )); then  # LIMIT YOCTO MAXRUNTIME TO NO LESS THAN 3 MINS 
 			new_max_runtime=180
@@ -337,6 +334,156 @@ yapo() (
 		echo "Unknown option, run yapo -h for help"
 	fi
 ) # yapo()
+
+
+## helper functions for converting between absolute and relative positions
+## force to 0...360 range
+_pt_abs2rel_pan() {
+	if [[ $reverse_tilt == "yes" ]]; then
+		printf "%.1f" $( bc <<< "($1 - $offset_pan - 180 + 36000) % 360" )
+	else
+		printf "%.1f" $( bc <<< "($1 + $offset_pan + 36000) % 360" )
+	fi
+}
+
+_pt_abs2rel_tilt() {
+	if [[ $reverse_tilt == "yes" ]]; then
+		printf "%.1f" $( bc <<< "(- $1 - $offset_tilt + 36000) % 360" )
+	else
+		printf "%.1f" $( bc <<< "($1 + $offset_tilt + 36000) % 360" )
+	fi
+}
+
+_pt_rel2abs_pan() {
+	if [[ $reverse_tilt == "yes" ]]; then
+		printf "%.1f" $( bc <<< "($1 + $offset_pan + 180 + 36000) % 360" )
+	else
+		printf "%.1f" $( bc <<< "($1 - $offset_pan + 36000) % 360" )
+	fi
+}
+
+_pt_rel2abs_tilt() {
+	if [[ $reverse_tilt == "yes" ]]; then
+		printf "%.1f" $( bc <<< "(- ($1 + $offset_tilt) + 36000) % 360" )
+	else
+		printf "%.1f" $( bc <<< "($1 - $offset_tilt + 36000) % 360" )
+	fi
+}
+
+
+## Pan-Tilt control
+pt() (
+	cd $HYPERNETS_TOOLS
+
+	if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]; then
+		echo
+		echo "  Pan-tilt control"
+		echo "********************"
+		echo "pt [-h|--help] [abs] [new_pan new_tilt]"
+		echo "pt                        without options returns the current pan-tilt position"
+		echo "   new_pan new_tilt       move pan-tilt to new position while accounting for the offsets in config_dynamic.ini"
+		echo "   abs new_pan new_tilt   move pan-tilt to new absolute position"
+		echo
+		echo "use x as new value for the axis that has to stay in the current position"
+		echo "eg:  pt 270 90      pt abs 270 90      pt x 0"
+		echo
+		exit 
+	fi
+
+	# use absolute position
+	if [[ $1 == "abs" ]]; then
+		abspos=1
+		shift 1
+	else
+		abspos=0
+	fi
+
+	source utils/configparser.sh
+	offset_tilt=$(parse_config "offset_tilt" config_dynamic.ini)
+	offset_pan=$(parse_config "offset_pan" config_dynamic.ini)
+	reverse_tilt=$(parse_config "reverse_tilt" config_dynamic.ini)
+
+	# check if pan-tilt relay is on
+	relay_state=$(python -m hypernets.yocto.relay -g -n2 2>&1 | egrep -o "(True|False)")
+
+	if [[ $relay_state != "True" ]]; then 
+		echo  "${red}Relay 2 is off! Turn on to operate pan-tilt${reset}"
+		exit -1
+	fi
+
+	## read absolute position
+	current_abs_pos=$(python -m hypernets.geometry.pan_tilt -g 2>&1 | grep -Eo '[0-9]+([.][0-9]+)?' | paste -s) # pan	tilt
+	current_abs_pan=$(cut -f 1 <<< $current_abs_pos)
+	current_abs_tilt=$(cut -f 2 <<< $current_abs_pos)
+
+	## calculate relative position
+	current_hyper_pan=$(_pt_abs2rel_pan $current_abs_pan)
+	current_hyper_tilt=$(_pt_abs2rel_tilt $current_abs_tilt)
+
+	############### print current position #################
+	if [[ ${1-} == "" ]]; then
+		echo "Current parameters"
+		echo "offset_pan = $offset_pan"
+		echo "offset_tilt = $offset_tilt"
+		echo "reverse_tilt = $reverse_tilt"
+		echo
+		echo "Current positions"
+		printf "abs:   pan = %.1f, tilt = %.1f\n" $current_abs_pan $current_abs_tilt
+		printf "hyper: pan = %.1f, tilt = %.1f\n" $current_hyper_pan $current_hyper_tilt
+	else ################## go to position ###################
+		set +eu
+		# check pan and tilt parameters are not empty and are numbers or "x"
+		[ -n "$1" ] && [ -n "$2" ] && ( [ "$1" -eq "$1" ] || [[ "$1" == "x" ]] ) 2>/dev/null && ( [ "$2" -eq "$2" ] || [[ "$2" == "x" ]] ) 2>/dev/null
+		if [ $? -ne 0 ]; then
+			echo "${red}Invalid input, enter pan and tilt values or x if no movement is required.${reset}"
+			exit -1
+		fi
+		set -eu
+
+		## 
+
+		if [[ "$1" == "x" ]]; then ## use current
+			requested_abs_pan=$current_abs_pan
+		elif [ $abspos = 1 ]; then ## requested abs
+			requested_abs_pan="$1"
+		else ## requested hyper
+			requested_abs_pan=$(_pt_rel2abs_pan "$1")
+		fi
+
+		if [[ "$2" == "x" ]]; then ## use current
+			requested_abs_tilt=$current_abs_tilt
+		elif [ $abspos = 1 ]; then ## requested abs
+			requested_abs_tilt="$2"
+		else ## requested hyper
+			requested_abs_tilt=$(_pt_rel2abs_tilt "$2")
+		fi
+
+		## force to 0...360 range
+		requested_abs_pan=$( bc <<< "($requested_abs_pan + 36000) % 360" )
+		requested_abs_tilt=$( bc <<< "($requested_abs_tilt + 36000) % 360" )
+	
+		printf "Moving to requested absolute position pan = %.1f, tilt = %.1f\n" $requested_abs_pan $requested_abs_tilt
+		python -m hypernets.geometry.pan_tilt -w -p $requested_abs_pan -t $requested_abs_tilt > /dev/null 2>&1
+
+		## read new abs positions
+		new_abs_pos=$(python -m hypernets.geometry.pan_tilt -g 2>&1 | grep -Eo '[0-9]+([.][0-9]+)?' | paste -s) # pan	tilt
+		new_abs_pan=$(cut -f 1 <<< $new_abs_pos)
+		new_abs_tilt=$(cut -f 2 <<< $new_abs_pos)
+	
+		## calculate relative position
+		new_hyper_pan=$(_pt_abs2rel_pan $new_abs_pan)
+		new_hyper_tilt=$(_pt_abs2rel_tilt $new_abs_tilt)
+
+		## calculate residuals
+		residual_pan=$( bc <<< "$new_abs_pan - $requested_abs_pan" )
+		residual_tilt=$( bc <<< "$new_abs_tilt - $requested_abs_tilt" )
+
+		echo
+		echo "New positions"
+		printf "abs:   pan = %.1f, tilt = %.1f, residuals: pan = %.1f, tilt = %.1f\n" $new_abs_pan $new_abs_tilt $residual_pan $residual_tilt
+		printf "hyper: pan = %.1f, tilt = %.1f\n" $new_hyper_pan $new_hyper_tilt
+	fi
+) # pt()
 
 
 alias kill-service="sudo systemctl kill --signal=SIGKILL hypernets-sequence"
