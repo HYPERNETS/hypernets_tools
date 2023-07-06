@@ -73,6 +73,11 @@ shutdown_sequence() {
 			sleep $sleep_duration
 		fi
 
+		## Log network traffic
+		## interface1 Rx Tx,interface2 Rx Tx,....
+		traffic=$(grep : /proc/net/dev | sed -e 's/^[[:space:]]\+//;s/[[:space:]]\+/ /g;s/://g'| cut -d " " -f 1,2,10 | paste -sd ",")
+		echo "[INFO]  Network traffic:$traffic"
+
 	    echo "[INFO]  Send Yoctopuce To sleep (or not)"
 		set +e
 	    python -m hypernets.yocto.sleep_monitor
