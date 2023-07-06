@@ -130,7 +130,7 @@ class Geometry(object):
 
         # Get sun position
         if 'sun' in [pan_ref, tilt_ref]:  # pickle me :
-            from hypernets.geometry.spa.spa_hypernets import spa_from_datetime
+            from hypernets.geometry.spa_hypernets import spa_from_datetime
             azimuth_sun, zenith_sun = spa_from_datetime(now=now)
             zenith_sun = 180 - zenith_sun
 
