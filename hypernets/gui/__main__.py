@@ -40,7 +40,7 @@ class Guied(Tk):
         self.mainloop()
 
     def quit_program(self, e):
-        self.destroy()
+        self.quit()
 
     def configure_gui(self):
         self.title("Guied - Hypernets GUI")
