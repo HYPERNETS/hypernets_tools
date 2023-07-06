@@ -8,6 +8,8 @@ from tkinter.ttk import Combobox, Separator
 
 from tkinter.messagebox import showerror, showinfo
 
+from re import sub
+
 import math
 import numpy as np
 from PIL import Image, ImageTk
@@ -348,7 +350,14 @@ class FrameRadiometer(LabelFrame):
         output = str(self.hypstar.get_env_log())
         if isinstance(output, Exception):
             showerror("Error", str(output))
+
+        self.option_add('*Dialog.msg.font', 'Helvetica 10')
+        self.master.option_add('*Dialog.msg.width', 90)
+        self.master.option_add('*Dialog.msg.wrapLength', 800)
+        output = sub(r"\t+", " ", output)
         showinfo("Environmental Logs", output)
+        self.option_clear()
+        self.master.option_clear()
 
     def set_swir_temperature(self):
         TEC = 0  # TODO : tunable from config / gui ?
