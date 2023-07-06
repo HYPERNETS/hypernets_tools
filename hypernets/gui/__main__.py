@@ -36,7 +36,11 @@ class Guied(Tk):
         self.create_logo()
         self.configure_frames()
         self.configure_gui()
+        self.bind('<Control-q>', self.quit_program)
         self.mainloop()
+
+    def quit_program(self, e):
+        self.destroy()
 
     def configure_gui(self):
         self.title("Guied - Hypernets GUI")
