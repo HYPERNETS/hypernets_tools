@@ -91,6 +91,8 @@ class Protocol(list[(Geometry, list[Request])]):
 
         def parse_chunk(line):
             # New flag Definition
+            if not len(line):
+                return
             if line[0] == "~":
                 self.add_flag(*split_flag(line))
 
@@ -124,7 +126,7 @@ class Protocol(list[(Geometry, list[Request])]):
             else:
                 line = line.replace(" ", "")
                 # check if we have more than one scan in line
-                if line.count("+") > 1:
+                if line.count("+") > 0:
                     # check if we have '#' in scan definition that is not a meta variable
                     # meta variables are allowed within geometry definition's square brackets
                     # str.find() does not use proper regexes, need re for that
@@ -134,8 +136,10 @@ class Protocol(list[(Geometry, list[Request])]):
                         line = match[0]
                     chunks = line.split("+")
                     for c in chunks:
+                        debug(f"chunk {c}")
                         parse_chunk(c)
                 else:
+                    debug(f"line {line}")
                     parse_chunk(line)
 
     def check_if_instrument_requested(self):
