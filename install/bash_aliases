@@ -1,11 +1,11 @@
 # HYPERNETS_TOOLS=~/hypernets_tools
 
-bold=$(tput bold)
-red=$(tput setaf 9)
-green=$(tput setaf 10)
-#yellow=$(tput setaf 11)
-yellow=$(tput setaf 12)
-reset=$(tput sgr0)
+## define text highlights
+HL=$(tput setaf 12) ## blue
+XHL=$(tput setaf 9) ## red
+BOLD=$(tput bold)
+GREEN=$(tput setaf 10)
+RESET_HL=$(tput sgr0) ## reset all text formatting
 
 # print help
 commands() {
@@ -15,33 +15,33 @@ commands() {
 	echo
 	if [[ $duchk -ge 80 ]]
 	then
-		echo "   Hypstar Commands    ${red}   DISK USAGE: $dupcc${reset}"
+		echo "   Hypstar Commands    ${XHL}   DISK USAGE: $dupcc${RESET_HL}"
 	else
 		echo "   Hypstar Commands       DISK USAGE: $dupcc"
 	fi
-	echo "${yellow} ********************" 
-	echo "${yellow} commands	${reset}to see this list"
-	#echo "${yellow} guide  	${reset}Hypstar cheat sheet "
-	#echo "${yellow} schedule	${reset}view/adjust yocto schedules 1 & 2     Set yocto rtc time"
-	echo "${yellow} relay   	${reset}get/set yocto relays   relay -h for help"
-	echo "${yellow} pt		${reset}Pan/Tilt position      pt -h for help"
-	#echo "${yellow} vm    	${reset}vm on   vm off "
-	echo "${yellow} now    	${reset}present status of: clock, meteo, rain, GPS, supply, wakeup"
-	#echo "${yellow} webpic  	${reset}takes  webcam photos, Photos stored in ~/hypernets_tools/OTHER/Web-site~sky/  & Server/Sitename/ "
-	#echo "${yellow} hypypic  	${reset}takes photo from hypstar camera. Photos stored in  ~/hypypics/   & Server/Sitename/ "
-	#echo "${yellow} level    	${reset}boom leveling assistant "
-	echo "${yellow} test-env  	${reset}displays hypstar latest environmental log"
-	echo "${yellow} test-env-live	${reset}displays hypstar environmental logs live"
-	echo "${yellow} status  	${reset}sudo systemctl status hypernets-sequence"
-	echo "${yellow} kill-service	${reset}kill hypernets-sequence service without going to sleep"
-	echo "${yellow} journal  	${reset}journalctl -b -u hypernets-sequence -e (journal -f to follow)"
-	#echo "${yellow} slog  	${reset}displays a summary log & index to logs of prevoius runs "
-	#echo "${yellow} portal  	${reset}makes a portal via ~/Portal folder to Server/Sitename/ "
-	echo "${yellow} gui		${reset}python -m hypernets.gui (if screen attached)"
-	#echo "${yellow} cp2server	 ${reset}                 ./utils/hello_server.sh   copy sequence data back to NPL server "
-	echo "${yellow} runseq	 	${reset}utils/run_service.sh    run a sequence"
-	echo "${yellow} yapo		${reset}yocto auto-power-off. yapo stop to disable, yapo -h for help"
-	echo "${yellow} goto-sleep	${reset}power off and send yocto to sleep if wakeup is scheduled"
+	echo "${HL} ********************" 
+	echo "${HL} commands	${RESET_HL}to see this list"
+	#echo "${HL} guide  	${RESET_HL}Hypstar cheat sheet "
+	#echo "${HL} schedule	${RESET_HL}view/adjust yocto schedules 1 & 2     Set yocto rtc time"
+	echo "${HL} relay   	${RESET_HL}get/set yocto relays   relay -h for help"
+	echo "${HL} pt		${RESET_HL}Pan/Tilt position      pt -h for help"
+	#echo "${HL} vm    	${RESET_HL}vm on   vm off "
+	echo "${HL} now    	${RESET_HL}present status of: clock, meteo, rain, GPS, supply, wakeup"
+	#echo "${HL} webpic  	${RESET_HL}takes  webcam photos, Photos stored in ~/hypernets_tools/OTHER/Web-site~sky/  & Server/Sitename/ "
+	#echo "${HL} hypypic  	${RESET_HL}takes photo from hypstar camera. Photos stored in  ~/hypypics/   & Server/Sitename/ "
+	#echo "${HL} level    	${RESET_HL}boom leveling assistant "
+	echo "${HL} test-env  	${RESET_HL}displays hypstar latest environmental log"
+	echo "${HL} test-env-live	${RESET_HL}displays hypstar environmental logs live"
+	echo "${HL} status  	${RESET_HL}sudo systemctl status hypernets-sequence"
+	echo "${HL} kill-service	${RESET_HL}kill hypernets-sequence service without going to sleep"
+	echo "${HL} journal  	${RESET_HL}journalctl -b -u hypernets-sequence -e (journal -f to follow)"
+	#echo "${HL} slog  	${RESET_HL}displays a summary log & index to logs of prevoius runs "
+	#echo "${HL} portal  	${RESET_HL}makes a portal via ~/Portal folder to Server/Sitename/ "
+	echo "${HL} gui		${RESET_HL}python -m hypernets.gui (if screen attached)"
+	#echo "${HL} cp2server	 ${RESET_HL}                 ./utils/hello_server.sh   copy sequence data back to NPL server "
+	echo "${HL} runseq	 	${RESET_HL}utils/run_service.sh    run a sequence"
+	echo "${HL} yapo		${RESET_HL}yocto auto-power-off. yapo stop to disable, yapo -h for help"
+	echo "${HL} goto-sleep	${RESET_HL}power off and send yocto to sleep if wakeup is scheduled"
 	echo
 } # commands()
 
@@ -114,16 +114,16 @@ now() (
 		sleep_countdown=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_sleepCountdown)
 
 		if [ $max_wakeup_time = 0 ]; then
-			echo "${red}Yocto Auto-Power-Off is disabled${reset}"
+			echo "${XHL}Yocto Auto-Power-Off is disabled${RESET_HL}"
 		else
-			echo "${yellow}Yocto Auto-Power-Off set to $max_wakeup_time s, ${red}powering off in $sleep_countdown s${reset}"
+			echo "${HL}Yocto Auto-Power-Off set to $max_wakeup_time s, ${XHL}powering off in $sleep_countdown s${RESET_HL}"
 		fi
 
 		if [ $next_wakeup_timestamp = 0 ]; then
-			echo "${red}Yocto scheduled wakeup is disabled${reset}"
+			echo "${XHL}Yocto scheduled wakeup is disabled${RESET_HL}"
 		else
 			delta=$(( $next_wakeup_timestamp - $yocto_offset - $(date -u +%s) ))
-			echo "${yellow}Next Yocto wakeup is scheduled on $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset (in $delta s)${reset}"
+			echo "${HL}Next Yocto wakeup is scheduled on $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset (in $delta s)${RESET_HL}"
 		fi
 	fi
 ) #now()
@@ -151,7 +151,7 @@ relay() (
 
 	echo -e "PC\tPT\tHYP\tRS\tCAM1\tCAM2"
 	echo -e  "1\t2\t3\t4\t5\t6"
-	python -m hypernets.yocto.relay -g -n1 -n2 -n3 -n4 -n5 -n6 2>&1 | egrep -o  "(True|False)" | sed -e "s/False/${red}OFF${reset}/g;s/True/${green}ON${reset}/g" | paste -s
+	python -m hypernets.yocto.relay -g -n1 -n2 -n3 -n4 -n5 -n6 2>&1 | egrep -o  "(True|False)" | sed -e "s/False/${XHL}OFF${RESET_HL}/g;s/True/${GREEN}ON${RESET_HL}/g" | paste -s
 ) # relay()
 
 
@@ -164,7 +164,7 @@ test-env() (
 	set -e
 
 	if [ $relay_on = 0 ]; then
-		echo "${red}Radiometer relay #3 is off${reset}"
+		echo "${XHL}Radiometer relay #3 is off${RESET_HL}"
 		exit
 	fi
 
@@ -187,7 +187,7 @@ test-env-live() (
 	set -e
 
 	if [ $relay_on = 0 ]; then
-		echo "${red}Radiometer relay #3 is off${reset}"
+		echo "${XHL}Radiometer relay #3 is off${RESET_HL}"
 		exit
 	fi
 
@@ -211,7 +211,7 @@ goto-sleep() (
 
 	# forced sleep
 	if [[ ${1-} == "--force" ]]; then
-		echo "${red}Forcing sleep${reset}"
+		echo "${XHL}Forcing sleep${RESET_HL}"
 		force="--force"
 	fi
 
@@ -222,19 +222,19 @@ goto-sleep() (
 
 	if [[ $yocto_sleep -eq 0 ]]; then
 		# All OK, shuttig down
-		echo "${red}Powering off${reset}"
+		echo "${XHL}Powering off${RESET_HL}"
 		sleep 1
 		sudo poweroff
 	fi
 
 	# Something went wrong
 	if [[ $yocto_sleep -eq 1 ]]; then
-		echo "${red}Yocto unreachable !!${reset}"
+		echo "${XHL}Yocto unreachable !!${RESET_HL}"
 	elif [[ $yocto_sleep -eq 255 ]]; then
-		echo "${red}Yocto scheduled wakeup is disabled!!!"
-		echo "${bold}Waking up is possible ONLY by manually pressing 'WAKE' button!!!${reset}"
+		echo "${XHL}Yocto scheduled wakeup is disabled!!!"
+		echo "${BOLD}Waking up is possible ONLY by manually pressing 'WAKE' button!!!${RESET_HL}"
 		echo
-		echo "${red}Use 'goto-sleep --force' to force sleep${reset}"
+		echo "${XHL}Use 'goto-sleep --force' to force sleep${RESET_HL}"
 	fi
 ) # goto-sleep()
 
@@ -251,7 +251,7 @@ yapo() (
 		source utils/configparser.sh
 		yocto=$(parse_config "yocto_prefix2" config_static.ini)
 	else
-		echo "${red}Yocto API is not installed${reset}"
+		echo "${XHL}Yocto API is not installed${RESET_HL}"
 		exit -1
 	fi
 
@@ -259,7 +259,7 @@ yapo() (
 		echo
 		echo "Yocto~Auto~Power~Off"
 		echo "yapo			without options returns the time in seconds until yocto turns PC power off"
-		echo "     set 180->99999	sets yocto max run time (in secs)   ${red}(3 minutes minimum!)${reset}"
+		echo "     set 180->99999	sets yocto max run time (in secs)   ${XHL}(3 minutes minimum!)${RESET_HL}"
 		echo "     stop		prevents yocto powering off for   infinity..."
 		echo "     reset		resets the yocto power-off countdown timer"
 		echo "eg:  yapo set 720      yapo stop       yapo reset"
@@ -274,11 +274,11 @@ yapo() (
 		
 	if [[ $yoption == "" ]]; then ######## display yocto-auto-power-off status ###############
 		if [[ $max_wakeup_time -eq "0" ]]; then
-			echo "${yellow}Yocto Auto-Power-Off is ${red}disabled! ${yellow}PC will run for ${red}infinity...${reset}"
+			echo "${HL}Yocto Auto-Power-Off is ${XHL}disabled! ${HL}PC will run for ${XHL}infinity...${RESET_HL}"
 			echo "Enter:   yapo set    to re-enable yocto-auto-power-off"
 			exit 0
 		else 
-			echo "${yellow}Yocto Auto-Power-Off set to $max_wakeup_time s, ${red}powering off in $sleep_countdown s${reset}"
+			echo "${HL}Yocto Auto-Power-Off set to $max_wakeup_time s, ${XHL}powering off in $sleep_countdown s${RESET_HL}"
 			if [ $yocto_offset = 0 ]; then
 				utc_offset=""
 			else
@@ -286,10 +286,10 @@ yapo() (
 			fi
 			
 			if [ $next_wakeup_timestamp = 0 ]; then
-				echo "${red}Yocto scheduled wakeup is disabled${reset}"
+				echo "${XHL}Yocto scheduled wakeup is disabled${RESET_HL}"
 			else
 				delta=$(( $next_wakeup_timestamp - $yocto_offset - $(date -u +%s) ))
-				echo "${yellow}Next Yocto wakeup is scheduled on $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset (in $delta s)${reset}"
+				echo "${HL}Next Yocto wakeup is scheduled on $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset (in $delta s)${RESET_HL}"
 			fi
 
 			echo "Enter:   yapo stop    to disable yocto-auto-power-off"
@@ -297,19 +297,19 @@ yapo() (
 		fi
 	elif [[ $yoption == "stop" ]]; then ############ disable yocto-auto-power-off ################
 		if [[ $max_wakeup_time -ne "0" ]]; then
-			echo "${yellow}Auto-Power-Off setting was $max_wakeup_time s${reset}"
+			echo "${HL}Auto-Power-Off setting was $max_wakeup_time s${RESET_HL}"
 
 			YWakeUpMonitor -r 127.0.0.1 -s $yocto set_powerDuration 0 >/dev/null 2>&1
-			echo "${red}Yocto Auto-Power-Off is now disabled${reset}"
+			echo "${XHL}Yocto Auto-Power-Off is now disabled${RESET_HL}"
 		else
-			echo "${yellow}Yocto Auto-Power-Off was already ${red}disabled${reset}"
+			echo "${HL}Yocto Auto-Power-Off was already ${XHL}disabled${RESET_HL}"
 		fi
 	elif [[ $yoption == "set" ]]; then #################### Set max run time ##########################
 		# check is not empty & is a number
 		set +eu
 		[ -n "$new_max_runtime" ] && [ "$new_max_runtime" -eq "$new_max_runtime" ] 2>/dev/null
 		if [ $? -ne 0 ]; then
-			echo "${red}Invalid input, yapo set requires max runtime in seconds as second parameter.${reset}"
+			echo "${XHL}Invalid input, yapo set requires max runtime in seconds as second parameter.${RESET_HL}"
 			echo
 			exit -1
 		fi
@@ -317,19 +317,19 @@ yapo() (
 
 		if (( $new_max_runtime < 180 )); then  # LIMIT YOCTO MAXRUNTIME TO NO LESS THAN 3 MINS 
 			new_max_runtime=180
-			echo "${red}Requested runtime limit is too short, using minimum allowed value ${new_max_runtime} s${reset}"
+			echo "${XHL}Requested runtime limit is too short, using minimum allowed value ${new_max_runtime} s${RESET_HL}"
 		fi
 
 		YWakeUpMonitor -r 127.0.0.1 -s $yocto set_powerDuration $new_max_runtime >/dev/null 2>&1
 		set_max_wakeup_time=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_powerDuration)
-		echo "${yellow}Auto-Power-Off set to power off after ${red}$set_max_wakeup_time seconds${reset}"
+		echo "${HL}Auto-Power-Off set to power off after ${XHL}$set_max_wakeup_time seconds${RESET_HL}"
 	elif [[ $yoption == "reset" ]]; then #################### Reset shutdown counter max run time ##########################
 		if [[ $max_wakeup_time -ne "0" ]]; then
 			YWakeUpMonitor -r 127.0.0.1 $yocto set_sleepCountdown $max_wakeup_time >/dev/null 2>&1
 			new_sleep_countdown=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_sleepCountdown)
-			echo "${yellow}Auto-Power-Off reset to power off after ${red}$new_sleep_countdown seconds${reset}"
+			echo "${HL}Auto-Power-Off reset to power off after ${XHL}$new_sleep_countdown seconds${RESET_HL}"
 		else
-			echo "${yellow}Yocto Auto-Power-Off was already ${red}disabled${reset}"
+			echo "${HL}Yocto Auto-Power-Off was already ${XHL}disabled${RESET_HL}"
 		fi
 	else
 		echo "Unknown option, run yapo -h for help"
@@ -439,7 +439,7 @@ EOF
 		gps_datetime=$(cut -f 3 <<< $gps)
 		if [ $gps_datetime = "N/A" ]; then gps_hasfix=0; else gps_hasfix=1; fi
 
-		echo "${yellow}Using parameters from config_dynamic.ini:${reset}"
+		echo "${HL}Using parameters from config_dynamic.ini:${RESET_HL}"
 		if [ $gps_hasfix = 1 ]; then
 			echo "latitude = $latitude (GPS: $gps_latitude)"
 			echo "longitude = $longitude (GPS: $gps_longitude)"
@@ -455,11 +455,11 @@ EOF
 		if [ $gps_hasfix = 1 ]; then
 			echo "GPS time is       $gps_datetime UTC"
 		else
-			echo "${yellow}No GPS fix${reset}"
+			echo "${HL}No GPS fix${RESET_HL}"
 		fi
 
 		echo
-		printf "${yellow}Sun position: azimuth %.2f, zenith %.2f, elevation %.2f\n${reset}" $sun_azimuth $sun_zenith $sun_elevation
+		printf "${HL}Sun position: azimuth %.2f, zenith %.2f, elevation %.2f\n${RESET_HL}" $sun_azimuth $sun_zenith $sun_elevation
 	else
 		abspos=0
 		sunpos=0
@@ -469,7 +469,7 @@ EOF
 	relay_state=$(python -m hypernets.yocto.relay -g -n2 2>&1 | egrep -o "(True|False)")
 
 	if [[ $relay_state != "True" ]]; then 
-		echo  "${red}Relay 2 is off! Turn on to operate pan-tilt${reset}"
+		echo  "${XHL}Relay 2 is off! Turn on to operate pan-tilt${RESET_HL}"
 		exit -1
 	fi
 
@@ -497,7 +497,7 @@ EOF
 		# check pan and tilt parameters are not empty and are numbers or "x"
 		[ -n "$1" ] && [ -n "$2" ] && ( [ "$1" -eq "$1" ] || [[ "$1" == "x" ]] ) 2>/dev/null && ( [ "$2" -eq "$2" ] || [[ "$2" == "x" ]] ) 2>/dev/null
 		if [ $? -ne 0 ]; then
-			echo "${red}Invalid input, enter numeric pan and tilt values or x if no movement is required.${reset}"
+			echo "${XHL}Invalid input, enter numeric pan and tilt values or x if no movement is required.${RESET_HL}"
 			exit -1
 		fi
 		set -eu
