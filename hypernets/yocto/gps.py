@@ -23,11 +23,11 @@ def _get_gps_usb(return_float):
 
     get = "/".join(["api", "latitude", "currentValue"])
     url = "/".join([url_base, get])
-    latitude = float(urlopen(url).read())
+    latitude = float(urlopen(url).read()) / 1000
 
     get = "/".join(["api", "longitude", "currentValue"])
     url = "/".join([url_base, get])
-    longitude = float(urlopen(url).read())
+    longitude = float(urlopen(url).read()) / 1000
 
     get = "/".join(["api", "gps", "dateTime"])
     url = "/".join([url_base, get])

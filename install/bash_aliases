@@ -3,7 +3,8 @@
 bold=$(tput bold)
 red=$(tput setaf 9)
 green=$(tput setaf 10)
-yellow=$(tput setaf 11)
+#yellow=$(tput setaf 11)
+yellow=$(tput setaf 12)
 reset=$(tput sgr0)
 
 # print help
@@ -432,11 +433,11 @@ EOF
 		elevation=$(parse_config "elevation" config_dynamic.ini)
 
 		# get gps position and time
-		gps=$(python -m hypernets.yocto.gps  | sed -e "s/[(,')]//g")
-		gps_latitude=$(cut -d " " -f 1 <<< $gps)
-		gps_longitude=$(cut -d " " -f 2 <<< $gps)
-		gps_datetime=$(cut -d " " -f 3 <<< $gps)
-		if [ $gps_datetime = "bN/A" ]; then gps_hasfix=0; else gps_hasfix=1; fi
+		gps=$(python -m hypernets.yocto.gps  | sed -e "s/, /\t/g; s/[()]//g; s/b\?'//g")
+		gps_latitude=$(cut -f 1 <<< $gps)
+		gps_longitude=$(cut -f 2 <<< $gps)
+		gps_datetime=$(cut -f 3 <<< $gps)
+		if [ $gps_datetime = "N/A" ]; then gps_hasfix=0; else gps_hasfix=1; fi
 
 		echo "${yellow}Using parameters from config_dynamic.ini:${reset}"
 		if [ $gps_hasfix = 1 ]; then
@@ -452,7 +453,7 @@ EOF
 		echo "reverse_tilt = $reverse_tilt"
 		echo "Using system time $(date '+%Y/%m/%d %H:%M:%S %Z')"
 		if [ $gps_hasfix = 1 ]; then
-			echo "GPS time is $gps_datetime)"
+			echo "GPS time is       $gps_datetime UTC"
 		else
 			echo "${yellow}No GPS fix${reset}"
 		fi
