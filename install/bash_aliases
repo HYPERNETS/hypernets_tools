@@ -22,7 +22,7 @@ commands() {
 	echo "${HL} ********************" 
 	echo "${HL} commands	${RESET_HL}to see this list"
 	#echo "${HL} guide  	${RESET_HL}Hypstar cheat sheet "
-	#echo "${HL} schedule	${RESET_HL}view/adjust yocto schedules 1 & 2     Set yocto rtc time"
+	echo "${HL} schedule	${RESET_HL}view/adjust yocto schedules 1 & 2" #    Set yocto rtc time"
 	echo "${HL} relay   	${RESET_HL}get/set yocto relays   relay -h for help"
 	echo "${HL} pt		${RESET_HL}Pan/Tilt position      pt -h for help"
 	#echo "${HL} vm    	${RESET_HL}vm on   vm off "
@@ -554,6 +554,687 @@ EOF
 		fi
 	fi
 ) # pt()
+
+
+## Yocto schedules
+schedule() (
+	marray=()
+	
+	skipread=0
+	
+	if [[ "$1" == "-h" ]]
+	then
+		echo "View & Adjust yocto schedules 1 & 2"
+		echo " notes:		-avoid overlaping sequences, max-runtime should be less than time between sequences"
+		exit
+	fi
+	
+	# check if Yocto command line API is installed
+	if [[ $(command -v YWakeUpMonitor) ]]; then
+		source utils/configparser.sh
+		yoctowifibrd=$(parse_config "yocto_prefix2" config_static.ini)
+	else
+		echo "${XHL}Yocto API is not installed${RESET_HL}"
+		exit -1
+	fi
+	
+	
+	clear
+	
+	yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yoctowifibrd get_utcOffset)
+	if [ $yocto_offset = 0 ]; then
+		utc_offset=""
+	else
+		utc_offset=$(printf "%+d" $(($yocto_offset/3600)))
+	fi
+	
+	while [ 1 ]
+	do
+		if [[ $skipread -eq 0 ]] #skip to schedule adjust if pressed redo
+		then
+			tput cup 0 0 
+			echo
+			echo "${HL}                Yocto Schedule                 ${RESET_HL}"
+			echo  "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ "
+			
+			yerrl=1
+			while [ $yerrl -eq 1 ] #check for yocto comms
+			do
+				yerr=$(YRealTimeClock -r 127.0.0.1 $yoctowifibrd get_dateTime 2>&1) #get yocto dt
+				if [ "$yerr" = "ERR: No module found" ]
+				then
+					echo "${XHL}   YOCTOPUCE HAS SLITHERED AWAY!! ${RESET_HL}    "
+					sleep 0.5
+					tput cuu 1
+					echo "                                       "
+					sleep 0.5
+					tput cuu 1
+				else
+					yerrl=0
+				fi
+			done
+			
+			echo -n "    Rugged PC date & time:  "
+			echo -n "20"
+			date +%y/%m/%d" "%H:%M:%S
+			echo -n "    Yocto date & time is:   "
+			dt=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yoctowifibrd get_dateTime)  #get yocto dt
+			echo $dt
+	
+			next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yoctowifibrd get_nextWakeUp|sed -e 's/[[:space:]].*//')
+			if [ $next_wakeup_timestamp = 0 ]; then
+				echo "${XHL}    Yocto scheduled wakeup is disabled${RESET_HL}"
+			else
+				delta=$(( $next_wakeup_timestamp - $yocto_offset - $(date -u +%s) ))
+				echo "    Next wake up is at:     $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset (in $delta s)"
+			fi
+			
+			
+			echo  "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+			echo -n "Enter option: ${HL}"
+			echo "1 - adjust schedule 1 "
+			echo "              2 - adjust schedule 2 (validation)"
+			echo "              E - Exit ${RESET_HL}"
+			
+			#loop waiting for key press & displaying time until yocto shutdown
+			loopy=1
+			
+			set +e
+			while [ $loopy -eq 1 ] 
+			do
+				tput civis     # -- invisible #hide the cursor
+			
+				read -s -t 0.1 -n1 ch #don echo input, timeout after 0.1s, accept 1st keypress, put into var ch
+				if [ $? = 0 ] #read length is 0 after 0s timeout exit
+				then	
+					tput cup 6 0
+			
+					loopy=0 #exit loop
+					break
+				fi
+			
+				#CHECK FOR YOCTO COMMS
+				yerr=$(YRealTimeClock -r 127.0.0.1 $yoctowifibrd get_dateTime 2>&1) #get yocto dt
+				yer=${yerr:0:20}
+				if [ "$yer" = "ERR: No module found" ]
+				then
+					loopy=0
+					ch=" "	
+				fi
+			done
+			set -e
+		fi
+		skipread=0
+		tput cup 15 1 
+		tput cnorm  
+		
+		
+		
+		#################### #Adjust schedule #######################################################
+		if [ "$ch" = "1" ] # Schedule 1
+		then
+			schedy=1
+			ch=99
+		fi
+		if [ "$ch" = "2" ] # Schedule 2 (validation)
+		then
+			schedy=2
+			ch=99
+		fi
+		
+		
+		if [ "$ch" = "99" ] 
+		then
+			clear
+			echo
+		
+			echo "${HL}                Yocto Schedule                 ${RESET_HL}"
+			echo  "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ "
+			
+			
+	#		epoch=$(date -d "${newt}" +"%s")
+			nwku=$(YWakeUpMonitor -r 127.0.0.1 any get_nextWakeUp) #get yocto nextwakeup
+			
+			value=${nwku#*=}  # print everything after the = 
+			valu=$(echo $value | grep -o -E '[0-9]+' | head -1 | sed -e 's/^0\+//') #remove the 1st number only
+			
+			echo "     Schedule $schedy  "
+			echo "Visible parameters are active, \"_\" marks inactive"
+			echo "All inactive is equivalent to all set for a single field"
+			echo "All inactive for all fields disables the schedule"
+			months=$(YWakeUpSchedule -r 127.0.0.1 $yoctowifibrd.wakeUpSchedule$schedy get_months)
+			months=${months#*= [}  # print everything after the =
+			months=${months%"]."}  #remove the trailing dot.
+			echo "Months format:       [JFMAMJJASOND] "
+			months=$(echo "$months" | tr . _)
+			echo "Months as set:       [$months] "
+			day=$(YWakeUpSchedule -r 127.0.0.1 $yoctowifibrd.wakeUpSchedule$schedy get_weekDays)
+			day=${day#*= [}  # print everything after the =
+			day=${day%"]."}  #remove the trailing dot.
+			echo "Days format:         [MTWTFSS]"
+			day=$(echo "$day" | tr . _)
+			echo "Days as set:         [$day]     "
+			hours=$(YWakeUpSchedule -r 127.0.0.1 $yoctowifibrd.wakeUpSchedule$schedy get_hours)
+			hours=${hours#*= [}  # print everything after the =
+			hours=${hours%"]."}  #remove the trailing dot.
+			echo "Hours format:        [0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23]  "
+			hrsasset=""
+			for (( hn=0;hn<=24;hn++ )) ; do
+				L=$(echo ${hours:$hn:1})
+				if [[ $hn -gt 9 ]] && [[ $hn -lt 20 ]] #space before 0->10
+				then
+					if [[ $L = "." ]]
+					then
+						hrsasset="${hrsasset}_"
+					else
+						hrsasset="${hrsasset}1"
+					fi
+				fi
+				if [[ $hn -gt 19 ]] && [[ $hn -lt 24 ]]
+				then
+					if [[ $L = "." ]]
+					then
+						hrsasset="${hrsasset}_"
+					else
+						hrsasset="${hrsasset}2"
+					fi
+				fi
+				if [[ $L = "." ]] # . are too messy to read with all the commas, just space instead
+				then
+					L="_" # $(echo -n " ") #..........................................................................
+				fi	
+				hrsasset="${hrsasset}$L"
+				if [[ $hn -lt 23 ]] #omit 1st comma
+				then
+					hrsasset="${hrsasset}," #DELIMETER!
+				fi
+			done
+			hours="$hrsasset"
+			hours=$(echo "$hours" | tr , " ")   #swap , delimiter for space
+			echo "Hours as set:        [$hours] "
+			
+			minbin=$(YWakeUpSchedule -r 127.0.0.1 $yoctowifibrd.wakeUpSchedule$schedy get_minutes)
+			minbin=${minbin#*= }  # print everything after the =
+			minbin=${minbin%"."}  #remove the trailing dot.
+			echo "Start minutes format:[0,21,45] example values, starts sequences at 00th, 21st & 45th minutes "
+			#display yocto apo status
+			papot=$(YWakeUpMonitor -r 127.0.0.1 $yoctowifibrd get_powerDuration) #get yocto dt
+			papot=${papot#*= }  # print everything after the =space 
+			papot="${papot%"."}"
+			if [[ $papot -gt 59 ]] #omit 1st comma
+			then
+				sec2mins=$papot 
+				sec2mins=$(printf '%dh:%dm:%ds\n' $((sec2mins/3600)) $((sec2mins%3600/60)) $((sec2mins%60)))
+			else 
+				sec2mins="unlimited"
+			fi
+			echo "Note Maximum run time currently is${XHL} $sec2mins. ${RESET_HL}Avoid overlap!"
+			echo -n "Start minutes as set:"
+			#Convert minutes decimal value format to binary
+			db=$(echo "obase=2;$minbin" | bc) #convert to binary 
+			dbn=$(echo "${#db}") #number of digits
+			#Convert binary to minutes values
+			minsasset="["
+			cma=0
+			
+			mni=-1
+			for (( mn=$dbn;mn>=0;mn-- )) ; do #count thru db 0->60, 1 bit/minute, count backwards as lsn is on the right
+				L=$(echo ${db:$mn:1}) #step thru db array checking 1 char(mn) at a time
+				if [[ $L -eq 1 ]] #every "1" record the mn value
+				then
+					if [[ $cma -eq 1 ]] #omit 1st comma
+					then
+						minsasset="${minsasset},"
+					fi
+					minsasset="${minsasset}$mni"
+					cma=1
+				fi 
+				mni=$((mni + 1))
+			done
+			minsasset="${minsasset}]"
+			echo "$minsasset"
+			
+			echo
+			
+			set +e
+			while true;
+			do
+				echo "Press \"A\" to adjust schedule, \"E\" to exit                                   "
+				read -t 0.1 -n 1 sc
+				if [[ $sc =~ ^([aA])$ ]] || [[ $sc =~ ^([eE])$ ]] 
+				then
+					echo
+					break
+				fi
+			tput cuu 1
+			done
+			set -e
+			
+			############ ADJUST SCHED ###################
+			if [[ $sc =~ ^([aA])$ ]] 
+			then
+				tput cuu 2 #put cursor back up 2 lines
+				echo "${HL}     Schedule $schedy Adjustment${RESET_HL}                                         "
+				echo "Visible parameters are active, \"_\" marks inactive"
+				echo "Months format:       [JFMAMJJASOND]   "
+				echo "Adjust months:       [$months] "
+				field=$months
+				fieldformat="JFMAMJJASOND"
+				fieldlength=12
+				xc=35 #xvalue at end of field to blank from
+				i=0  #this is the position of the current letter in the string #12 #$((xc - fieldlength))
+				y=22
+				yy=$y #reference y position
+				tput cup $y 0 #put cursor
+				echo "Select: <- ->    Toggle: \"|spacebar|\"    Done: \"Enter\"    Main Menu: \"M\"     " 
+				y=20
+				adjv="Adjust months:       "
+				fieldn=1
+				#Loop through adjustments, step to next field with D, 
+				loopy=1
+				looopy=1
+				xj=1  #the amount to jump cursor forwards/backward with arrows
+				nf=1
+				
+				mins="$minsasset"
+				mins=${mins#*[}  # print everything after the =
+				mins=${mins%"]"}  #remove the trailing dot.
+				while [ $loopy -eq 1 ]
+				do     
+					L=""
+					tput cup $y 0 #put cursor
+					echo -n "$adjv[$field]"
+					
+					x=$((fieldlength - i))
+					x=$((x + 1))
+					tput cub $x  #put cursor wrt position in year
+					tput cnorm     # -- show the cursor
+				
+					#Get input & check for arrow keys (read options remove the arrow ^[[ parts)
+				    IFS="" read -r -sn1 userinput
+					tput civis     # -- invisible #hide the cursor
+			    	case $userinput in
+			        	C) userinput="zzzz" ;; #right
+			        	D) userinput="zzzzz" ;; #left
+				   	esac
+					# toggle the char with spacebar press
+					if [[ ${userinput} = " " ]]
+					then
+						tput cuf $x  #put cursor wrt position in year
+						L=$(echo ${fieldformat:i:1}) #char n  in the reference format
+						hmmm=$(echo ${field:i:1}) # char n in the adjusting
+						if [[ $fieldn -eq 3 ]] # hours field, correct for varying x jump 
+						then
+							if [[ $i -gt 18 ]]
+							then
+								i=$((i + 1)) #position to 2nd digit (1st digit gets saved at end of if then)
+								if [[ $hmmm = "_" ]]
+								then
+									hmmm=$L #the corresponding char in the format
+									Lnext=$(echo ${fieldformat:i:1}) #char n  in the reference forma
+									field=$(echo ${field:0:i}$Lnext${field:i+1}) #update the adjusted field at next position too
+								else
+									hmmm="_"
+									field=$(echo ${field:0:i}$hmmm${field:i+1}) #update the adjusted field at next position too
+								fi
+								i=$((i - 1)) #repositiuon back to 1st digit
+							else
+								if [[ $hmmm = "_" ]]
+								then
+									hmmm=$L #the corresponing char in the format
+								else
+									hmmm="_"
+								fi	
+							fi
+						else  #all other fields
+							if [[ $hmmm = "_" ]]
+							then
+								hmmm=$L #the corresponing char in the format
+							else
+								hmmm="_"
+							fi
+						fi
+						field=$(echo ${field:0:i}$hmmm${field:i+1}) #update the adjusted field at position i
+					fi
+				
+					if [[ $fieldn -eq 3 ]] #correct for x jump while arrow backwards on hours
+					then
+						if [[ $i -gt 18 ]]
+						then
+							xj=3
+						else
+							xj=2
+						fi
+						if [[ $userinput = "zzzzz" ]] && [[ $i -gt 17 ]] && [[ $i -lt 22 ]] #echo backwards 1  check is not < jan
+						then
+							xj=2
+						fi
+					fi
+				
+					if [[ $userinput = "zzzzz" ]] && [[ $i -gt 0 ]] #echo backwards 1  check is not < jan
+					then
+						tput cub $xj #move backwards
+						i=$((i - xj))
+					fi
+				
+					if [[ $userinput = "zzzz" ]] && [[ $i -lt $fieldlength-$xj ]] #echo forwards 1 check is not > dec
+					then
+						tput cuf $xj #move forwards
+						i=$((i + xj))
+					fi
+					#Done so load next fields
+					if [[ ${userinput} = "" ]]
+					then	
+						y=$((y + nf)) #move cursor down 
+						
+						tput cup $y 0 #put cursor
+						fieldn=$((fieldn + 1))  #next field to plow
+						if [[ $fieldn -eq 2 ]]
+						then
+							months=$field
+							echo "Days format:         [MTWTFSS]"
+							echo 
+							fieldformat="MTWTFSS"
+							fieldlength=7
+							field=$day
+							adjv="Adjust days:         "
+							xc=30 #clear remains on the line after xc
+							i=0
+						fi
+						if [[ $fieldn -eq 3 ]]
+						then
+							day=$field
+							echo "Hours format:        [0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23]  "
+							echo 
+							fieldformat="0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23"
+							fieldlength=61
+							field=$hours
+							adjv="Adjust hours:        "
+							xc=84 #clear remains on the line after xc
+							xj=2 #jump cursor by 2 bcoz commas
+							i=0
+						fi
+						if [[ $fieldn -eq 4 ]]
+						then
+							hours=$field
+							break
+						fi
+			
+						y=$((y + 1)) #move cursor down 
+						yt=$((y + 2))
+						tput cup $yt 0 #put cursor
+						if [[ $fieldn -lt 6 ]]
+						then
+			   				echo "Select: <- ->    Toggle: \"|spacebar|\"    Done: \"Enter\"    Main Menu: \"M\"     " 
+						fi
+						tput cuu 2 #put cursor back up 2 lines
+					fi
+			
+					#clear screen
+					tput cup $y 0 #put cursor to x origin
+					tput cuf $xc #put cursor to end of field
+					tput el #clear to end of line
+			
+					#exit & save
+					if [[ $userinput =~ ^([sS])$ ]] || [[ $loopy -eq 0 ]]
+					then
+						loopy=0
+					fi
+			
+					#redo
+					if [[ $userinput =~ ^([rR])$ ]] #redo
+					then
+						echo "  Give it another crack then....  "
+						loopy=0
+					fi
+			
+					#exit
+					if [[ $userinput =~ ^([mM])$ ]]    
+					then
+						loopy=0
+						echo " Bailed "
+					fi
+				done
+			
+				if [[ $fieldn -eq 4 ]]
+				then
+					echo -n "Minutes as set:      "
+					echo "$minsasset"
+			
+					fieldformat="a,b,c,d"
+					fieldlength=34
+					field=$mins
+					echo "Enter minutes:                                                                         "
+					tput cub 141 #put cursor to start of line
+					tput cuf 21 #put cursor to end of field
+					tput el #clear to end of line
+					echo
+					echo "   Separate with commas   \"Enter\" when done or to leave as is   \"X\" to clear all   " 
+					tput cuu 3
+					tput cuf 21 #put cursor to end of field
+					echo
+					tput cub 141 #put cursor to start of line
+					tput cuf 21 #put cursor to end of field
+					tput cuu 1
+			
+					tput cnorm
+					read ma
+					fieldn=5
+				fi
+				if [[ $fieldn -eq 5 ]]
+				then
+					minutes=$ma
+					if [[ $ma == "" ]]
+					then
+						minutes="$minsasset"
+					elif [[ $ma =~ ^([xX])$ ]]
+					then
+						minutes=""
+					fi
+					minutes=${minutes/]/}
+					minutes=${minutes#[}
+	
+					# set to -1 if no minutes set (empty or only spaces)
+					if [[ -z "${minutes// }" ]]; then 
+						minutes="-1"
+					fi
+			
+					echo 
+					echo "   DONE                                                                                                                 "
+					echo
+					tput cuu 2 #put cursor back up 1 line
+					sleep 1
+					echo "                 Re-do: \"R\"   Save & exit: \"S\"   Main Menu: \"M\" (without save)                                    " 
+					while [ $looopy -eq 1 ]
+					do   
+						#Get input & check for arrow keys (read options remove the arrow ^[[ parts)
+				    	read -r -sn1 userinput
+						if [[ $userinput =~ ^([sS])$ ]] || [[ $userinput =~ ^([mM])$ ]] || [[ $userinput =~ ^([rR])$ ]] #save
+						then
+							looopy=0
+							loopy=0
+						fi				
+					done
+				fi
+				# convert to yocto format & save
+				if [[ $userinput =~ ^([sS])$ ]]
+				then
+					echo
+					echo
+					#re-deliniate & backwards format for yocto
+					months=$(echo "$months" | tr _ . )
+			 		read -a mfarray <<< $(echo "$months" | sed 's/./& /g') # put a space btween each char
+					mfbinarray=() #clear array
+					for (( mfn=0;mfn<=11;mfn++ )) ; do #loop until end of array
+						rev=$((12 - mfn))
+						mfnn=${mfarray[$mfn]}
+						if [[ $mfnn = "." ]] # remove leading 1 in 10's
+						then
+							mfbinarray[$rev]="0" 
+						else
+							mfbinarray[$rev]="1"
+						fi
+					done
+					months=$(echo "${mfbinarray[*]}") #put array contents back into minss var
+					months=$(echo "$months" | sed -r 's/[ ]+//g') #replace space with nufn
+					months=$(echo "obase=10; ibase=2; $months" | bc)
+					#save to yocto
+					YWakeUpSchedule -r 127.0.0.1 $yoctowifibrd.wakeUpSchedule$schedy set_months $months
+			
+					day=$(echo "$day" | tr _ . )
+			 		read -a darray <<< $(echo "$day" | sed 's/./& /g') # put a space btween each char
+					dbinarray=() #clear array
+					for (( dn=0;dn<=6;dn++ )) ; do #loop until end of array
+						rev=$((7 - dn))
+						dnn=${darray[$dn]}
+						if [[ $dnn = "." ]] # remove leading 1 in 10's
+						then
+							dbinarray[$rev]="0"
+						else
+							dbinarray[$rev]="1"
+						fi
+					done
+					day=$(echo "${dbinarray[*]}") #put array contents back into minss var
+					day=$(echo "$day" | sed -r 's/[ ]+//g') #replace space with nufn
+					day=$(echo "obase=10; ibase=2; $day" | bc)
+					#save to yocto
+					YWakeUpSchedule -r 127.0.0.1 $yoctowifibrd.wakeUpSchedule$schedy set_weekDays $day
+			 
+					harray=($(echo $hours)) #put hours into array
+					for (( hn=23;hn>=0;hn-- )) ; do #loop until last num
+						hnn=${harray[$hn]}
+						if [[ ${hnn:0:1} == "_" ]]; then continue; fi ## skip if not set
+						if [ $hnn -ge 10 ] && [ $hnn -lt 20 ] # remove leading 1 in 10's
+						then
+							harray[$hn]=$((hnn - 10))
+						fi
+						if [ $hnn -ge 20 ] # remove leading 2 in 20's
+						then
+							harray[$hn]=$((hnn - 20))
+						fi
+					done
+					hours=$(echo "${harray[*]}") #put array contents back into hours var
+					hours=$(echo "$hours" | sed -r 's/[_]+/./g') #replace _ with .
+					harray=($(echo $hours)) # put hours back into an array
+					hbinarray=() #clear array
+					for (( hn=0;hn<=23;hn++ )) ; do #loop until end of array
+						rev=$((24 - hn))
+						hnn=${harray[$hn]}
+						if [[ $hnn = "." ]] # remove leading 1 in 10's
+						then
+							hbinarray[$rev]="0"
+						else
+							hbinarray[$rev]="1"
+						fi
+					done
+					hours=$(echo "${hbinarray[*]}") #put array contents back into minss var
+					hours=$(echo "$hours" | sed -r 's/[ ]+//g') #replace space with nufn
+					hours=$(echo "obase=10; ibase=2; $hours" | bc)
+					#save to yocto
+					YWakeUpSchedule -r 127.0.0.1 $yoctowifibrd.wakeUpSchedule$schedy set_hours $hours
+			
+					minsbinarray=() #clear mins array
+					marray=($(echo $minutes | tr "," "\n")) #remove the , put into an array
+					len=${#marray[@]} # number of vars in arrays
+					arn=$((len - 1))
+					mnn=${marray[$arn]} # 1st num in array (ie 1st num from right)
+					for (( mn=59;mn>=0;mn-- )) ; do #loop until last num creating binary num
+						revvar=$((60 - mn))
+						if [[ $mn -eq $mnn ]] #check var against loop mn
+						then 
+							arn=$((arn - 1))
+							mnn=${marray[$arn]} #load next bit to look for	
+							minsbinarray[$revvar]="1"
+						else
+							minsbinarray[$revvar]="0"
+						fi
+					done
+					b2d=$(echo "${minsbinarray[*]}") #put array contents back into minss var
+					b2d=$(echo "$b2d" | sed -r 's/[ ]+//g') #replace space with nufn
+					dec=$(echo "obase=10; ibase=2; $b2d" | bc)
+					#save to yocto
+					#last one with -s for saving to flash
+					YWakeUpSchedule -s -r 127.0.0.1 $yoctowifibrd.wakeUpSchedule$schedy set_minutes $dec
+			
+					echo
+					#all saved to yocto!
+					echo "${RESET_HL}          Schedule is set! "
+					sleep 1
+				fi
+			
+			
+				#redo
+				if [[ $userinput =~ ^([rR])$ ]] #redo
+				then
+					echo "  Give it another crack then....  "
+					ch=2
+					skipread=1
+				fi
+			
+				#exit
+				if [[ $userinput =~ ^([aA])$ ]]    
+				then
+					loopy=0
+					echo " Bailed "
+				fi
+				echo
+				echo
+				tput cuu 3 #put cursor back up 3 lines
+				tput cuf 22 #put cursor 22 chars along the line
+			fi
+		
+			echo "${RESET_HL} "
+			sleep 1
+		fi
+		
+	#	################## #Set yocto time to pc time #########################################################
+	#	if [[ "${ch}" -eq "3" ]] 
+	#	then	
+	#		pct=20  #preceed century
+	#		cdt=$(date +%y/%m/%d" "%H:%M:%S",") # >> pct  #append with current pc date, time
+	#		pct=$pct$cdt
+	#		pctt="${pct%","}"  #remove the trailing comma. Use "${dt%?}" if last char/s unknown(add more ?? as needed)
+	#		epoch=$(date -d "${pctt}" +"%s")  # convert to unix
+	#		YRealTimeClock -r 127.0.0.1 $yoctowifibrd set_unixTime $epoch >/dev/null
+	#		echo "Time set! "
+	#	fi
+	#	
+	#	######################## #Set yocto time to any time  ############################################
+	#	if [[ $ch -eq "4" ]] 
+	#	then
+	#		echo -n "Yocto current date & time is: "
+	#		dtl=$(YRealTimeClock -r 127.0.0.1 $yoctowifibrd get_dateTime) #get yocto dt
+	#		dt=${dtl#*= }  # print everything after the =  
+	#		dtt="${dt%"."}"  #remove the trailing dot. Use "${dt%?}" if last char/s unknown(add more ?? as needed)
+	#		echo $dtt
+	#		poch=$(date -d "${dtt}" +"%s")  # convert to unix
+	#		echo "epoch conv = $poch"
+	#		echo -n "Enter same format to change:  "
+	#		read newt
+	#		epoch=$(date -d "${newt}" +"%s")
+	#		
+	#		YRealTimeClock -r 127.0.0.1 $yoctowifibrd set_unixTime $epoch >/dev/null 2>&1
+	#		echo "Time set! "
+	#	fi
+		
+		
+		######################## #Set yocto time to any time  ############################################
+		if [[ $ch =~ ^([eE])$ ]] 
+		then
+			tput cuu 3
+			tput cub 20
+			echo "                             "
+			echo  "The end "
+			exit
+		fi
+		
+		
+		#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		sleep 1
+		clear
+	done
+) # schedule()
 
 
 alias kill-service="sudo systemctl kill --signal=SIGKILL hypernets-sequence"
