@@ -22,15 +22,15 @@ commands() {
 	echo "${yellow} commands	${reset}to see this list"
 	#echo "${yellow} guide  	${reset}Hypstar cheat sheet "
 	#echo "${yellow} schedule	${reset}view/adjust yocto schedules 1 & 2     Set yocto rtc time"
-	echo "${yellow} relay   	${reset}returns states or with args sets relay n state    eg: relay 5 on   relay 6 off ..."
-	echo "${yellow} pt		${reset}Pan/Tilt position   or move with args:  pt 90 34    see pt -h for more"
+	echo "${yellow} relay   	${reset}get/set yocto relays   relay -h for help"
+	echo "${yellow} pt		${reset}Pan/Tilt position      pt -h for help"
 	#echo "${yellow} vm    	${reset}vm on   vm off "
 	echo "${yellow} now    	${reset}present status of: clock, meteo, rain, GPS, supply, wakeup"
 	#echo "${yellow} webpic  	${reset}takes  webcam photos, Photos stored in ~/hypernets_tools/OTHER/Web-site~sky/  & Server/Sitename/ "
 	#echo "${yellow} hypypic  	${reset}takes photo from hypstar camera. Photos stored in  ~/hypypics/   & Server/Sitename/ "
 	#echo "${yellow} level    	${reset}boom leveling assistant "
-	echo "${yellow} test-env  	${reset}displays hypstar test_env once"
-	echo "${yellow} test-env-live	${reset}displays hypstar test_env live"
+	echo "${yellow} test-env  	${reset}displays hypstar latest environmental log"
+	echo "${yellow} test-env-live	${reset}displays hypstar environmental logs live"
 	echo "${yellow} status  	${reset}sudo systemctl status hypernets-sequence"
 	echo "${yellow} kill-service	${reset}kill hypernets-sequence service without going to sleep"
 	echo "${yellow} journal  	${reset}journalctl -b -u hypernets-sequence -e (journal -f to follow)"
@@ -38,8 +38,8 @@ commands() {
 	#echo "${yellow} portal  	${reset}makes a portal via ~/Portal folder to Server/Sitename/ "
 	echo "${yellow} gui		${reset}python -m hypernets.gui (if screen attached)"
 	#echo "${yellow} cp2server	 ${reset}                 ./utils/hello_server.sh   copy sequence data back to NPL server "
-	echo "${yellow} runseq	 	${reset}./utils/run_service.sh    run a sequence"
-	echo "${yellow} yapo		${reset}yocto auto-power-off.   yapo stop   to disable, see yapo -h for more"
+	echo "${yellow} runseq	 	${reset}utils/run_service.sh    run a sequence"
+	echo "${yellow} yapo		${reset}yocto auto-power-off. yapo stop to disable, yapo -h for help"
 	echo "${yellow} goto-sleep	${reset}power off and send yocto to sleep if wakeup is scheduled"
 	echo
 } # commands()
@@ -379,29 +379,90 @@ pt() (
 		echo
 		echo "  Pan-tilt control"
 		echo "********************"
-		echo "pt [-h|--help] [abs] [new_pan new_tilt]"
+		echo "pt [-h|--help] [abs|sun] [new_pan new_tilt]"
 		echo "pt                        without options returns the current pan-tilt position"
-		echo "   new_pan new_tilt       move pan-tilt to new position while accounting for the offsets in config_dynamic.ini"
-		echo "   abs new_pan new_tilt   move pan-tilt to new absolute position"
+		echo "   new_pan new_tilt       move pan-tilt while accounting for the offsets in config_dynamic.ini"
+		echo "   abs new_pan new_tilt   move pan-tilt to absolute position"
+		echo "   sun new_pan new_tilt   move pan-tilt to position relative to the sun"
 		echo
+		echo "pt sun  without arguments points to the sun"
 		echo "use x as new value for the axis that has to stay in the current position"
-		echo "eg:  pt 270 90      pt abs 270 90      pt x 0"
+		echo "eg: pt 270 90   pt abs 270 90   pt x 0   pt sun"
 		echo
 		exit 
-	fi
-
-	# use absolute position
-	if [[ $1 == "abs" ]]; then
-		abspos=1
-		shift 1
-	else
-		abspos=0
 	fi
 
 	source utils/configparser.sh
 	offset_tilt=$(parse_config "offset_tilt" config_dynamic.ini)
 	offset_pan=$(parse_config "offset_pan" config_dynamic.ini)
 	reverse_tilt=$(parse_config "reverse_tilt" config_dynamic.ini)
+
+	# use absolute position
+	if [[ $1 == "abs" ]]; then
+		abspos=1
+		sunpos=0
+		shift 1
+	elif [[ $1 == "sun" ]]; then
+		abspos=0
+		sunpos=1
+		shift 1
+	
+		## if pan and tilt are empty then set to 0
+		set +eu
+		if [ -z "$1" ]; then set -- "0" "0"; fi 
+		set -eu
+
+		## calculate sun position
+		python_script=$(cat << EOF
+from hypernets.geometry.spa_hypernets import spa_from_datetime
+
+azimuth_sun, zenith_sun = spa_from_datetime()
+print(f"{azimuth_sun:.2f}\t{zenith_sun:.2f}")
+EOF
+		)
+
+		spa=$(python -c "$python_script")
+		sun_azimuth=$(cut -f 1 <<< $spa)
+		sun_zenith=$(cut -f 2 <<< $spa)
+
+		sun_elevation=$(bc <<< "90 - $sun_zenith")
+
+		latitude=$(parse_config "latitude" config_dynamic.ini)
+		longitude=$(parse_config "longitude" config_dynamic.ini)
+		elevation=$(parse_config "elevation" config_dynamic.ini)
+
+		# get gps position and time
+		gps=$(python -m hypernets.yocto.gps  | sed -e "s/[(,')]//g")
+		gps_latitude=$(cut -d " " -f 1 <<< $gps)
+		gps_longitude=$(cut -d " " -f 2 <<< $gps)
+		gps_datetime=$(cut -d " " -f 3 <<< $gps)
+		if [ $gps_datetime = "bN/A" ]; then gps_hasfix=0; else gps_hasfix=1; fi
+
+		echo "${yellow}Using parameters from config_dynamic.ini:${reset}"
+		if [ $gps_hasfix = 1 ]; then
+			echo "latitude = $latitude (GPS: $gps_latitude)"
+			echo "longitude = $longitude (GPS: $gps_longitude)"
+		else
+			echo "latitude = $latitude"
+			echo "longitude = $longitude"
+		fi
+		echo "elevation = $elevation"
+		echo "offset_pan = $offset_pan"
+		echo "offset_tilt = $offset_tilt"
+		echo "reverse_tilt = $reverse_tilt"
+		echo "Using system time $(date '+%Y/%m/%d %H:%M:%S %Z')"
+		if [ $gps_hasfix = 1 ]; then
+			echo "GPS time is $gps_datetime)"
+		else
+			echo "${yellow}No GPS fix${reset}"
+		fi
+
+		echo
+		printf "${yellow}Sun position: azimuth %.2f, zenith %.2f, elevation %.2f\n${reset}" $sun_azimuth $sun_zenith $sun_elevation
+	else
+		abspos=0
+		sunpos=0
+	fi
 
 	# check if pan-tilt relay is on
 	relay_state=$(python -m hypernets.yocto.relay -g -n2 2>&1 | egrep -o "(True|False)")
@@ -435,17 +496,18 @@ pt() (
 		# check pan and tilt parameters are not empty and are numbers or "x"
 		[ -n "$1" ] && [ -n "$2" ] && ( [ "$1" -eq "$1" ] || [[ "$1" == "x" ]] ) 2>/dev/null && ( [ "$2" -eq "$2" ] || [[ "$2" == "x" ]] ) 2>/dev/null
 		if [ $? -ne 0 ]; then
-			echo "${red}Invalid input, enter pan and tilt values or x if no movement is required.${reset}"
+			echo "${red}Invalid input, enter numeric pan and tilt values or x if no movement is required.${reset}"
 			exit -1
 		fi
 		set -eu
-
-		## 
 
 		if [[ "$1" == "x" ]]; then ## use current
 			requested_abs_pan=$current_abs_pan
 		elif [ $abspos = 1 ]; then ## requested abs
 			requested_abs_pan="$1"
+		elif [ $sunpos = 1 ]; then ## requested sun
+			requested_rel_sun_pan=$(bc <<< "$sun_azimuth + ($1)")
+			requested_abs_pan=$(_pt_rel2abs_pan "$requested_rel_sun_pan")
 		else ## requested hyper
 			requested_abs_pan=$(_pt_rel2abs_pan "$1")
 		fi
@@ -454,6 +516,9 @@ pt() (
 			requested_abs_tilt=$current_abs_tilt
 		elif [ $abspos = 1 ]; then ## requested abs
 			requested_abs_tilt="$2"
+		elif [ $sunpos = 1 ]; then ## requested sun, zenith is 180 in relative coords
+			requested_rel_sun_tilt=$(bc <<< "(180 - $sun_zenith + ($2))")
+			requested_abs_tilt=$(_pt_rel2abs_pan "$requested_rel_sun_tilt")
 		else ## requested hyper
 			requested_abs_tilt=$(_pt_rel2abs_tilt "$2")
 		fi
@@ -482,6 +547,10 @@ pt() (
 		echo "New positions"
 		printf "abs:   pan = %.1f, tilt = %.1f, residuals: pan = %.1f, tilt = %.1f\n" $new_abs_pan $new_abs_tilt $residual_pan $residual_tilt
 		printf "hyper: pan = %.1f, tilt = %.1f\n" $new_hyper_pan $new_hyper_tilt
+
+		if [ $sunpos = 1 ]; then ## requested sun
+			new_sun_pan=
+		fi
 	fi
 ) # pt()
 

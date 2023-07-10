@@ -49,6 +49,7 @@ def spa_from_gps():
         warnings.simplefilter("ignore")
 
         # use pysolar default values for temperature and pressure
+        # TODO test with gps elevation
         azimuth = get_azimuth(latitude, longitude, now, elevation=0)
         zenith = 90 - get_altitude(latitude, longitude, now, elevation=0)
 
