@@ -17,7 +17,7 @@ if [[ -z $pantiltPort ]] ; then
 fi
 
 echo "Using port $pantiltPort for Pan-tilt."
-echo "This shuold be normally /dev/ttyS3 for V1 & V2 systems and /dev/ttyS0 for V3"
+echo "This should be normally /dev/ttyS3 for V1 & V2 systems and /dev/ttyS0 for V3"
 echo 
 
 pantiltPort=$(echo $pantiltPort | rev | cut -d'/' -f1 | rev)

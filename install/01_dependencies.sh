@@ -30,16 +30,14 @@ else
 fi
 	
 if [ "$ID"  == "debian" ]; then
-	sudo apt install python3-pip tk make gcc python3-tk rsync python3-pysolar net-tools
+	sudo apt install python3-pip tk make gcc python3-tk rsync python3-pysolar python3-crcmod python3-serial python3-matplotlib pipx net-tools
     [ ! -e /usr/bin/python ] && ln -s /usr/bin/python3 /usr/bin/python
 
-	sudo -u $user python -m pip uninstall serial
-	sudo -u $user python -m pip install crcmod pyftdi yoctopuce pyserial
-	sudo -u $user python -m pip install matplotlib
 elif [ "$ID"  == "manjaro" ]; then
 	sudo pacman -Sy python-pip tk make gcc python-pipx python-crcmod python-pyserial python-matplotlib net-tools
 
-	sudo -u $user python -m pipx install pyftdi
 	sudo -u $user python -m pip install pysolar --break-system-packages
-	sudo -u $user python -m pip install yoctopuce --break-system-packages
 fi
+	
+sudo -u $user python -m pipx install pyftdi
+sudo -u $user python -m pip install yoctopuce --break-system-packages
