@@ -14,8 +14,11 @@ if [[ ${PWD##*/} != "hypernets_tools"* ]]; then
 	exit 1
 fi
 
-user="$SUDO_USER"
+user=$(logname)
 
+# echo "user is $user"
+# echo "USER is $USER"
+# echo "SUDO-USER is $SUDO_USER"
 
 # Detection of what system we are currently running (i.e. debian or manjaro)
 if [ -f /etc/os-release ]; then
@@ -25,21 +28,18 @@ else
 	echo "Not a systemd freedesktop.org distribution?"
 	exit 1
 fi
-
+	
 if [ "$ID"  == "debian" ]; then
-	sudo apt install python3-pip tk make gcc python3-tk rsync python3-pysolar
+	sudo apt install python3-pip tk make gcc python3-tk rsync python3-pysolar net-tools
     [ ! -e /usr/bin/python ] && ln -s /usr/bin/python3 /usr/bin/python
+
+	sudo -u $user python -m pip uninstall serial
+	sudo -u $user python -m pip install crcmod pyftdi yoctopuce pyserial
+	sudo -u $user python -m pip install matplotlib
 elif [ "$ID"  == "manjaro" ]; then
-	sudo pacman -Sy python-pip tk make gcc
+	sudo pacman -Sy python-pip tk make gcc python-pipx python-crcmod python-pyserial python-matplotlib net-tools
+
+	sudo -u $user python -m pipx install pyftdi
+	sudo -u $user python -m pip install pysolar --break-system-packages
+	sudo -u $user python -m pip install yoctopuce --break-system-packages
 fi
-
-sudo -u $user python3 -m pip uninstall serial
-sudo -u $user python3 -m pip install crcmod pyftdi yoctopuce pyserial
-sudo -u $user python3 -m pip install matplotlib
-
-# Get Access to  /dev/ttySx without 'sudo'
-sudo usermod -a -G uucp $USER
-
-
-# Ensure relogin
-# reboot

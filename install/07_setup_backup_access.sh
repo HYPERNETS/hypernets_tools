@@ -48,38 +48,43 @@ echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then 
 	echo
 
-	## configure network interface
-	cat << EOF > /etc/network/interfaces.d/ssh_backup_interface
+	if [ "$ID"  == "debian" ]; then
+		## configure network interface
+		cat << EOF > /etc/network/interfaces.d/ssh_backup_interface
 auto $sshIf
 iface $sshIf inet static
 	address $sshIp/24
 EOF
+		systemctl restart networking
 
-	systemctl restart networking
+		## Set up ssh server
+		apt install openssh-server
 
-
-	## Set up ssh server
-	apt install openssh-server
-
-	cat << EOF > /etc/ssh/sshd_config.d/ssh_backup_sshd_config.conf
+		cat << EOF > /etc/ssh/sshd_config.d/ssh_backup_sshd_config.conf
 ListenAddress $sshIp
 EOF
 
-	if [ "$ID"  == "debian" ]; then
+		systemctl stop ssh
 		systemctl enable ssh
 		systemctl start ssh
 	elif [ "$ID"  == "manjaro" ]; then
+		## configure network interface
+		if [ $(nmcli connection show | grep -c ssh_backup_interface) -ne 0 ]; then
+			nmcli connection delete ssh_backup_interface
+		fi
+		nmcli connection add type ethernet ifname $sshIf con-name ssh_backup_interface ip4 $sshIp/24 ipv4.method manual connection.autoconnect yes
+		nmcli connection up ssh_backup_interface
+
+		sed -i '/^ListenAddress/d' /etc/ssh/sshd_config
+		echo "ListenAddress $sshIp" >> /etc/ssh/sshd_config
+
+		systemctl stop sshd
 		systemctl enable sshd
 		systemctl start sshd
 	fi
 
-	## Set up DHCP server
+	######## Set up DHCP server ########
 	if [[ $dhcpServer == "yes" ]]; then
-		apt install isc-dhcp-server
-
-		sed -i "/INTERFACESv4=/s/.*/INTERFACESv4=\"$sshIf\"/" /etc/default/isc-dhcp-server
-
-		mv -f /etc/dhcp/dhcpd.conf /etc/dhcp/dhcpd.conf.bak
 		subnet=$(awk -F "." '{print $1"."$2"."$3".0"}' <<< $sshIp)
 		last_octet=$(sed -e 's/.*\.//' <<< $sshIp)
 
@@ -91,9 +96,14 @@ EOF
 			range2=$(awk -F "." '{print $1"."$2"."$3".50"}' <<< $sshIp)
 		fi
 
-		cat << EOF > /etc/dhcp/dhcpd.conf
-option domain-name-servers ns1.example.org, ns2.example.org;
-
+		if [ "$ID"  == "debian" ]; then
+			apt install isc-dhcp-server
+	
+			sed -i "/INTERFACESv4=/s/.*/INTERFACESv4=\"$sshIf\"/" /etc/default/isc-dhcp-server
+	
+			mv -f /etc/dhcp/dhcpd.conf /etc/dhcp/dhcpd.conf.bak
+	
+			cat << EOF > /etc/dhcp/dhcpd.conf
 default-lease-time 7200;
 max-lease-time 86400;
 
@@ -104,15 +114,47 @@ subnet $subnet netmask 255.255.255.0 {
 }
 
 EOF
+	
+			systemctl enable isc-dhcp-server
+			systemctl start isc-dhcp-server
+		elif [ "$ID"  == "manjaro" ]; then
+			pacman -Sy dhcp
 
-		systemctl enable isc-dhcp-server
-		systemctl start isc-dhcp-server
-	elif [[ -f "/etc/default/isc-dhcp-server" ]]; then
-		systemctl stop isc-dhcp-server
-		systemctl disable isc-dhcp-server
+			mv -f /etc/dhcpd.conf /etc/dhcpd.conf.bak
 
-		sed -i "/INTERFACESv4=/s/.*/INTERFACESv4=\"\"/" /etc/default/isc-dhcp-server
-	fi
+			cat << EOF > /etc/dhcpd.conf
+default-lease-time 7200;
+max-lease-time 86400;
+
+ddns-update-style none;
+
+subnet $subnet netmask 255.255.255.0 {
+  range $range1 $range2;
+}
+
+EOF
+			systemctl enable dhcpd4
+			systemctl start dhcpd4
+			systemctl stop dhcpd6
+			systemctl disable dhcpd6
+		fi # manjaro
+	else # dhcp = no
+		if [ "$ID"  == "debian" ]; then
+			if [[ -f "/etc/default/isc-dhcp-server" ]]; then
+				systemctl stop isc-dhcp-server
+				systemctl disable isc-dhcp-server
+
+				sed -i "/INTERFACESv4=/s/.*/INTERFACESv4=\"\"/" /etc/default/isc-dhcp-server
+			fi
+		elif [ "$ID"  == "manjaro" ]; then
+			if [[ -f "/etc/dhcpd.conf" ]]; then
+				systemctl stop dhcpd4
+				systemctl disable dhcpd4
+				systemctl stop dhcpd6
+				systemctl disable dhcpd6
+			fi
+		fi # manjaro
+	fi # dhcp = yes / no
 else
 	echo "Exit"
 	exit 1

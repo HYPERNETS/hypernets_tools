@@ -6,6 +6,15 @@ if [[ ${PWD##*/} != "hypernets_tools"* ]]; then
 	exit 1
 fi
 
+# Detection of what system we are currently running (i.e. debian or manjaro)
+if [ -f /etc/os-release ]; then
+	source /etc/os-release
+else
+	echo "Error: impossible to detect OS system version."
+	echo "Not a systemd freedesktop.org distribution?"
+	exit 1
+fi
+
 if [[ $EUID -eq 0 ]]; then
 	user=$SUDO_USER
 else
@@ -13,6 +22,12 @@ else
 fi
 
 home=$(eval echo "~$user")
+
+if [ "$ID"  == "manjaro" ]; then
+	sed -i '/\.bash_aliases/d' $home/.bashrc
+
+	echo "if [ -f ~/.bash_aliases ]; then . ~/.bash_aliases; fi" >> $home/.bashrc
+fi
 
 echo
 echo "Setting up shortcuts in $home/.bash_aliases"

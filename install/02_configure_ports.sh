@@ -13,11 +13,14 @@ source utils/configparser.sh
 pantiltPort=$(parse_config "pantilt_port" config_dynamic.ini)
 
 if [[ -z $pantiltPort ]] ; then
-	pantiltPort="/dev/ttyS3"  # default value
+	pantiltPort="/dev/ttyS0"  # default value
 fi
 
-pantiltPort=$(echo $pantiltPort | rev | cut -d'/' -f1 | rev)
+echo "Using port $pantiltPort for Pan-tilt."
+echo "This shuold be normally /dev/ttyS3 for V1 & V2 systems and /dev/ttyS0 for V3"
+echo 
 
+pantiltPort=$(echo $pantiltPort | rev | cut -d'/' -f1 | rev)
 
 ### helper script for finding next available device number
 cat > /usr/local/sbin/unique-num << EOF

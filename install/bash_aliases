@@ -63,7 +63,7 @@ now() (
 	echo "System time is $(date '+%Y/%m/%d %H:%M:%S %Z')"
 
 	# get yocto time
-	if [[ $yocto_api_installed ]]; then
+	if [ $yocto_api_installed = 1 ]; then
 		yocto_time=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yocto get_dateTime)
 		yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yocto get_utcOffset)
 
@@ -108,7 +108,7 @@ now() (
 	echo "Wake up reason is $(python -m hypernets.yocto.wakeupreason)"
 
 	# get watchdog and wakeup timers
-	if [[ $yocto_api_installed ]]; then
+	if [ $yocto_api_installed = 1 ]; then
 		next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_nextWakeUp|sed -e 's/[[:space:]].*//')
 		max_wakeup_time=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_powerDuration)
 		sleep_countdown=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_sleepCountdown)
@@ -151,7 +151,7 @@ relay() (
 
 	echo -e "PC\tPT\tHYP\tRS\tCAM1\tCAM2"
 	echo -e  "1\t2\t3\t4\t5\t6"
-	python -m hypernets.yocto.relay -g -n1 -n2 -n3 -n4 -n5 -n6 2>&1 | egrep -o  "(True|False)" | sed -e "s/False/${XHL}OFF${RESET_HL}/g;s/True/${GREEN}ON${RESET_HL}/g" | paste -s
+	python -m hypernets.yocto.relay -g -n1 -n2 -n3 -n4 -n5 -n6 2>&1 | grep -E -o  "(True|False)" | sed -e "s/False/${XHL}OFF${RESET_HL}/g;s/True/${GREEN}ON${RESET_HL}/g" | paste -s
 ) # relay()
 
 
@@ -204,6 +204,14 @@ test-env-live() (
 # power off and send yocto to sleep if wakeup is scheduled
 goto-sleep() (
 	cd $HYPERNETS_TOOLS
+
+	source utils/configparser.sh
+	keep_pc=$(parse_config "keep_pc" config_dynamic.ini)
+
+	if [[ $keep_pc != "off" ]]; then
+		echo "${XHL}Set keep_pc = off first in config_dynamic.ini${RESET_HL}"
+		exit -1	
+	fi
 
 	# dummy sudo for quick elevation of privileges later during poweroff
 	# yocto sleep timer is only 10 s
@@ -341,33 +349,33 @@ yapo() (
 ## force to 0...360 range
 _pt_abs2rel_pan() {
 	if [[ $reverse_tilt == "yes" ]]; then
-		printf "%.1f" $( bc <<< "($1 - $offset_pan - 180 + 36000) % 360" )
+		printf "%.1f" $( bc <<< "($1 - ($offset_pan) - 180 + 36000) % 360" )
 	else
-		printf "%.1f" $( bc <<< "($1 + $offset_pan + 36000) % 360" )
+		printf "%.1f" $( bc <<< "($1 + ($offset_pan) + 36000) % 360" )
 	fi
 }
 
 _pt_abs2rel_tilt() {
 	if [[ $reverse_tilt == "yes" ]]; then
-		printf "%.1f" $( bc <<< "(- $1 - $offset_tilt + 36000) % 360" )
+		printf "%.1f" $( bc <<< "(- ($1) - ($offset_tilt) + 36000) % 360" )
 	else
-		printf "%.1f" $( bc <<< "($1 + $offset_tilt + 36000) % 360" )
+		printf "%.1f" $( bc <<< "($1 + ($offset_tilt) + 36000) % 360" )
 	fi
 }
 
 _pt_rel2abs_pan() {
 	if [[ $reverse_tilt == "yes" ]]; then
-		printf "%.1f" $( bc <<< "($1 + $offset_pan + 180 + 36000) % 360" )
+		printf "%.1f" $( bc <<< "($1 + ($offset_pan) + 180 + 36000) % 360" )
 	else
-		printf "%.1f" $( bc <<< "($1 - $offset_pan + 36000) % 360" )
+		printf "%.1f" $( bc <<< "($1 - ($offset_pan) + 36000) % 360" )
 	fi
 }
 
 _pt_rel2abs_tilt() {
 	if [[ $reverse_tilt == "yes" ]]; then
-		printf "%.1f" $( bc <<< "(- ($1 + $offset_tilt) + 36000) % 360" )
+		printf "%.1f" $( bc <<< "(- ($1 + ($offset_tilt)) + 36000) % 360" )
 	else
-		printf "%.1f" $( bc <<< "($1 - $offset_tilt + 36000) % 360" )
+		printf "%.1f" $( bc <<< "($1 - ($offset_tilt) + 36000) % 360" )
 	fi
 }
 
@@ -397,6 +405,10 @@ pt() (
 	offset_tilt=$(parse_config "offset_tilt" config_dynamic.ini)
 	offset_pan=$(parse_config "offset_pan" config_dynamic.ini)
 	reverse_tilt=$(parse_config "reverse_tilt" config_dynamic.ini)
+
+	# remove plus sign, if any
+	offset_tilt=${offset_tilt#+}
+	offset_pan=${offset_pan#+}
 
 	# use absolute position
 	if [[ $1 == "abs" ]]; then
@@ -432,6 +444,11 @@ EOF
 		longitude=$(parse_config "longitude" config_dynamic.ini)
 		elevation=$(parse_config "elevation" config_dynamic.ini)
 
+		# remove plus sign, if any
+		latitude=${latitude#+}
+		longitude=${longitude#+}
+		elevation=${elevation#+}
+
 		# get gps position and time
 		gps=$(python -m hypernets.yocto.gps  | sed -e "s/, /\t/g; s/[()]//g; s/b\?'//g")
 		gps_latitude=$(cut -f 1 <<< $gps)
@@ -466,8 +483,7 @@ EOF
 	fi
 
 	# check if pan-tilt relay is on
-	relay_state=$(python -m hypernets.yocto.relay -g -n2 2>&1 | egrep -o "(True|False)")
-
+	relay_state=$(python -m hypernets.yocto.relay -g -n2 2>&1 | grep -E -o "(True|False)")
 	if [[ $relay_state != "True" ]]; then 
 		echo  "${XHL}Relay 2 is off! Turn on to operate pan-tilt${RESET_HL}"
 		exit -1
@@ -479,8 +495,8 @@ EOF
 	current_abs_tilt=$(cut -f 2 <<< $current_abs_pos)
 
 	## calculate relative position
-	current_hyper_pan=$(_pt_abs2rel_pan $current_abs_pan)
-	current_hyper_tilt=$(_pt_abs2rel_tilt $current_abs_tilt)
+	current_hyper_pan="$(_pt_abs2rel_pan $current_abs_pan)"
+	current_hyper_tilt="$(_pt_abs2rel_tilt $current_abs_tilt)"
 
 	############### print current position #################
 	if [[ ${1-} == "" ]]; then
