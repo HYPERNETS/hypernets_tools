@@ -52,10 +52,12 @@ fi
 if [ ! "$ID"  == "debian" ]; then
 	echo "Linux distribution not supported."
 	echo "Please manually install the Yoctopuce virtualhub"
-	echo "www.yoctopuce.com/EN/virtualhub.php"
+	echo "https://www.yoctopuce.com/EN/virtualhub.php"
 	echo
 	echo "and Yoctopuce command line API"
-	echo "http://www.yoctopuce.com/EN/libraries.php"
+	echo "https://www.yoctopuce.com/EN/libraries.php"
+	echo "Download linux intel and copy the contents of Binaries/linux/64bits/"
+	echo "into ~/.local/bin/"
 	exit 1
 fi
 

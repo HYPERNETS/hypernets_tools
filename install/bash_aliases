@@ -574,6 +574,8 @@ EOF
 
 ## Yocto schedules
 schedule() (
+	cd $HYPERNETS_TOOLS
+
 	marray=()
 	
 	skipread=0
@@ -631,11 +633,14 @@ schedule() (
 			done
 			
 			echo -n "    Rugged PC date & time:  "
-			echo -n "20"
-			date +%y/%m/%d" "%H:%M:%S
+			date '+%Y/%m/%d %H:%M:%S %Z'
 			echo -n "    Yocto date & time is:   "
-			dt=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yoctowifibrd get_dateTime)  #get yocto dt
-			echo $dt
+			yocto_time=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yoctowifibrd get_dateTime)
+			if [ $yocto_offset = 0 ]; then
+				echo "$yocto_time UTC$utc_offset"
+			else
+				echo "$yocto_time UTC$utc_offset (UTC offset is $yocto_offset s)"
+			fi
 	
 			next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yoctowifibrd get_nextWakeUp|sed -e 's/[[:space:]].*//')
 			if [ $next_wakeup_timestamp = 0 ]; then
