@@ -62,6 +62,7 @@ EOF
 
 		cat << EOF > /etc/ssh/sshd_config.d/ssh_backup_sshd_config.conf
 ListenAddress $sshIp
+ListenAddress 127.0.0.1
 EOF
 
 		systemctl stop ssh
@@ -77,6 +78,7 @@ EOF
 
 		sed -i '/^ListenAddress/d' /etc/ssh/sshd_config
 		echo "ListenAddress $sshIp" >> /etc/ssh/sshd_config
+		echo "ListenAddress 127.0.0.1" >> /etc/ssh/sshd_config
 
 		systemctl stop sshd
 		systemctl enable sshd
