@@ -384,7 +384,7 @@ _pt_rel2abs_tilt() {
 pt() (
 	cd $HYPERNETS_TOOLS
 
-	if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]; then
+	if [[ ${1-} == "-h" ]] || [[ ${1-} == "--help" ]]; then
 		echo
 		echo "  Pan-tilt control"
 		echo "********************"
@@ -411,11 +411,11 @@ pt() (
 	offset_pan=${offset_pan#+}
 
 	# use absolute position
-	if [[ $1 == "abs" ]]; then
+	if [[ ${1-} == "abs" ]]; then
 		abspos=1
 		sunpos=0
 		shift 1
-	elif [[ $1 == "sun" ]]; then
+	elif [[ ${1-} == "sun" ]]; then
 		abspos=0
 		sunpos=1
 		shift 1
