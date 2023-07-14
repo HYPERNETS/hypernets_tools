@@ -171,7 +171,7 @@ debug_yocto(){
 }
 
 
-if [[ ! "$bypassYocto" == "yes" ]] ; then
+if [[ "$bypassYocto" != "yes" ]] ; then
 
     if [[ "$debugYocto" == "yes" ]] ; then
         debug_yocto
@@ -180,7 +180,7 @@ if [[ ! "$bypassYocto" == "yes" ]] ; then
 	# Ensure Yocto is online
 	yoctopuceIP=$(parse_config "yoctopuce_ip" config_static.ini)
 
-	if [[ ! "$yoctopuceIP" == "usb" ]] ; then
+	if [[ "$yoctopuceIP" != "usb" ]] ; then
 		# We ping it if there is an IP address
 		echo "[INFO]  Waiting for yoctopuce..."
 		while ! timeout 2 ping -c 1 -n $yoctopuceIP &>/dev/null
@@ -214,10 +214,10 @@ if [[ ! "$bypassYocto" == "yes" ]] ; then
         
 
 
-		if [[ ! "$wakeupreason" == "SCHEDULE"* ]]; then
+		if [[ "$wakeupreason" != "SCHEDULE"* ]]; then
 			echo "[WARNING]  $wakeupreason is not a reason to start the sequence."
 			startSequence="no"
-			if [[ ! "$keepPc" == "on" ]]; then
+			if [[ "$keepPc" != "on" ]]; then
 				echo "[DEBUG]  Security sleep 2 minutes..."
 				sleep 120
 			fi
@@ -238,7 +238,7 @@ fi
 
 if [[ "$startSequence" == "no" ]] ; then
 	echo "[INFO]  Start sequence = no"
-	if [[ ! "$keepPc" == "on" ]]; then
+	if [[ "$keepPc" != "on" ]]; then
 		echo "[INFO]  5 minutes sleep..."
 		sleep 300
 	fi
@@ -276,7 +276,7 @@ if [[ -n $verbosity ]] ; then
 	extra_args="$extra_args -v $verbosity"
 fi
 
-if [[ ! "$bypassYocto" == "yes" ]] ; then
+if [[ "$bypassYocto" != "yes" ]] ; then
 	echo "[INFO]  Set relays #2 and #3 to ON."
 	python -m hypernets.yocto.relay -son -n2 -n3
 
