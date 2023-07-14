@@ -266,10 +266,11 @@ yapo() (
 	if [[ "$yoption" == "-h" ]] || [[ "$yoption" == "--help" ]]; then
 		echo
 		echo "Yocto~Auto~Power~Off"
-		echo "yapo			without options returns the time in seconds until yocto turns PC power off"
-		echo "     set 180->99999	sets yocto max run time (in secs)   ${XHL}(3 minutes minimum!)${RESET_HL}"
-		echo "     stop		prevents yocto powering off for   infinity..."
-		echo "     reset		resets the yocto power-off countdown timer"
+		echo "yapo                  without options returns the time in seconds until yocto turns PC power off"
+		echo "     set 180->99999   sets yocto max run time (in secs)   ${XHL}(3 minutes minimum!)${RESET_HL}"
+		echo "     stop             prevents yocto powering off for   infinity..."
+		echo "     restore          restores last used yocto max run time"
+		echo "     reset            resets the yocto power-off countdown timer"
 		echo "eg:  yapo set 720      yapo stop       yapo reset"
 		echo
 		exit 
@@ -283,8 +284,15 @@ yapo() (
 	if [[ "${yoption-}" == "" ]]; then ######## display yocto-auto-power-off status ###############
 		if [[ "$max_wakeup_time" -eq "0" ]]; then
 			echo "${HL}Yocto Auto-Power-Off is ${XHL}disabled! ${HL}PC will run for ${XHL}infinity...${RESET_HL}"
-			echo "Use   yapo set   to re-enable yocto-auto-power-off"
-			echo "See   yapo -h   for help"
+
+		if [ -f "$HYPERNETS_TOOLS"/sleep.lock ]; then
+			prev_yapo_set=$(grep "last_yapo_set=" "$HYPERNETS_TOOLS"/sleep.lock | sed -e 's/[^0-9]//g')
+			echo "${HL}Last used Yocto Auto-Power-Off setting was $prev_yapo_set s${RESET_HL}"
+			echo "Use   yapo restore   to re-enable yocto-auto-power-off at ${HL}$prev_yapo_set s${RESET_HL}"
+		else
+			echo "Use   yapo set       to re-enable yocto-auto-power-off"
+		fi
+			echo "See   yapo -h        for help"
 			exit 0
 		else 
 			echo "${HL}Yocto Auto-Power-Off set to $max_wakeup_time s, ${XHL}powering off in $sleep_countdown s${RESET_HL}"
@@ -310,6 +318,23 @@ yapo() (
 
 			YWakeUpMonitor -r 127.0.0.1 -s "$yocto" set_powerDuration 0 >/dev/null 2>&1
 			echo "${XHL}Yocto Auto-Power-Off is now disabled${RESET_HL}"
+
+			# make a sleep.lock file in hypernets_tools/
+			cat << EOF > "$HYPERNETS_TOOLS"/sleep.lock
+# This is a sleep.lock file for hypernets_tools
+# which inhibits sending Yocto to sleep and powering off the PC
+# even if the automated sequence was started with keep_pc = off
+# in config_dynamic.ini
+# 
+# Delete this file to re-enable sleep or even better, 
+# use   yapo set   which re-enables yocto auto-power-off and 
+# deletes this file or see   yapo -h   for help.
+#
+# The last used yocto auto-power-off setting was
+last_yapo_set=$max_wakeup_time
+EOF
+
+			echo "${HL}Saved the previous setting into ${HYPERNETS_TOOLS}/sleep.lock${RESET_HL}"
 		else
 			echo "${HL}Yocto Auto-Power-Off was already ${XHL}disabled${RESET_HL}"
 		fi
@@ -332,6 +357,35 @@ yapo() (
 		YWakeUpMonitor -r 127.0.0.1 -s "$yocto" set_powerDuration $new_max_runtime >/dev/null 2>&1
 		set_max_wakeup_time=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 "$yocto" get_powerDuration)
 		echo "${HL}Auto-Power-Off set to power off after ${XHL}$set_max_wakeup_time seconds${RESET_HL}"
+		
+		if [ -f "$HYPERNETS_TOOLS"/sleep.lock ]; then
+			rm -f "$HYPERNETS_TOOLS"/sleep.lock
+			echo "${HL}Removed ${HYPERNETS_TOOLS}/sleep.lock"
+		fi
+	elif [[ "${yoption-}" == "restore" ]]; then #################### Restore last used max run time from sleep.lock ##########################
+		if [ ! -f "$HYPERNETS_TOOLS"/sleep.lock ]; then
+			echo "${XHL}${HYPERNETS_TOOLS}/sleep.lock file not found, last used yocto max run time is unknown${RESET_HL}"
+			echo "${HL}Use   yapo set   to set new yocto-auto-power-off time${RESET_HL}"
+			echo
+			exit -1
+		fi
+
+		set +eu
+
+		prev_yapo_set=$(grep "last_yapo_set=" "$HYPERNETS_TOOLS"/sleep.lock | sed -e 's/[^0-9]//g')
+
+		# check if valid number
+		[ -n "$prev_yapo_set" ] && [ "$prev_yapo_set" -eq "$prev_yapo_set" ] 2>/dev/null
+		if [ $? -ne 0 ]; then
+			echo "${XHL}Invalid last used yocto max run time found from ${HYPERNETS_TOOLS}/sleep.lock${RESET_HL}"
+			echo "${HL}Use   yapo set   to set new yocto-auto-power-off time${RESET_HL}"
+			echo
+			exit -1
+		fi
+		set -eu
+
+		# use recursive yapo set for restoring
+		yapo set "$prev_yapo_set"
 	elif [[ "${yoption-}" == "reset" ]]; then #################### Reset shutdown counter max run time ##########################
 		if [[ "$max_wakeup_time" -ne "0" ]]; then
 			YWakeUpMonitor -r 127.0.0.1 "$yocto" set_sleepCountdown "$max_wakeup_time" >/dev/null 2>&1

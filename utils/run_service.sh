@@ -70,6 +70,12 @@ shutdown_sequence() {
 	    python -m hypernets.yocto.relay -soff -n2 -n3
     fi
 
+	# Sleep inhibited by sleep.lock
+	if [ -f sleep.lock ]; then
+		keepPc="on"
+		sleepLocked=1
+	fi
+
     if [[ "$keepPc" == "off" ]]; then
 	    echo "[INFO]  Option : Keep PC OFF"
 
@@ -123,7 +129,6 @@ shutdown_sequence() {
 		echo "[CRITICAL] NOT shutting down !!"
 	    exit 1
     else
-	    # Cause service exit 1 and doesnt execute SuccessAction=poweroff
 	    echo "[INFO]  Option : Keep PC ON"
 
 		# Test run
@@ -134,6 +139,14 @@ shutdown_sequence() {
 			echo
 		fi
 
+		# sleep inhibited by sleep.lock file
+		if [[ "${sleepLocked-}" == 1 ]]; then
+			echo "[ERROR] Power off has been inhibited by sleep.lock file in the hypernets_tools folder"
+			echo "[ERROR] Remove the sleep.lock file to enable sending yocto to sleep and powering off the PC"
+			echo
+		fi
+
+	    # Cause service exit 1 and doesnt execute SuccessAction=poweroff
 	    exit 1
     fi
 }
