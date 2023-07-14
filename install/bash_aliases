@@ -283,7 +283,8 @@ yapo() (
 	if [[ "${yoption-}" == "" ]]; then ######## display yocto-auto-power-off status ###############
 		if [[ "$max_wakeup_time" -eq "0" ]]; then
 			echo "${HL}Yocto Auto-Power-Off is ${XHL}disabled! ${HL}PC will run for ${XHL}infinity...${RESET_HL}"
-			echo "Enter:   yapo set    to re-enable yocto-auto-power-off"
+			echo "Use   yapo set   to re-enable yocto-auto-power-off"
+			echo "See   yapo -h   for help"
 			exit 0
 		else 
 			echo "${HL}Yocto Auto-Power-Off set to $max_wakeup_time s, ${XHL}powering off in $sleep_countdown s${RESET_HL}"
@@ -1257,7 +1258,7 @@ alias kill-service="sudo systemctl kill --signal=SIGKILL hypernets-sequence"
 alias journal="journalctl -b -u hypernets-sequence -e"
 alias status="sudo systemctl status hypernets-sequence"
 alias gui="(cd \"$HYPERNETS_TOOLS\" && python -m hypernets.gui)"
-alias runseq="(cd \"$HYPERNETS_TOOLS\" && ./utils/run_service.sh)"
+alias runseq="(cd \"$HYPERNETS_TOOLS\" && ./utils/run_service.sh --test-run)"
 
 # print the help
 commands

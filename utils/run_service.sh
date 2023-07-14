@@ -23,6 +23,17 @@ if [[ ${PWD##*/} != "hypernets_tools"* ]]; then
 	exit 1
 fi
 
+if [[ "${1-}" == "-h" ]] || [[ "${1-}" == "--help" ]]; then
+	echo "$0 [-h|--help] [--test-run]"
+	echo
+	echo "Without options run the fully automated sequence"
+	echo
+	echo "  --test-run   override config_dynamic.ini by keep_pc = on"
+	echo "  -h, --help   print this help"
+	echo 
+	exit 
+fi
+
 
 source utils/configparser.sh
 
@@ -42,8 +53,16 @@ sequence_file_alt=$(parse_config "sequence_file_alt" config_dynamic.ini)
 
 checkWakeUpReason=$(parse_config "check_wakeup_reason" config_dynamic.ini)
 startSequence=$(parse_config "start_sequence" config_dynamic.ini)
-keepPc=$(parse_config "keep_pc" config_dynamic.ini)
 debugYocto=$(parse_config "debug_yocto" config_static.ini)
+
+# Test run, don't send yocto to sleep and don't ignore the sequence
+if [[ "${1-}" == "--test-run" ]]; then
+	keepPc="on"
+	keepPcInConf=$(parse_config "keep_pc" config_dynamic.ini)
+else	
+	keepPc=$(parse_config "keep_pc" config_dynamic.ini)
+fi
+
 
 shutdown_sequence() {
     if [[ "$bypassYocto" == "no" ]] && [[ "$startSequence" == "yes" ]] ; then
@@ -106,6 +125,15 @@ shutdown_sequence() {
     else
 	    # Cause service exit 1 and doesnt execute SuccessAction=poweroff
 	    echo "[INFO]  Option : Keep PC ON"
+
+		# Test run
+		if [[ "${keepPcInConf-}" == "off" ]]; then
+			echo "-----------------------------------"
+			echo "keep_pc = off in config_dynamic.ini"
+			echo "Automated sequence would have shut down the PC"
+			echo
+		fi
+
 	    exit 1
     fi
 }
