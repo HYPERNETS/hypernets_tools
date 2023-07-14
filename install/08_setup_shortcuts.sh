@@ -15,11 +15,7 @@ else
 	exit 1
 fi
 
-if [[ $EUID -eq 0 ]]; then
-	user=$SUDO_USER
-else
-	user=$(whoami)
-fi
+user=$(logname)
 
 home=$(eval echo "~$user")
 
@@ -36,7 +32,10 @@ echo "Run the following line for importing into active shell instance"
 echo ". $home/.bash_aliases"
 echo
 
-cat << EOF > $home/.bash_aliases
+sudo rm -f $home/.bash_aliases
+sudo -u $user touch $home/.bash_aliases
+
+cat << EOF >> $home/.bash_aliases
 # This file is generated and installed by hypernets_tools
 #
 # It contains the definitions and aliases of command shortcuts

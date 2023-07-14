@@ -454,7 +454,7 @@ EOF
 		gps_latitude=$(cut -f 1 <<< $gps)
 		gps_longitude=$(cut -f 2 <<< $gps)
 		gps_datetime=$(cut -f 3 <<< $gps)
-		if [ $gps_datetime = "N/A" ]; then gps_hasfix=0; else gps_hasfix=1; fi
+		if [ "$gps_datetime" = "N/A" ]; then gps_hasfix=0; else gps_hasfix=1; fi
 
 		echo "${HL}Using parameters from config_dynamic.ini:${RESET_HL}"
 		if [ $gps_hasfix = 1 ]; then
@@ -469,6 +469,7 @@ EOF
 		echo "offset_tilt = $offset_tilt"
 		echo "reverse_tilt = $reverse_tilt"
 		echo "Using system time $(date '+%Y/%m/%d %H:%M:%S %Z')"
+
 		if [ $gps_hasfix = 1 ]; then
 			echo "GPS time is       $gps_datetime UTC"
 		else
@@ -535,7 +536,7 @@ EOF
 			requested_abs_tilt="$2"
 		elif [ $sunpos = 1 ]; then ## requested sun, zenith is 180 in relative coords
 			requested_rel_sun_tilt=$(bc <<< "(180 - $sun_zenith + ($2))")
-			requested_abs_tilt=$(_pt_rel2abs_pan "$requested_rel_sun_tilt")
+			requested_abs_tilt=$(_pt_rel2abs_tilt "$requested_rel_sun_tilt")
 		else ## requested hyper
 			requested_abs_tilt=$(_pt_rel2abs_tilt "$2")
 		fi
