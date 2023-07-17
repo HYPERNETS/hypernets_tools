@@ -339,7 +339,7 @@ EOF
 			echo "${HL}Yocto Auto-Power-Off was already ${XHL}disabled${RESET_HL}"
 		fi
 	elif [[ $yoption == "set" ]]; then #################### Set max run time ##########################
-		# check is not empty & is a number
+		# check is not empty & is an integer
 		set +eu
 		[ -n "$new_max_runtime" ] && [ "$new_max_runtime" -eq "$new_max_runtime" ] 2>/dev/null
 		if [ $? -ne 0 ]; then
@@ -374,7 +374,7 @@ EOF
 
 		prev_yapo_set=$(grep "last_yapo_set=" "$HYPERNETS_TOOLS"/sleep.lock | sed -e 's/[^0-9]//g')
 
-		# check if valid number
+		# check if not empty and is valid integer
 		[ -n "$prev_yapo_set" ] && [ "$prev_yapo_set" -eq "$prev_yapo_set" ] 2>/dev/null
 		if [ $? -ne 0 ]; then
 			echo "${XHL}Invalid last used yocto max run time found from ${HYPERNETS_TOOLS}/sleep.lock${RESET_HL}"
@@ -544,7 +544,15 @@ EOF
 	fi
 
 	## read absolute position
-	current_abs_pos=$(python -m hypernets.geometry.pan_tilt -g 2>&1 | grep -Eo '[0-9]+([.][0-9]+)?' | paste -s) # pan	tilt
+	set +e
+	current_abs_pos=$(python -m hypernets.geometry.pan_tilt -g 2>&1 | grep "Absolute positions: " | grep -Eo '[0-9]+([.][0-9]+)?' | paste -s) # pan	tilt
+	set -e
+
+	if [[ "$current_abs_pos" == "" ]]; then
+		echo "${XHL}Failed to read current position from pan-tilt!${RESET_HL}"
+		exit -1
+	fi
+
 	current_abs_pan=$(cut -f 1 <<< $current_abs_pos)
 	current_abs_tilt=$(cut -f 2 <<< $current_abs_pos)
 
@@ -565,7 +573,7 @@ EOF
 	else ################## go to position ###################
 		set +eu
 		# check pan and tilt parameters are not empty and are numbers or "x"
-		[ -n "$1" ] && [ -n "$2" ] && ( [ "$1" -eq "$1" ] || [[ "$1" == "x" ]] ) 2>/dev/null && ( [ "$2" -eq "$2" ] || [[ "$2" == "x" ]] ) 2>/dev/null
+		( [[ "$1" =~ ^[+-]?[0-9]*\.?[0-9]+$ ]] || [[ "$1" == "x" ]] ) 2>/dev/null && ( [[ "$2" =~ ^[+-]?[0-9]*\.?[0-9]+$ ]] || [[ "$2" == "x" ]] ) 2>/dev/null
 		if [ $? -ne 0 ]; then
 			echo "${XHL}Invalid input, enter numeric pan and tilt values or x if no movement is required.${RESET_HL}"
 			exit -1

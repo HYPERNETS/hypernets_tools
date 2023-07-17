@@ -32,7 +32,7 @@ echo "Run the following line for importing into active shell instance"
 echo ". $home/.bash_aliases"
 echo
 
-sudo rm -f $home/.bash_aliases
+rm -f $home/.bash_aliases
 sudo -u $user touch $home/.bash_aliases
 
 cat << EOF >> $home/.bash_aliases

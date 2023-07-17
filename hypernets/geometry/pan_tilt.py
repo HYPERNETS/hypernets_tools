@@ -57,7 +57,7 @@ def check_trame(data):
         if len(data) == 0:
             warning("Timeout !")
         else:
-            warning("Bad lenght !")
+            warning("Bad length !")
         return False
 
     if sum(data[1:-1]) % 256 != data[-1]:
@@ -82,9 +82,14 @@ def query_position(ser):
 
     _, _, _, cmd, pan, _ = unpack('>BBBBHB', data)
 
+    # convert unsigned to signed if over 400 deg
+    # otherwise slightly negative would be around 655 deg
+    if pan > 40000:
+        pan = -(pan & 0x8000) | (pan & 0x7fff)
+
     data = bytearray([0xFF, 0x01, 0x00, 0x53, 0x00, 0x00])
-    debug(f"Query tilt : {stringifyBinaryToHex(data)}")
     send_trame(data, ser)
+    debug(f"Query tilt : {stringifyBinaryToHex(data)}")
 
     data = bytearray()
     for _ in range(7):
@@ -96,6 +101,11 @@ def query_position(ser):
 
     _, _, _, cmd, tilt, _ = unpack('>BBBBHB', data)
 
+    # convert unsigned to signed if over 400 deg
+    # otherwise slightly negative would be around 655 deg
+    if tilt > 40000:
+        tilt = -(tilt & 0x8000) | (tilt & 0x7fff)
+
     return pan, tilt
 
 
@@ -105,8 +115,12 @@ def print_position(ser):
         ser = open_serial()
 
     position = query_position(ser)
-    print(f"Absolute positions: pan {position[0]/100}, "
-        f"tilt {position[1]/100}")
+    if position is not None:
+        print(f"Absolute positions: pan {position[0]/100}, "
+            f"tilt {position[1]/100}")
+    else:
+        print("Failed to read current position from pan-tilt!")
+
 
 def move_to(ser, pan, tilt, wait=False):
 
