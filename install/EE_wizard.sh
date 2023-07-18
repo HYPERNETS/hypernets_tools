@@ -152,12 +152,6 @@ function setup_backdoor(){
 }
 
 
-function setup_shortcuts(){
-	./install/08_setup_shortcuts.sh
-	echo "------------------------------------------------"
-}
-
-
 function main_menu(){
 while true; do
 	echo "------------------------------------------------"
@@ -172,6 +166,7 @@ while true; do
 		# "Check installation before field deployment"
 		"Configure ssh server as backup access"
 		"Setup shortcut commands for convenience"
+		"Operating system configuration"
  		"Quit")
 
 	select opt in "${options[@]}"
@@ -210,10 +205,14 @@ while true; do
 				break
 				;;
 			"${options[7]}")
-                setup_shortcuts
+                ./install/08_setup_shortcuts.sh
 				break
 				;;
 			"${options[8]}")
+                install/09_sysconfig.sh
+				break
+				;;
+			"${options[9]}")
                 exit 0
 				break
 				;;
