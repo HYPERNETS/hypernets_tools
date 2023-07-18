@@ -43,6 +43,7 @@ disk_usage() {
 
     echo "Disk usage informations:" 
     df -h -text4
+	journalctl --disk-usage
 
     diskUsageOuput="LOGS/disk-usage.log"
     dfOutput=$(df -text4 --output=used,avail,pcent)
