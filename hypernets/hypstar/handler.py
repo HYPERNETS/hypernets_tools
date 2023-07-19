@@ -36,9 +36,7 @@ class HypstarHandler(Hypstar):
             # switching baudrates, let's test if it's there
             try:
                 super().__init__(instrument_port)
-
             except IOError as e:
-                error(f"{e}")
                 error("Did not get instrument BOOTED packet in {}s".format(boot_timeout)) # noqa
                 exit(27)
 
@@ -91,8 +89,13 @@ class HypstarHandler(Hypstar):
         debug(env_log)
 
     def __del__(self):
-        env_log = self.get_env_log()
-        debug(env_log)
+        try:
+            env_log = self.get_env_log()
+            debug(env_log)
+            super().__del__()
+
+        except Exception as e:
+            error(f"{e}")
 
     @staticmethod
     def wait_for_instrument_port(instrument_port):

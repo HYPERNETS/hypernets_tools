@@ -50,6 +50,10 @@ class Guied(Tk):
         self.mainloop()
 
     def quit_program(self, e):
+        # call destructor of the hypstar instance
+        if self.frmRadiometer.hypstar is not None:
+            del self.frmRadiometer.hypstar
+
         self.quit()
 
     def configure_gui(self):
@@ -65,8 +69,8 @@ class Guied(Tk):
 
     def configure_frames(self):
         if self.radiometer:
-            frmRadiometer = FrameRadiometer(self)
-            frmRadiometer.grid(sticky=W+E+N+S, column=0, row=1, padx=2, pady=2,
+            self.frmRadiometer = FrameRadiometer(self)
+            self.frmRadiometer.grid(sticky=W+E+N+S, column=0, row=1, padx=2, pady=2,
                                rowspan=4)
 
         if self.pantilt:
