@@ -13,6 +13,7 @@ from hypernets.gui.frame_console import FrameConsole
 from hypernets.gui.frame_rainsensor import FrameRainSensor
 
 from importlib import resources
+from logging import ERROR, WARNING, INFO, DEBUG, basicConfig
 from hypernets.resources import img
 
 
@@ -37,6 +38,15 @@ class Guied(Tk):
         self.configure_frames()
         self.configure_gui()
         self.bind('<Control-q>', self.quit_program)
+
+        log_fmt = '[%(levelname)-7s %(asctime)s] (%(module)s) %(message)s'
+        dt_fmt = '%Y-%m-%dT%H:%M:%S'
+
+        log_levels = {"ERROR": ERROR, "WARNING": WARNING, "INFO": INFO,
+                      "DEBUG": DEBUG}
+    
+        basicConfig(level=self.verbosity, format=log_fmt, datefmt=dt_fmt)
+
         self.mainloop()
 
     def quit_program(self, e):
@@ -87,6 +97,7 @@ class Guied(Tk):
         self.baudrate = parser.getint('hypstar', 'baudrate')
         self.tec_target_temp = parser.get('hypstar', 'swir_tec')
         self.serial_port = parser.get('hypstar', 'hypstar_port')
+        self.verbosity = parser.get('general', 'verbosity')
 
 
 if __name__ == '__main__':
