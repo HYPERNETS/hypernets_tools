@@ -36,9 +36,7 @@ class HypstarHandler(Hypstar):
             # switching baudrates, let's test if it's there
             try:
                 super().__init__(instrument_port)
-
             except IOError as e:
-                error(f"{e}")
                 error("Did not get instrument BOOTED packet in {}s".format(boot_timeout)) # noqa
                 exit(27)
 
@@ -56,16 +54,25 @@ class HypstarHandler(Hypstar):
         try:
             self.set_log_level(instrument_loglevel)
             self.set_baud_rate(HypstarSupportedBaudRates(instrument_baudrate))
-            self.get_hw_info()
+
             # due to the bug in PSU HW revision 3 12V regulator might not start
             # up properly and optical multiplexer is not available since this
             # prevents any spectra acquisition, instrument is unusable and
             # there's no point in continuing instrument power cycling is the
             # only workaround and that's done in run_sequence bash script so we
             # signal it that it's all bad
-            if not self.hw_info.optical_multiplexer_available:
-                error("MUX+SWIR+TEC hardware not available")
-                exit(27)  # SIGABORT
+            #
+            # Later firmwares, however, start comms before completing initialisation
+            # so we retry a few times before giving up
+            for i in range(retry_count := 5):
+                self.get_hw_info()
+                if not self.hw_info.optical_multiplexer_available:
+                    if i < retry_count:
+                        debug("MUX+SWIR+TEC hardware not available, retrying in 5 seconds")
+                        sleep(5)
+                    else:
+                        error("MUX+SWIR+TEC hardware not available")
+                        exit(27)
 
         except IOError as e:
             error(f"{e}")
@@ -74,16 +81,21 @@ class HypstarHandler(Hypstar):
         except Exception as e:
             error(e)
             # if instrument does not respond, there's no point in doing
-            # anything, so we exit with ABORTED signal so that shell script can
-            # catch exception
-            exit(6)  # SIGABRT
+            # anything, so we exit with exit code 6 so that shell script knows
+            # where we bailed out
+            exit(6)
 
         env_log = self.get_env_log()
         debug(env_log)
 
     def __del__(self):
-        env_log = self.get_env_log()
-        debug(env_log)
+        try:
+            env_log = self.get_env_log()
+            debug(env_log)
+            super().__del__()
+
+        except Exception as e:
+            error(f"{e}")
 
     @staticmethod
     def wait_for_instrument_port(instrument_port):
