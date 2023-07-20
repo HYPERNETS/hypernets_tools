@@ -12,6 +12,11 @@ def lightsensor_thread(event, path):
     url = "/".join([url_base, get])
 
     with open(path, "w") as monitor_pd:
+        # write header
+        seq = path.split("/")[-2]
+        monitor_pd.write(f"# monitor photodiode signal for {seq}\n")
+        monitor_pd.write(f"# timestamp\tlx\n")
+
         try:
             # record to file until event is set
             while 1:
@@ -20,7 +25,7 @@ def lightsensor_thread(event, path):
                 monitor_pd.write(f"{now_str}\t{light}\n")
                 monitor_pd.flush()
                 
-                # main thread requested to stop
+                # calling thread requested to stop
                 if event.is_set():
                     break
 
