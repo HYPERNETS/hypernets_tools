@@ -14,7 +14,8 @@ def lightsensor_thread(event, path):
     with open(path, "w") as monitor_pd:
         # write header
         seq = path.split("/")[-2]
-        monitor_pd.write(f"# monitor photodiode signal for {seq}\n")
+        seq = seq.replace("CUR", "")
+        monitor_pd.write(f"# monitor photodiode signal for sequence {seq}\n")
         monitor_pd.write(f"# timestamp\tlx\n")
 
         try:
@@ -38,7 +39,8 @@ def lightsensor_thread(event, path):
 
 def start_lightsensor_thread(path):
     event = Event()
-    thread = Thread(target=lightsensor_thread, args=(event, path, ))
+    # start as daemon thread so it won't stay hanging after the main thread terminates with fault
+    thread = Thread(target=lightsensor_thread, daemon=True, args=(event, path, ))
     debug("Starting monitor PD logging thread")
     thread.start()
     return thread, event
