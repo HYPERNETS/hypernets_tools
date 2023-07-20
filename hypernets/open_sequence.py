@@ -90,7 +90,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
         # Start monitor photodiode logging in a separate thread
         monitor_pd_path = path.join(DATA_DIR, seq_name, "monitorPD.csv")
-        monitor_pd_thread, monitor_pd_event = start_lightsensor_thread(path)
+        monitor_pd_thread, monitor_pd_event = start_lightsensor_thread(monitor_pd_path)
 
     else:
         except_boot = False
