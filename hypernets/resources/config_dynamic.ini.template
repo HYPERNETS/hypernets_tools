@@ -13,6 +13,8 @@ sequence_file = hypernets/resources/sequences_samples/your_sequence.txt
 check_wakeup_reason = no
 # sequence_file_alt = hypernets/resources/sequences_samples/sequence_validation_v2.txt
 
+# check the rain sensor and abort the sequence if rain is detected
+check_rain = yes
 
 auto_update = no
 

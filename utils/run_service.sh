@@ -52,6 +52,7 @@ sequence_file=$(parse_config "sequence_file" config_dynamic.ini)
 sequence_file_alt=$(parse_config "sequence_file_alt" config_dynamic.ini)
 
 checkWakeUpReason=$(parse_config "check_wakeup_reason" config_dynamic.ini)
+checkRain=$(parse_config "check_rain" config_dynamic.ini)
 startSequence=$(parse_config "start_sequence" config_dynamic.ini)
 debugYocto=$(parse_config "debug_yocto" config_static.ini)
 
@@ -68,6 +69,11 @@ shutdown_sequence() {
     if [[ "$bypassYocto" == "no" ]] && [[ "$startSequence" == "yes" ]] ; then
 	    echo "[INFO]  Set relays #2 and #3 to OFF."
 	    python -m hypernets.yocto.relay -soff -n2 -n3
+
+		if [[ "$checkRain" == "yes" ]]; then
+	    	echo "[INFO]  Set relay #4 to OFF."
+		    python -m hypernets.yocto.relay -soff -n4
+		fi
     fi
 
 	# Sleep inhibited by sleep.lock
@@ -274,8 +280,15 @@ if [[ "$bypassYocto" != "yes" ]] ; then
                 sequence_file=$sequence_file_alt
             fi 
         fi
-	fi
-fi
+	fi # checkWakeUpReason
+
+	if [[ "$checkRain" == "yes" ]] ; then
+		echo "[INFO]  Rain sensor check is enabled."
+		echo "[INFO]  Set relay #4 to ON."
+		python -m hypernets.yocto.relay -son -n4
+		sleep 5
+	fi # checkRain
+fi # bypassYocto != yes
 
 if [[ "$startSequence" == "no" ]] ; then
 	echo "[INFO]  Start sequence = no"
@@ -309,6 +322,10 @@ if [[ "$dumpEnvironmentLogs" == "yes" ]] ; then
 	extra_args="$extra_args -e "
 fi
 
+if [[ "$checkRain" == "yes" ]] ; then
+	extra_args="$extra_args -r "
+fi
+
 if [[ -n $swirTec ]] ; then
 	extra_args="$extra_args -T $swirTec"
 fi
@@ -334,6 +351,12 @@ exit_actions() {
         echo "[INFO]  Success"
     else
     	echo "[INFO]  Hysptar scheduled job exited with code $return_value";
+
+		# It is raining
+		if [ $return_value -eq 88 ]; then
+			echo "[WARNING} Stopping due to rain"
+			shutdown_sequence
+		fi
 
 		# FIXME : sudo issue
 		# if [ $return_value -eq 27 ]; then
