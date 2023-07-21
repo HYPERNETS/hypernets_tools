@@ -93,7 +93,9 @@ now() (
 	# rain sensor relay is off, switch on
 	if [ "$relay_on" = 0 ]; then
 		python -m hypernets.yocto.relay -son -n4
-		sleep 1
+		echo -n "Waiting for rain sensor initialisation..."
+		sleep 5
+		echo "done"
 	fi
 
 	hypernets/rain_sensor/rain_sensor
