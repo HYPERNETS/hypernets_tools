@@ -354,7 +354,7 @@ exit_actions() {
 
 		# It is raining
 		if [ $return_value -eq 88 ]; then
-			echo "[WARNING} Stopping due to rain"
+			echo "[WARNING] Stopping due to rain"
 			shutdown_sequence
 		fi
 
