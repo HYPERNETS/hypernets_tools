@@ -15,13 +15,28 @@ from hypernets.hypstar.libhypstar.python.data_structs.environment_log import Env
 
 from logging import debug, info, warning, error # noqa
 
+from hypernets.rain_sensor.rain_sensor_python import RainSensor
 
 def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                       instrument_loglvl, instrument_boot_timeout,
                       instrument_standalone=False,
                       instrument_swir_tec=0,
                       dump_environment_logs=False,
-                      DATA_DIR="DATA"):
+                      DATA_DIR="DATA",
+                      check_rain=False):
+
+    # Check if it is raining
+    if check_rain:
+        try:
+            debug("Checking rain sensor")
+            rain_sensor = RainSensor()
+            if rain_sensor.read_value() == 1:
+                warning("Skipping sequence due to rain")
+                exit(88) # exit code 88 
+        except Exception as e:
+            print(e)
+            error("Disabling further rain sensor checks")
+            check_rain = False
 
     protocol = Protocol(sequence_file)
     info(protocol)
@@ -130,6 +145,18 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         #     print("    With :")
         #     for key, value in flags_dict.items():
         #         print(f"\t- {key} : {value}")
+
+        # Check if it is raining
+        if check_rain:
+            try:
+                debug("Checking rain sensor")
+                if rain_sensor.read_value() == 1:
+                    warning("Aborting sequence due to rain")
+                    exit(88) # exit code 88 
+            except Exception as e:
+                print(e)
+                error("Disabling further rain sensor checks")
+                check_rain = False
 
         flag_condition = True
         for j, flag in enumerate(geometry.flags, start=1):
@@ -251,6 +278,10 @@ if __name__ == '__main__':
     parser.add_argument("--noyocto", action="store_true",
                         help="Run using instrument alone, no meteo or yocto stuff") #noqa
 
+    parser.add_argument("-r", "--check-rain", action="store_true",
+                        help="Check rain sensor and stop sequence if raining", #noqa
+                        default=False)
+
     parser.add_argument("-p", "--port", type=str,
                         help="Serial port used for communications with instrument", #noqa
                         default="/dev/radiometer0")
@@ -290,4 +321,5 @@ if __name__ == '__main__':
                       instrument_boot_timeout=args.timeout,
                       instrument_standalone=args.noyocto,
                       instrument_swir_tec=args.swir_tec,
-                      dump_environment_logs=args.log_environment)
+                      dump_environment_logs=args.log_environment,
+                      check_rain=args.check_rain)
