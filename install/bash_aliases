@@ -66,6 +66,7 @@ now() (
 	if [ "$yocto_api_installed" = 1 ]; then
 		yocto_time=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yocto get_dateTime)
 		yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yocto get_utcOffset)
+		next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_nextWakeUp | sed -e 's/[[:space:]].*//')
 
 		if [ "$yocto_offset" = 0 ]; then
 			utc_offset=""
@@ -111,7 +112,6 @@ now() (
 
 	# get watchdog and wakeup timers
 	if [ "$yocto_api_installed" = 1 ]; then
-		next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_nextWakeUp|sed -e 's/[[:space:]].*//')
 		max_wakeup_time=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_powerDuration)
 		sleep_countdown=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_sleepCountdown)
 
@@ -124,7 +124,8 @@ now() (
 		if [ "$next_wakeup_timestamp" = 0 ]; then
 			echo "${XHL}Yocto scheduled wakeup is disabled${RESET_HL}"
 		else
-			delta=$(( "$next_wakeup_timestamp" - "$yocto_offset" - $(date -u +%s) ))
+			yocto_timestamp=$(date -d "$yocto_time UTC" -u +%s)
+			delta=$(( "$next_wakeup_timestamp" - "$yocto_timestamp" ))
 			echo "${HL}Next Yocto wakeup is scheduled on $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset (in $delta s)${RESET_HL}"
 		fi
 	fi
@@ -307,7 +308,8 @@ yapo() (
 			if [ "$next_wakeup_timestamp" = 0 ]; then
 				echo "${XHL}Yocto scheduled wakeup is disabled${RESET_HL}"
 			else
-				delta=$(( "$next_wakeup_timestamp" - "$yocto_offset" - $(date -u +%s) ))
+				yocto_timestamp=$(date -d "$yocto_time UTC" -u +%s)
+				delta=$(( "$next_wakeup_timestamp" - "$yocto_timestamp" ))
 				echo "${HL}Next Yocto wakeup is scheduled on $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset (in $delta s)${RESET_HL}"
 			fi
 
@@ -706,7 +708,8 @@ schedule() (
 			if [ "$next_wakeup_timestamp" = 0 ]; then
 				echo "${XHL}    Yocto scheduled wakeup is disabled${RESET_HL}"
 			else
-				delta=$(( "$next_wakeup_timestamp" - "$yocto_offset" - $(date -u +%s) ))
+				yocto_timestamp=$(date -d "$yocto_time UTC" -u +%s)
+				delta=$(( "$next_wakeup_timestamp" - "$yocto_timestamp" ))
 				echo "    Next wake up is at:     $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset (in $delta s)"
 			fi
 			
@@ -1268,38 +1271,7 @@ schedule() (
 			sleep 1
 		fi
 		
-	#	################## #Set yocto time to pc time #########################################################
-	#	if [[ "${ch}" -eq "3" ]] 
-	#	then	
-	#		pct=20  #preceed century
-	#		cdt=$(date +%y/%m/%d" "%H:%M:%S",") # >> pct  #append with current pc date, time
-	#		pct=$pct$cdt
-	#		pctt="${pct%","}"  #remove the trailing comma. Use "${dt%?}" if last char/s unknown(add more ?? as needed)
-	#		epoch=$(date -d "${pctt}" +"%s")  # convert to unix
-	#		YRealTimeClock -r 127.0.0.1 $yoctowifibrd set_unixTime $epoch >/dev/null
-	#		echo "Time set! "
-	#	fi
-	#	
-	#	######################## #Set yocto time to any time  ############################################
-	#	if [[ $ch -eq "4" ]] 
-	#	then
-	#		echo -n "Yocto current date & time is: "
-	#		dtl=$(YRealTimeClock -r 127.0.0.1 $yoctowifibrd get_dateTime) #get yocto dt
-	#		dt=${dtl#*= }  # print everything after the =  
-	#		dtt="${dt%"."}"  #remove the trailing dot. Use "${dt%?}" if last char/s unknown(add more ?? as needed)
-	#		echo $dtt
-	#		poch=$(date -d "${dtt}" +"%s")  # convert to unix
-	#		echo "epoch conv = $poch"
-	#		echo -n "Enter same format to change:  "
-	#		read newt
-	#		epoch=$(date -d "${newt}" +"%s")
-	#		
-	#		YRealTimeClock -r 127.0.0.1 $yoctowifibrd set_unixTime $epoch >/dev/null 2>&1
-	#		echo "Time set! "
-	#	fi
-		
-		
-		######################## #Set yocto time to any time  ############################################
+		######### EXIT #########
 		if [[ "$ch" =~ ^([eE])$ ]] 
 		then
 			tput cuu 3
