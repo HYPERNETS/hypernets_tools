@@ -66,7 +66,13 @@ fi
 
 
 shutdown_sequence() {
-    if [[ "$bypassYocto" == "no" ]] && [[ "$startSequence" == "yes" ]] ; then
+    if [[ "$bypassYocto" != "yes" ]] && [[ "$startSequence" == "yes" ]] ; then
+		# log supply voltage before switching off the relays
+		set +e
+		voltage=$(python -m hypernets.yocto.voltage)
+		set -e
+		echo "[INFO]  Supply voltage: $voltage V"
+
 	    echo "[INFO]  Set relays #2 and #3 to OFF."
 	    python -m hypernets.yocto.relay -soff -n2 -n3
 
@@ -87,9 +93,9 @@ shutdown_sequence() {
 
 		uptime=$(sed -e 's/\..*//' /proc/uptime)
 
-		## minimum allowed uptime is 2 minutes for successful sequence
-		## and 5 minutes for failed sequence
-		if [ $1 -eq 0 ] ; then
+		## minimum allowed uptime is 2 minutes for successful sequence (exit code 0)
+		## and rain (exit code 88), and 5 minutes for all other failed sequences
+		if [[ "$1" == "0" ]] || [[ "$1" == "88" ]] ; then
 			min_uptime=120
 		else
 			min_uptime=300
@@ -250,6 +256,12 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 			echo "[INFO]  ok"
 		fi
 	fi
+
+	# log supply voltage
+	set +e
+	voltage=$(python -m hypernets.yocto.voltage)
+	set -e
+	echo "[INFO]  Supply voltage: $voltage V"
 
 	if [[ "$checkWakeUpReason" == "yes" ]] ; then
 		echo "[INFO]  Check Wake up reason..."
