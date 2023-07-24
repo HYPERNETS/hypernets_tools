@@ -19,6 +19,9 @@ from hypernets.rain_sensor.rain_sensor_python import RainSensor
 
 from hypernets.abstract.geometry import Geometry
 
+from hypernets.yocto.lightsensor_logger import start_lightsensor_thread, terminate_lightsensor_thread
+
+
 def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                       instrument_loglvl, instrument_boot_timeout,
                       instrument_standalone=False,
@@ -102,6 +105,11 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
             except Exception as e:
                 meteo.write(e)
+
+        # Start monitor photodiode logging in a separate thread
+        monitor_pd_path = path.join(DATA_DIR, seq_name, "monitorPD.csv")
+        monitor_pd_thread, monitor_pd_event = start_lightsensor_thread(monitor_pd_path)
+
     else:
         except_boot = False
 
@@ -245,6 +253,8 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             mdfile.write(f"pt_ref={pan_real:.2f}; {tilt_real:.2f}\n")
 
     mdfile.close()
+
+    terminate_lightsensor_thread(monitor_pd_thread, monitor_pd_event)
 
     replace(seq_path, final_seq_path)
     info(f"Created sequence : {final_seq_path}")

@@ -8,6 +8,8 @@ from tkinter.ttk import Combobox, Separator
 
 from tkinter.messagebox import showerror, showinfo
 
+from re import sub
+
 import math
 import numpy as np
 from PIL import Image, ImageTk
@@ -33,7 +35,7 @@ class FrameRadiometer(LabelFrame):
                          text="Radiometer", padx=2, pady=10)
 
         self.enable_vm_button_text = StringVar()
-        self.enable_vm_button_text.set("Turn VM on")
+        self.enable_vm_button_text.set("Turn VM electronics on")
         self.vm_enabled = False
         self.configure_items_radiometer()
         self.configure_items_output()
@@ -174,8 +176,10 @@ class FrameRadiometer(LabelFrame):
     def check_if_hypstar_exists(self):
         if self.hypstar is None:
             try:
-                self.hypstar = HypstarHandler(instrument_port=self.master.serial_port, instrument_baudrate=self.master.baudrate, expect_boot_packet=False)
-                self.hypstar.set_log_level(int(HypstarLogLevel[self.master.loglevel]))
+                self.hypstar = HypstarHandler(instrument_port=self.master.serial_port, 
+                                              instrument_baudrate=self.master.baudrate, 
+                                              expect_boot_packet=False, 
+                                              instrument_loglevel=int(HypstarLogLevel[self.master.loglevel]))
                 self.hypstar.set_baud_rate(HypstarSupportedBaudRates(self.master.baudrate))
                 self.calibration_coefficients = self.hypstar.get_calibration_coeficients_basic()
 
@@ -200,7 +204,12 @@ class FrameRadiometer(LabelFrame):
         try:
             self.last_file_path = self.hypstar.take_request(request, gui=True)
             self.make_output()
+
+            self.master.option_add('*Dialog.msg.width', 60)
+            self.master.option_add('*Dialog.msg.wrapLength', 800)
             showinfo("End Acquisition", f"Saved to : {self.last_file_path}")
+            self.option_clear()
+            self.master.option_clear()
 
         except Exception as e:
             showerror("Error", str(e))
@@ -348,7 +357,14 @@ class FrameRadiometer(LabelFrame):
         output = str(self.hypstar.get_env_log())
         if isinstance(output, Exception):
             showerror("Error", str(output))
+
+        self.option_add('*Dialog.msg.font', 'Helvetica 10')
+        self.master.option_add('*Dialog.msg.width', 90)
+        self.master.option_add('*Dialog.msg.wrapLength', 800)
+        output = sub(r"\t+", " ", output)
         showinfo("Environmental Logs", output)
+        self.option_clear()
+        self.master.option_clear()
 
     def set_swir_temperature(self):
         TEC = 0  # TODO : tunable from config / gui ?
