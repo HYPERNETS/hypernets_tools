@@ -17,6 +17,8 @@ from logging import debug, info, warning, error # noqa
 
 from hypernets.yocto.lightsensor_logger import start_lightsensor_thread, terminate_lightsensor_thread
 
+from hypernets.rain_sensor.rain_sensor_python import RainSensor
+
 from hypernets.abstract.geometry import Geometry
 
 def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
