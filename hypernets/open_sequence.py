@@ -17,6 +17,8 @@ from logging import debug, info, warning, error # noqa
 
 from hypernets.rain_sensor.rain_sensor_python import RainSensor
 
+from hypernets.abstract.geometry import Geometry
+
 def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                       instrument_loglvl, instrument_boot_timeout,
                       instrument_standalone=False,
@@ -84,7 +86,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     copy(sequence_file, path.join(seq_path, path.basename(sequence_file)))
 
     if not instrument_standalone:
-        from hypernets.geometry.pan_tilt import move_to_geometry
+        from hypernets.geometry.pan_tilt import move_to_geometry, move_to
         from hypernets.yocto.meteo import get_meteo
         except_boot = True
 
@@ -152,7 +154,18 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                 debug("Checking rain sensor")
                 if rain_sensor.read_value() == 1:
                     warning("Aborting sequence due to rain")
+
+                    # get the absolute position of nadir
+                    reference = Geometry.reference_to_int("hyper", "hyper")
+                    park = Geometry(reference, tilt=0)
+                    park.get_absolute_pan_tilt()
+
+                    # park radiometer to nadir
+                    info("Parking radiometer to nadir")
+                    move_to(ser=None, tilt=park.tilt_abs, wait=True)
+
                     exit(88) # exit code 88 
+
             except Exception as e:
                 print(e)
                 error("Disabling further rain sensor checks")
