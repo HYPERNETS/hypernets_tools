@@ -355,7 +355,7 @@ exit_actions() {
 		# It is raining
 		if [ $return_value -eq 88 ]; then
 			echo "[WARNING] Stopping due to rain"
-			shutdown_sequence
+			shutdown_sequence $return_value
 		fi
 
 		# FIXME : sudo issue
