@@ -362,7 +362,7 @@ EOF
 		
 		if [ -f "$HYPERNETS_TOOLS"/sleep.lock ]; then
 			rm -f "$HYPERNETS_TOOLS"/sleep.lock
-			echo "${HL}Removed ${HYPERNETS_TOOLS}/sleep.lock"
+			echo "${HL}Removed ${HYPERNETS_TOOLS}/sleep.lock${RESET_HL}"
 		fi
 	elif [[ "${yoption-}" == "restore" ]]; then #################### Restore last used max run time from sleep.lock ##########################
 		if [ ! -f "$HYPERNETS_TOOLS"/sleep.lock ]; then
