@@ -41,13 +41,13 @@ def start_lightsensor_thread(path):
     event = Event()
     # start as daemon thread so it won't stay hanging after the main thread terminates with fault
     thread = Thread(target=lightsensor_thread, daemon=True, args=(event, path, ))
-    debug("Starting monitor PD logging thread")
+    info("Starting monitor PD logging thread")
     thread.start()
     return thread, event
 
 
 def terminate_lightsensor_thread(thread, event):
-    debug("Terminating monitor PD logging thread")
+    info("Terminating monitor PD logging thread")
     event.set()
     thread.join()
     debug("Monitor PD logging thread has finished")
