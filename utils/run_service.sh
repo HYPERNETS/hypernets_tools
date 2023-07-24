@@ -66,6 +66,8 @@ fi
 
 
 shutdown_sequence() {
+	return_value="$1"
+
     if [[ "$bypassYocto" != "yes" ]] && [[ "$startSequence" == "yes" ]] ; then
 		# log supply voltage before switching off the relays
 		voltage=$(python -m hypernets.yocto.voltage)
@@ -111,7 +113,7 @@ shutdown_sequence() {
 
 		## minimum allowed uptime is 2 minutes for successful sequence (exit code 0)
 		## and rain (exit code 88), and 5 minutes for all other failed sequences
-		if [[ "$1" == "0" ]] || [[ "$1" == "88" ]] ; then
+		if [[ "$return_value" == "0" ]] || [[ "$return_value" == "88" ]] ; then
 			min_uptime=120
 		else
 			min_uptime=300
@@ -276,12 +278,22 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 		yocto=$(parse_config "yocto_prefix2" config_static.ini)
 		set +e
 		wget -O- "http://127.0.0.1:4444/bySerial/$yocto/api.txt" > /dev/null 2>&1
-		retcode = $?
+		retcode=$?
 		if [[ $retcode == 0 ]]; then
 			echo "[INFO]  Found Yocto"
 		elif [[ $retcode == 8 ]]; then 
 			# Server issued an error response. Probably 404 not found.
 			echo "[CRITICAL] Yocto '$yocto' is not accessible !!"
+
+			# list modules if command line API is installed
+			if [[ $(command -v YModule) ]]; then
+				inventory=$(YModule -r 127.0.0.1 inventory)
+				echo "[CRITICAL] The list of modules found:"
+				echo "$inventory"
+			fi
+
+			echo "[CRITICAL] Can't do anything without Yocto !!"
+			echo "[CRITICAL] Exiting the sequence !!"
 			exit -1
 		else
 			# Some other wget error
