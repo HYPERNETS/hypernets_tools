@@ -268,7 +268,7 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 				echo "[DEBUG]  Security sleep 2 minutes..."
 				sleep 120
 			fi
-			shutdown_sequence;
+			shutdown_sequence 0
 		fi
 
 		if [[ "$wakeupreason" == "SCHEDULE2" ]]; then
@@ -296,7 +296,7 @@ if [[ "$startSequence" == "no" ]] ; then
 		echo "[INFO]  5 minutes sleep..."
 		sleep 300
 	fi
-	shutdown_sequence;
+	shutdown_sequence 0
 fi
 
 
