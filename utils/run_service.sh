@@ -81,7 +81,6 @@ shutdown_sequence() {
 
 		# log next scheduled yocto wakeup if yocto command line API is installed
 		if [[ $(command -v YWakeUpMonitor) ]]; then
-			source utils/configparser.sh
 			yocto=$(parse_config "yocto_prefix2" config_static.ini)
 			next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_nextWakeUp|sed -e 's/[[:space:]].*//')
 			yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yocto get_utcOffset)
@@ -272,6 +271,23 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 			sleep 2
 			echo "[INFO]  ok"
 		fi
+
+		# Check if yocto is accessible
+		yocto=$(parse_config "yocto_prefix2" config_static.ini)
+		set +e
+		wget -O- "http://127.0.0.1:4444/bySerial/$yocto/api.txt" > /dev/null 2>&1
+		retcode = $?
+		if [[ $retcode == 0 ]]; then
+			echo "[INFO]  Found Yocto"
+		elif [[ $retcode == 8 ]]; then 
+			# Server issued an error response. Probably 404 not found.
+			echo "[CRITICAL] Yocto '$yocto' is not accessible !!"
+			exit -1
+		else
+			# Some other wget error
+			echo "[ERROR] Yocto request finished with error code $retcode"
+		fi
+		set -e
 	fi
 
 	# log supply voltage
