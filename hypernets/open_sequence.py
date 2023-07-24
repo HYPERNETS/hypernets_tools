@@ -18,6 +18,7 @@ from logging import debug, info, warning, error # noqa
 from hypernets.rain_sensor.rain_sensor_python import RainSensor
 
 from hypernets.abstract.geometry import Geometry
+from hypernets.geometry.pan_tilt import move_to_geometry, move_to
 
 from hypernets.yocto.lightsensor_logger import start_lightsensor_thread, terminate_lightsensor_thread
 
@@ -37,6 +38,17 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             rain_sensor = RainSensor()
             if rain_sensor.read_value() == 1:
                 warning("Skipping sequence due to rain")
+
+                # get the absolute position of nadir
+                reference = Geometry.reference_to_int("hyper", "hyper")
+                park = Geometry(reference, tilt=0)
+                park.get_absolute_pan_tilt()
+
+                # park radiometer to nadir 
+                # just in case it wasn't parked at the end of the last sequence
+                info("Parking radiometer to nadir")
+                move_to(ser=None, tilt=park.tilt_abs, wait=True)
+
                 exit(88) # exit code 88 
         except Exception as e:
             print(e)
@@ -89,7 +101,6 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     copy(sequence_file, path.join(seq_path, path.basename(sequence_file)))
 
     if not instrument_standalone:
-        from hypernets.geometry.pan_tilt import move_to_geometry, move_to
         from hypernets.yocto.meteo import get_meteo
         except_boot = True
 
