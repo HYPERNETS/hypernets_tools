@@ -176,8 +176,10 @@ class FrameRadiometer(LabelFrame):
     def check_if_hypstar_exists(self):
         if self.hypstar is None:
             try:
-                self.hypstar = HypstarHandler(instrument_port=self.master.serial_port, instrument_baudrate=self.master.baudrate, expect_boot_packet=False)
-                self.hypstar.set_log_level(int(HypstarLogLevel[self.master.loglevel]))
+                self.hypstar = HypstarHandler(instrument_port=self.master.serial_port, 
+                                              instrument_baudrate=self.master.baudrate, 
+                                              expect_boot_packet=False, 
+                                              instrument_loglevel=int(HypstarLogLevel[self.master.loglevel]))
                 self.hypstar.set_baud_rate(HypstarSupportedBaudRates(self.master.baudrate))
                 self.calibration_coefficients = self.hypstar.get_calibration_coeficients_basic()
 
