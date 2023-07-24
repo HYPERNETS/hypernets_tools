@@ -27,7 +27,18 @@ def pt_time_estimation(position_0, position_1,
 
     pan0, tilt0 = position_0
     pan1, tilt1 = position_1
-    return unit * max(abs(pan1-pan0)/pan_speed, abs(tilt1-tilt0)/tilt_speed)
+    
+    if pan1 is None:
+        pan_time = 0
+    else:
+        pan_time = abs(pan1-pan0)/pan_speed
+
+    if tilt1 is None:
+        tilt_time = 0
+    else:
+        tilt_time = abs(tilt1-tilt0)/tilt_speed
+
+    return unit * max(pan_time, tilt_time)
 
 
 def stringifyBinaryToHex(data):
@@ -122,21 +133,20 @@ def print_position(ser):
         print("Failed to read current position from pan-tilt!")
 
 
-def move_to(ser, pan, tilt, wait=False):
+def move_to(ser, pan=None, tilt=None, wait=False):
 
     if ser is None:
         ser = open_serial()
 
-    if pan is None or tilt is None:
-        initial_position = query_position(ser)
-        if pan is None:
-            pan = initial_position[0] / 100
-        if tilt is None:
-            tilt = initial_position[1] / 100
+    if pan is None and tilt is None:
+        return
 
     # Conversion FIXME : here modulo should fit pan/tilt range specification
     debug(f"Before modulo: {pan}, {tilt}")
-    pan, tilt = int(pan*100) % 36000, int(tilt*100) % 36000
+    if pan is not None:
+        pan = int(pan*100) % 36000
+    if tilt is not None:
+        tilt = int(tilt*100) % 36000
     debug(f"After modulo: {pan}, {tilt}")
 
     info(f"Requested Position :\t({pan}, {tilt})\t(10^-2 degrees)")
@@ -148,15 +158,17 @@ def move_to(ser, pan, tilt, wait=False):
         debug(f"Initial position :\t{initial_position}\t(10^-2 degrees)")
         debug(f"Estimated Time : \t{estimated_time}s")
 
-    # Sync Byte + address + cmd1 + pan
-    data = bytearray([0xFF, 0x01, 0x00, 0x4b]) + pack(">H", pan)
-    debug("Pan Request :\t%s" % stringifyBinaryToHex(data))
-    send_trame(data, ser)
+    if pan is not None:
+        # Sync Byte + address + cmd1 + pan
+        data = bytearray([0xFF, 0x01, 0x00, 0x4b]) + pack(">H", pan)
+        debug("Pan Request :\t%s" % stringifyBinaryToHex(data))
+        send_trame(data, ser)
 
-    # Sync Byte + address + cmd1 + tilt
-    data = bytearray([0xFF, 0x01, 0x00, 0x4d]) + pack(">H", tilt)
-    debug("Tilt Request :\t%s" % stringifyBinaryToHex(data))
-    send_trame(data, ser)
+    if tilt is not None:
+        # Sync Byte + address + cmd1 + tilt
+        data = bytearray([0xFF, 0x01, 0x00, 0x4d]) + pack(">H", tilt)
+        debug("Tilt Request :\t%s" % stringifyBinaryToHex(data))
+        send_trame(data, ser)
 
     if wait:
         # sleep(estimated_time)
