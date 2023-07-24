@@ -68,9 +68,7 @@ fi
 shutdown_sequence() {
     if [[ "$bypassYocto" != "yes" ]] && [[ "$startSequence" == "yes" ]] ; then
 		# log supply voltage before switching off the relays
-		set +e
 		voltage=$(python -m hypernets.yocto.voltage)
-		set -e
 		echo "[INFO]  Supply voltage: $voltage V"
 
 	    echo "[INFO]  Set relays #2 and #3 to OFF."
@@ -80,7 +78,26 @@ shutdown_sequence() {
 	    	echo "[INFO]  Set relay #4 to OFF."
 		    python -m hypernets.yocto.relay -soff -n4
 		fi
-    fi
+
+		# log next scheduled yocto wakeup if yocto command line API is installed
+		if [[ $(command -v YWakeUpMonitor) ]]; then
+			source utils/configparser.sh
+			yocto=$(parse_config "yocto_prefix2" config_static.ini)
+			next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_nextWakeUp|sed -e 's/[[:space:]].*//')
+			yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yocto get_utcOffset)
+			if [ "$yocto_offset" = 0 ]; then
+				utc_offset=""
+			else
+				utc_offset=$(printf "%+d" $(("$yocto_offset" / 3600)))
+			fi
+			if [ "$next_wakeup_timestamp" = 0 ]; then
+				echo "[WARNING]  Yocto scheduled wakeup is disabled"
+			else
+				delta=$(( "$next_wakeup_timestamp" - "$yocto_offset" - $(date -u +%s) ))
+				echo "[INFO]  Next Yocto wakeup is scheduled on $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset (in $delta s)"
+			fi
+		fi # log next scheduled yocto wakeup if yocto command line API is installed
+    fi # [[ "$bypassYocto" != "yes" ]] && [[ "$startSequence" == "yes" ]]
 
 	# Sleep inhibited by sleep.lock
 	if [ -f sleep.lock ]; then
@@ -258,9 +275,7 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 	fi
 
 	# log supply voltage
-	set +e
 	voltage=$(python -m hypernets.yocto.voltage)
-	set -e
 	echo "[INFO]  Supply voltage: $voltage V"
 
 	if [[ "$checkWakeUpReason" == "yes" ]] ; then
