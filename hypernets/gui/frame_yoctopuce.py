@@ -41,8 +41,15 @@ class FrameYoctopuce(LabelFrame):
                               command=lambda x=i+1: self.callback(x))
                        for i in range(6)]
 
+        label_texts = ("PC", "PT", "HYP", "RS", "CAM1", "CAM2")
+        self.relay_labels = [Label(frm_relays, text=label_texts[i])
+                             for i in range(6)]
+
+        for i, label in enumerate(self.relay_labels):
+            label.grid(column=i, row=1)
+
         for i, relay in enumerate(self.relays):
-            relay.grid(column=i, row=1)
+            relay.grid(column=i, row=2)
         # ---------------------------------------------------------------------
         frm_meteo = LabelFrame(self, relief="groove", labelanchor='nw',
                                text="Meteo")
