@@ -75,9 +75,21 @@ if [[ "$gps_datetime" != "N/A" ]] && [[ "$gps_datetime" != "" ]]; then
 		echo "[WARNING] PC time:        $(date -u -d @$sys_timestamp '+%Y/%m/%d %H:%M:%S') UTC"
 		echo "[WARNING] Syncing PC clock to Yocto GPS"
 
+		# check if ntp is enabled and disable if it is, 
+		# otherwise timedatectl won't allow setting the time
+		ntp_enabled=$(timedatectl show | grep "^NTP=")
+		if [[ "$ntp_enabled" == "yes" ]]; then
+			timedatectl --no-ask-password --no-pager set-ntp 0
+		fi
+
 		# make new timedate in local time zone without -u since timedatect set-time uses local time zone
 		new_timedate=$(date -d @$gps_timestamp '+%Y-%m-%d %H:%M:%S')
 		timedatectl --no-ask-password --no-pager set-time "$new_timedate" > /dev/null
+
+		# re-enable ntp if it was enabled before
+		if [[ "$ntp_enabled" == "yes" ]]; then
+			timedatectl --no-ask-password --no-pager set-ntp 1
+		fi
 
 		# print the pc and yocto gps times after sync
 		gps=$(python -m hypernets.yocto.gps | sed -e "s/, /\t/g; s/[()]//g; s/b\?'//g")
