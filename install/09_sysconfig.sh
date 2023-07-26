@@ -65,13 +65,31 @@ set -e
 echo
 echo "${HL}Allowing users to adjust PC clock${RESET_HL}"
 
-cat > /etc/polkit-1/rules.d/10-timedate.rules << EOF
+# check polkit version
+polkit_version=$(pkaction --version | sed -e 's/[^0-9]*//')
+if (( $(echo "$polkit_version < 0.106" | bc -l) )); then
+	# old polkit doesn't support Javascript syntax
+	cat > /etc/polkit-1/localauthority/50-local.d/com.hypstar.timedate.pkla << EOF
+[Allow $user set PC clock]
+Identity=unix-user:$user
+Action=org.freedesktop.timedate1.set-time
+ResultAny=yes
+ResultInactive=yes
+ResultActive=yes
+EOF
+
+else
+	# new polkit supports Javascript syntax
+	cat > /etc/polkit-1/rules.d/10-timedate.rules << EOF
 polkit.addRule(function(action, subject) {
 	if (action.id == "org.freedesktop.timedate1.set-time") {
 		return polkit.Result.YES;
 	}
 });
 EOF
+
+fi
+
 systemctl restart polkit.service
 
 # set system clock to UTC
