@@ -34,10 +34,14 @@ fi
 user=$(logname)
 
 ## uninstall unnecessary large packages
-echo
-echo "${HL}Uninstalling needless large packages${RESET_HL}"
-apt purge libreoffice* gimp-data
-apt autoremove
+set +e
+if [ "$ID"  == "debian" ]; then
+	echo
+	echo "${HL}Uninstalling needless large packages${RESET_HL}"
+	apt purge libreoffice* gimp-data
+	apt autoremove
+fi
+set -e
 
 set +e
 ## disable services
@@ -89,7 +93,11 @@ echo "SystemMaxUse=1G" >> /etc/systemd/journald.conf
 
 
 # add user to groups
-group_array=("sudo" "systemd-journal")
+if [ "$ID"  == "debian" ]; then
+	group_array=("sudo" "systemd-journal")
+elif [ "$ID"  == "manjaro" ]; then
+	group_array=("wheel" "systemd-journal")
+fi
 
 echo
 added_groups=0
