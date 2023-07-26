@@ -34,6 +34,8 @@ if [[ "${1-}" == "-h" ]] || [[ "${1-}" == "--help" ]]; then
 	exit 
 fi
 
+# add ~/.local/bin to path, Yocto command line API is installed there in Manjaro
+PATH="$PATH:~/.local/bin"
 
 source utils/configparser.sh
 

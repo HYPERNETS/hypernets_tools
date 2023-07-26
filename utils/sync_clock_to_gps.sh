@@ -10,14 +10,14 @@ if [[ ${PWD##*/} != "hypernets_tools"* ]]; then
 fi
 
 if [[ "${1-}" == "-h" ]] || [[ "${1-}" == "--help" ]]; then
+	echo "$0 [-h|--help] [-m max_offset]"
 	echo
 	echo "Sync PC clock to Yocto GPS time"
+	echo 
+	echo "  -m max_offset   sync only if difference from GPS time is larger than max_offset seconds"
+	echo "  -h, --help      print this help"
 	echo
-	echo "$0 [-h|--help] [-m max_offset]"
-	echo " -h,--help       print this help"
-	echo " -m max_offset   sync only if difference from GPS time is larger than max_offset seconds"
-	echo
-	exit 1
+	exit
 fi
 
 if [[ "${1-}" == "-m" ]]; then
