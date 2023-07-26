@@ -121,6 +121,11 @@ now() (
 			echo "${HL}Yocto Auto-Power-Off set to $max_wakeup_time s, ${XHL}powering off in $sleep_countdown s${RESET_HL}"
 		fi
 
+		# Sleep inhibited by sleep.lock
+		if [ -f sleep.lock ]; then
+			echo "${XHL}Yocto sleep is inhibited by $HYPERNETS_TOOLS/sleep.lock${RESET_HL}"
+		fi
+
 		if [ "$next_wakeup_timestamp" = 0 ]; then
 			echo "${XHL}Yocto scheduled wakeup is disabled${RESET_HL}"
 		else
