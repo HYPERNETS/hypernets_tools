@@ -57,11 +57,29 @@ fi
 set -e
 
 
+# allow users to set clock
+echo
+echo "${HL}Allowing users to adjust PC clock${RESET_HL}"
+
+cat > /etc/polkit-1/rules.d/10-timedate.rules << EOF
+polkit.addRule(function(action, subject) {
+	if (action.id == "org.freedesktop.timedate1.set-time") {
+		return polkit.Result.YES;
+	}
+});
+EOF
+systemctl restart polkit.service
+
 # set system clock to UTC
 echo
 echo "${HL}Setting system clock to UTC time zone${RESET_HL}"
 timedatectl set-timezone UTC
 
+# enable ntpd
+echo
+echo "${HL}Enabling systemd-timesyncd.service${RESET_HL}"
+systemctl enable systemd-timesyncd.service
+systemctl start systemd-timesyncd.service
 
 # limit journal size to 1 GB
 echo

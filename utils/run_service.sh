@@ -81,6 +81,12 @@ shutdown_sequence() {
 		    python -m hypernets.yocto.relay -soff -n4
 		fi
 
+		# Sync PC clock to yocto gps if more than 5 sec out of sync
+		# and yocto gps has fix
+		set +e
+		utils/sync_clock_to_gps.sh -m 5
+		set -e
+
 		# log next scheduled yocto wakeup if yocto command line API is installed
 		if [[ $(command -v YWakeUpMonitor) ]]; then
 			yocto=$(parse_config "yocto_prefix2" config_static.ini)
@@ -102,6 +108,8 @@ shutdown_sequence() {
 				echo "[INFO]  Next Yocto wakeup is scheduled on $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset (in $delta s)"
 			fi
 		fi # log next scheduled yocto wakeup if yocto command line API is installed
+
+
     fi # [[ "$bypassYocto" != "yes" ]] && [[ "$startSequence" == "yes" ]]
 
 	# Sleep inhibited by sleep.lock
@@ -347,6 +355,12 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 		python -m hypernets.yocto.relay -son -n4
 		sleep 5
 	fi # checkRain
+
+	# Sync PC clock to yocto gps if more than 5 sec out of sync
+	# and yocto gps has fix
+	set +e
+	utils/sync_clock_to_gps.sh -m 5
+	set -e
 fi # bypassYocto != yes
 
 if [[ "$startSequence" == "no" ]] ; then
