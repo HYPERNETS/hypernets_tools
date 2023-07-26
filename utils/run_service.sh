@@ -253,6 +253,21 @@ debug_yocto(){
     # ------------------------------------------------------------------------------
 }
 
+# log operating system release
+if [ -f /etc/os-release ]; then
+	source /etc/os-release
+fi
+
+# for manjaro read version from /etc/lsb-release
+if [[ "$ID" == "manjaro" ]]; then
+	if [ -f /etc/lsb-release ]; then
+		source /etc/lsb-release
+		PRETTY_NAME="${PRETTY_NAME-} ${DISTRIB_RELEASE-}"
+	fi
+fi
+
+echo "[INFO]  Running on ${PRETTY_NAME-}"
+
 
 if [[ "$bypassYocto" != "yes" ]] ; then
 
