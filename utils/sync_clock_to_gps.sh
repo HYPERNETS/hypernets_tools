@@ -77,7 +77,7 @@ if [[ "$gps_datetime" != "N/A" ]] && [[ "$gps_datetime" != "" ]]; then
 
 		# check if ntp is enabled and disable if it is, 
 		# otherwise timedatectl won't allow setting the time
-		ntp_enabled=$(timedatectl show | grep "^NTP=")
+		ntp_enabled=$(timedatectl show -p NTP --value)
 		if [[ "$ntp_enabled" == "yes" ]]; then
 			timedatectl --no-ask-password --no-pager set-ntp 0
 		fi
