@@ -75,7 +75,6 @@ make_log() {
 make_log $logNameBase sequence
 make_log $logNameBase hello
 make_log $logNameBase access
-make_log $logNameBase time
 make_log $logNameBase webcam
 disk_usage $logNameBase
 
