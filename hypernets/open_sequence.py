@@ -15,6 +15,11 @@ from hypernets.hypstar.libhypstar.python.data_structs.environment_log import Env
 
 from logging import debug, info, warning, error # noqa
 
+from hypernets.rain_sensor.rain_sensor_python import RainSensor
+
+from hypernets.abstract.geometry import Geometry
+from hypernets.geometry.pan_tilt import move_to_geometry, move_to
+
 from hypernets.yocto.lightsensor_logger import start_lightsensor_thread, terminate_lightsensor_thread
 
 
@@ -23,7 +28,32 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                       instrument_standalone=False,
                       instrument_swir_tec=0,
                       dump_environment_logs=False,
-                      DATA_DIR="DATA"):
+                      DATA_DIR="DATA",
+                      check_rain=False):
+
+    # Check if it is raining
+    if check_rain:
+        try:
+            debug("Checking rain sensor")
+            rain_sensor = RainSensor()
+            if rain_sensor.read_value() == 1:
+                warning("Skipping sequence due to rain")
+
+                # get the absolute position of nadir
+                reference = Geometry.reference_to_int("hyper", "hyper")
+                park = Geometry(reference, tilt=0)
+                park.get_absolute_pan_tilt()
+
+                # park radiometer to nadir 
+                # just in case it wasn't parked at the end of the last sequence
+                info("Parking radiometer to nadir")
+                move_to(ser=None, tilt=park.tilt_abs, wait=True)
+
+                exit(88) # exit code 88 
+        except Exception as e:
+            print(e)
+            error("Disabling further rain sensor checks")
+            check_rain = False
 
     protocol = Protocol(sequence_file)
     info(protocol)
@@ -71,7 +101,6 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     copy(sequence_file, path.join(seq_path, path.basename(sequence_file)))
 
     if not instrument_standalone:
-        from hypernets.geometry.pan_tilt import move_to_geometry
         from hypernets.yocto.meteo import get_meteo
         except_boot = True
 
@@ -137,6 +166,29 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         #     print("    With :")
         #     for key, value in flags_dict.items():
         #         print(f"\t- {key} : {value}")
+
+        # Check if it is raining
+        if check_rain:
+            try:
+                debug("Checking rain sensor")
+                if rain_sensor.read_value() == 1:
+                    warning("Aborting sequence due to rain")
+
+                    # get the absolute position of nadir
+                    reference = Geometry.reference_to_int("hyper", "hyper")
+                    park = Geometry(reference, tilt=0)
+                    park.get_absolute_pan_tilt()
+
+                    # park radiometer to nadir
+                    info("Parking radiometer to nadir")
+                    move_to(ser=None, tilt=park.tilt_abs, wait=True)
+
+                    exit(88) # exit code 88 
+
+            except Exception as e:
+                print(e)
+                error("Disabling further rain sensor checks")
+                check_rain = False
 
         flag_condition = True
         for j, flag in enumerate(geometry.flags, start=1):
@@ -260,6 +312,10 @@ if __name__ == '__main__':
     parser.add_argument("--noyocto", action="store_true",
                         help="Run using instrument alone, no meteo or yocto stuff") #noqa
 
+    parser.add_argument("-r", "--check-rain", action="store_true",
+                        help="Check rain sensor and stop sequence if raining", #noqa
+                        default=False)
+
     parser.add_argument("-p", "--port", type=str,
                         help="Serial port used for communications with instrument", #noqa
                         default="/dev/radiometer0")
@@ -299,4 +355,5 @@ if __name__ == '__main__':
                       instrument_boot_timeout=args.timeout,
                       instrument_standalone=args.noyocto,
                       instrument_swir_tec=args.swir_tec,
-                      dump_environment_logs=args.log_environment)
+                      dump_environment_logs=args.log_environment,
+                      check_rain=args.check_rain)

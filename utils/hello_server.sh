@@ -76,7 +76,6 @@ make_log $logNameBase hello
 make_log $logNameBase access
 make_log $logNameBase time
 make_log $logNameBase webcam
-make_log $logNameBase rain
 disk_usage $logNameBase
 
 # We check if network is on

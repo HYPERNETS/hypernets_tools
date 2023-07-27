@@ -18,18 +18,18 @@ cd hypernets/rain_sensor/
 sudo make
 cd -
 
-read -p "Install Measurement at Boot? (y/n)"
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-	user="$SUDO_USER"
-	path_to_service=$(echo "$PWD/utils/rain_sensor_service.sh" | sed 's/\//\\\//g')
-	path_to_h_tools=$(echo "$PWD" | sed 's/\//\\\//g')
-	service_file="/etc/systemd/system/hypernets-rain.service"
-
-	cp "./install/hypernets-rain.service" $service_file
-
-	sed -i '/User=$/s/$/'$user'/' $service_file
-	sed -i '/ExecStart=$/s/$/'$path_to_service'/' $service_file
-	sed -i '/WorkingDirectory=$/s/$/'$path_to_h_tools'\//' $service_file
-
-	systemctl enable hypernets-rain
-fi
+# read -p "Install Measurement at Boot? (y/n)"
+# if [[ $REPLY =~ ^[Yy]$ ]]; then
+# 	user="$SUDO_USER"
+# 	path_to_service=$(echo "$PWD/utils/rain_sensor_service.sh" | sed 's/\//\\\//g')
+# 	path_to_h_tools=$(echo "$PWD" | sed 's/\//\\\//g')
+# 	service_file="/etc/systemd/system/hypernets-rain.service"
+# 
+# 	cp "./install/hypernets-rain.service" $service_file
+# 
+# 	sed -i '/User=$/s/$/'$user'/' $service_file
+# 	sed -i '/ExecStart=$/s/$/'$path_to_service'/' $service_file
+# 	sed -i '/WorkingDirectory=$/s/$/'$path_to_h_tools'\//' $service_file
+# 
+# 	systemctl enable hypernets-rain
+# fi
