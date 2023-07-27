@@ -647,7 +647,7 @@ schedule() (
 	
 	skipread=0
 	
-	if [[ "${1-}" == "-h" ]]
+	if [[ "${1-}" == "-h" ]] || [[ "${1-}" == "--help" ]]
 	then
 		echo "View & Adjust yocto schedules 1 & 2"
 		echo " notes:		-avoid overlaping sequences, max-runtime should be less than time between sequences"
@@ -704,7 +704,7 @@ schedule() (
 			echo -n "    Yocto date & time is:   "
 			yocto_time=$(YRealTimeClock -f '[result]' -r 127.0.0.1 "$yoctowifibrd" get_dateTime)
 			if [ "$yocto_offset" = 0 ]; then
-				echo "$yocto_time UTC$utc_offset"
+				echo "$yocto_time UTC"
 			else
 				echo "$yocto_time UTC$utc_offset (UTC offset is $yocto_offset s)"
 			fi
@@ -723,7 +723,9 @@ schedule() (
 			echo -n "Enter option: ${HL}"
 			echo "1 - adjust schedule 1 "
 			echo "              2 - adjust schedule 2 (validation)"
-			echo "              E - Exit ${RESET_HL}"
+			echo "              3 - adjust Yocto time zone"
+			echo "              E - Exit"
+			echo "  any other key - Refresh ${RESET_HL}"
 			
 			#loop waiting for key press & displaying time until yocto shutdown
 			loopy=1
@@ -764,8 +766,7 @@ schedule() (
 		then
 			schedy=1
 			ch=99
-		fi
-		if [ "$ch" = "2" ] # Schedule 2 (validation)
+		elif [ "$ch" = "2" ] # Schedule 2 (validation)
 		then
 			schedy=2
 			ch=99
@@ -781,13 +782,12 @@ schedule() (
 			echo  "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ "
 			
 			
-	#		epoch=$(date -d "${newt}" +"%s")
 			nwku=$(YWakeUpMonitor -r 127.0.0.1 any get_nextWakeUp) #get yocto nextwakeup
 			
 			value=${nwku#*=}  # print everything after the = 
 			valu=$(echo "$value" | grep -o -E '[0-9]+' | head -1 | sed -e 's/^0\+//') #remove the 1st number only
 			
-			echo "     Schedule $schedy  "
+			echo "     ${HL}Schedule $schedy${RESET_HL}  "
 			echo "Visible parameters are active, \"_\" marks inactive"
 			echo "All inactive is equivalent to all set for a single field"
 			echo "All inactive for all fields disables the schedule"
@@ -889,7 +889,7 @@ schedule() (
 			while true;
 			do
 				echo "Press \"A\" to adjust schedule, \"E\" to exit                                   "
-				read -t 0.1 -n 1 sc
+				read -t 0.1 -s -n 1 sc
 				if [[ "$sc" =~ ^([aA])$ ]] || [[ "$sc" =~ ^([eE])$ ]] 
 				then
 					echo
@@ -1249,7 +1249,7 @@ schedule() (
 					#all saved to yocto!
 					echo "${RESET_HL}          Schedule is set! "
 					sleep 1
-				fi
+				fi # "$userinput" =~ ^([sS])$   Save
 			
 			
 				#redo
@@ -1272,10 +1272,88 @@ schedule() (
 				tput cuf 22 #put cursor 22 chars along the line
 			fi
 		
-			echo "${RESET_HL} "
+			echo "${RESET_HL}"
 			sleep 1
-		fi
-		
+		fi # "$ch" = "99" schedule adjustment
+
+
+		########### Yocto time zone adjustment ##############
+		if [ "$ch" = "3" ] # yocto time zone
+		then
+			clear
+			echo 
+			echo -n "Yocto date & time is:   "
+			yocto_time=$(YRealTimeClock -f '[result]' -r 127.0.0.1 "$yoctowifibrd" get_dateTime)
+			echo "$yocto_time UTC$utc_offset"
+			echo 
+
+			set +e
+			while true; do
+				echo "Press \"A\" to adjust Yocto time zone, \"E\" to exit                             "
+				read -t 0.1 -s -n 1 sc
+				if [[ "$sc" =~ ^([aA])$ ]] || [[ "$sc" =~ ^([eE])$ ]] 
+				then
+					echo
+					break
+				fi
+			tput cuu 1
+			done
+			set -e
+
+			if [[ "$sc" =~ ^([aA])$ ]] 
+			then
+				echo -n "Enter new time zone: UTC"
+				read tz
+
+				echo
+
+				if [[ "$tz" == "" ]]; then
+					tz=0
+				else
+					set +e
+					[ "$tz" -eq "$tz" ] 2>/dev/null
+			        if [ $? -ne 0 ] || [[ "$tz" -gt "12" ]] || [[ "$tz" -lt "-12" ]]; then
+						echo "${XHL}UTC$tz is invalid time zone${RESET_HL}"
+						tz="${utc_offset:-0}"
+						sleep 2	
+					fi
+					set -e
+				fi
+
+				if [[ "$tz" -eq 0 ]]; then
+					new_utc_offset=""
+				else
+					new_utc_offset=$(printf "%+d" "$tz")
+				fi
+				new_yocto_offset=$(("$tz" * 3600))
+
+				if [[ "$yocto_offset" -eq "$new_yocto_offset" ]]; then
+					echo "Keeping current Yocto time zone UTC$utc_offset"
+				else
+					echo "Setting Yocto time zone to UTC$new_utc_offset"
+					echo
+					YRealTimeClock -s -r 127.0.0.1 $yoctowifibrd set_utcOffset "$new_yocto_offset"
+					
+					echo
+					echo "${XHL} Warning!!"
+					echo " It may take up to one minute until the Yocto"
+					echo " adjusts the clock to new time zone${RESET_HL}"
+					sleep 5
+
+					# read new offset 
+					yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yoctowifibrd get_utcOffset)
+					if [ "$yocto_offset" = 0 ]; then
+						utc_offset=""
+					else
+						utc_offset=$(printf "%+d" $(("$yocto_offset" / 3600)))
+					fi
+				fi
+
+				sleep 1
+			fi
+		fi # [ "$ch" = "3" ] # yocto time zone
+	
+
 		######### EXIT #########
 		if [[ "$ch" =~ ^([eE])$ ]] 
 		then
@@ -1291,7 +1369,7 @@ schedule() (
 		#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		sleep 1
 		clear
-	done
+	done # while [ 1 ]
 ) # schedule()
 
 
