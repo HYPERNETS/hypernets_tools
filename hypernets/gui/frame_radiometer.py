@@ -385,25 +385,34 @@ class FrameRadiometer(LabelFrame):
         self.option_clear()
         self.master.option_clear()
 
+
     def set_swir_temperature(self):
         TEC = 0  # TODO : tunable from config / gui ?
         if not self.check_if_hypstar_exists():
             return
-        output = self.hypstar.set_SWIR_module_temperature(TEC)
 
-        if isinstance(output, Exception):
-            showerror("Error", str(output))
-        else:
-            showinfo("Thermal Control", f"Thermal Control setted to {TEC}.")
+        print(f"Stabilising SWIR sensor temperature to {TEC} 'C...")
+        try:
+            self.hypstar.set_SWIR_module_temperature(TEC)
+        except Exception as e:
+            showerror("Error", str(e))
+            return
+
+        showinfo("Thermal Control3", f"SWIR temperature set to {TEC} 'C")
+
 
     def unset_swir_temperature(self):
         if not self.check_if_hypstar_exists():
             return
-        output = self.hypstar.shutdown_SWIR_module_thermal_control()
-        if isinstance(output, Exception):
-            showerror("Error", str(output))
-        else:
-            showinfo("Thermal Control", "Thermal Control unsetted.")
+
+        try:
+            self.hypstar.shutdown_SWIR_module_thermal_control()
+        except Exception as e:
+            showerror("Error", str(e))
+            return
+
+        showinfo("Thermal Control", "SWIR Thermal Control is disabled")
+
 
     def enable_vm(self):
         if not self.check_if_hypstar_exists():
