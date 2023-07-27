@@ -69,7 +69,7 @@ class FrameYoctopuce(LabelFrame):
         update_gps.grid(column=0, row=0)
         lbl_gps.grid(column=1, row=0, padx=8)
         # ---------------------------------------------------------------------
-        lbl_webpage = Label(self, text="http://10.42.0.X")
+        lbl_webpage = Label(self, text="http://127.0.0.1:4444")
         # ---------------------------------------------------------------------
         connection.grid(column=0, row=0)
         frm_relays.grid(sticky=W, column=0, row=1)

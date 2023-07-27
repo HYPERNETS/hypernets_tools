@@ -268,25 +268,44 @@ class FrameRadiometer(LabelFrame):
         prev_spec.grid(sticky=W,  column=1, row=10, columnspan=1)
         next_spec.grid(sticky=W,  column=2, row=10, columnspan=1)
 
+
     def prev_spec(self):
         if self.spectra is None:
             showerror("Error", "Please take an acquisition")
             return
+
+        # plot window has been shown and closed, re-init
+        if self.spectra.shown is True:
+            self.make_output()
+
         self.spectra.prev_spectrum(None)
         self.update_output()
+
 
     def next_spec(self):
         if self.spectra is None:
             showerror("Error", "Please take an acquisition")
             return
+
+        # plot window has been shown and closed, re-init
+        if self.spectra.shown is True:
+            self.make_output()
+
         self.spectra.next_spectrum(None)
         self.update_output()
 
+
     def show_plot(self, nofile=False):
-        if not nofile and self.last_file_path is None:
+        if not nofile and self.last_file_path is None or self.spectra is None:
+            showerror("Error", "Please take an acquisition")
             return
-        # self.make_output()
+        
+        # plot window has been shown and closed, re-init
+        if self.spectra.shown is True:
+            self.make_output()
+
         show_interactive_plots(self.spectra)
+
 
     def make_output(self, spec=None):
         if self.last_file_path is None and spec is None:
@@ -401,6 +420,7 @@ class FrameRadiometer(LabelFrame):
             showerror("Error", str(output))
         pass
 
+
     def measure_vm(self):
         if not self.check_if_hypstar_exists():
             return
@@ -411,11 +431,18 @@ class FrameRadiometer(LabelFrame):
                 self.vm_light_source.value, it, self.vm_current.get(), int(self.radiometer_var[4].get()))
 
         spec = spectra[0].getBytes()
+
+        # turn off VM after measuring
+        self.enable_vm_button_text.set("Turn VM electronics on")
+        self.hypstar.VM_enable(False)
+
         self.make_output(spec=spec)
         self.show_plot(nofile=True)
 
+
     def read_cal(self):
         pass
+
 
     def __del__(self):
         if self.hypstar is not None:
