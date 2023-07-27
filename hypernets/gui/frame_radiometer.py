@@ -435,6 +435,7 @@ class FrameRadiometer(LabelFrame):
         # turn off VM after measuring
         self.enable_vm_button_text.set("Turn VM electronics on")
         self.hypstar.VM_enable(False)
+        self.vm_enabled = False
 
         self.make_output(spec=spec)
         self.show_plot(nofile=True)
