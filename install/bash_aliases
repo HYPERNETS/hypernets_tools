@@ -1460,15 +1460,25 @@ hypypic()(
 	OUTPUT_DIR="OTHER/HYPYCAM"
 	mkdir -p "$OUTPUT_DIR"
 	cap_file="$OUTPUT_DIR/$(date -u '+%Y%m%dT%H%M%S').jpg"
-	python -m  hypernets.hypstar.handler -p -b 3000000 -l INFO -d INFO -o "$cap_file"
 
-	if [[ $? -ne 0 ]]; then
+    set +e
+    set pipefail
+#    cap_out=$(utils/webcam_get_image.sh -c "$webcam_credent" -i "$webcam_ip" -d "OTHER/WEBCAM_${cam^^}/" 2>&1 | tee /dev/fd/2)
+#    cap_retcode=$?
+
+	cap_out=$(python -m  hypernets.hypstar.handler -p -b 3000000 -l INFO -d INFO -o "$cap_file" 2>&1 | tee /dev/fd/2)
+	cap_retcode=$?
+
+	saved_to=$(grep "INFO:root:Saved to" <<< "$cap_out" | sed -e 's/INFO:root:Saved to //;s/\.$//')
+	
+	if [[ "$cap_retcode" -ne 0 ]]; then
 		echo "${XHL}hypstar camera capture failed."
 		echo "Is relay 3 switched on?${RESET_HL}"
+	elif [[ "$saved_to" == ""]]; then
+		echo "${XHL}hypstar camera capture failed."
+		echo "Try again.${RESET_HL}"
 	else
-		#cap_file=$(grep "INFO:root:Saved to" <<< "$cap_out" | sed -e 's/INFO:root:Saved to //;s/\.$//')
-
-		echo "${HL}hypstar camera image has been stored as $HYPERNETS_TOOLS/$cap_file${RESET_HL}"
+		echo "${HL}hypstar camera image has been stored as $HYPERNETS_TOOLS/$saved_to${RESET_HL}"
 
 		source utils/configparser.sh
 		ipServer=$(parse_config "credentials" config_static.ini)
@@ -1476,12 +1486,12 @@ hypypic()(
 		sshPort=$(parse_config "ssh_port" config_static.ini)
 
 		set +e
-		rsync -e "ssh -p $sshPort" -t --relative "$cap_file" "$ipServer:$remoteDir"
+		rsync -e "ssh -p $sshPort" -t --relative "$saved_to" "$ipServer:$remoteDir"
 
 		if [[ $? -ne 0 ]]; then
 			echo "${XHL}Copying the image to $ipServer failed${RESET_HL}"
 		else
-			echo "${HL}Copied the image to $ipServer:$remoteDir/$cap_file${RESET_HL}"
+			echo "${HL}Copied the image to $ipServer:$remoteDir/$saved_to${RESET_HL}"
 		fi
 	fi
 ) # hypypic()
