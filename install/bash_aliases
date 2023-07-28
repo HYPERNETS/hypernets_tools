@@ -27,7 +27,6 @@ commands() {
 	echo "${HL} pt		${RESET_HL}Pan/Tilt position      pt -h for help"
 	#echo "${HL} vm    	${RESET_HL}vm on   vm off "
 	echo "${HL} now    	${RESET_HL}present status of: clock, meteo, rain, GPS, supply, wakeup"
-	#echo "${HL} hypypic  	${RESET_HL}takes photo from hypstar camera. Photos stored in  ~/hypypics/   & Server/Sitename/ "
 	#echo "${HL} level    	${RESET_HL}boom leveling assistant "
 	echo "${HL} test-env  	${RESET_HL}displays hypstar latest environmental log"
 	echo "${HL} test-env-live	${RESET_HL}displays hypstar environmental logs live"
@@ -37,7 +36,8 @@ commands() {
 	#echo "${HL} slog  	${RESET_HL}displays a summary log & index to logs of prevoius runs "
 	#echo "${HL} portal  	${RESET_HL}makes a portal via ~/Portal folder to Server/Sitename/ "
 	echo "${HL} gui		${RESET_HL}python -m hypernets.gui (if screen attached)"
-	echo "${HL} webpic 	${RESET_HL}takes webcam photo    webpic -h for help"
+	echo "${HL} webpic 	${RESET_HL}take webcam photo    webpic -h for help"
+	echo "${HL} hypypic  	${RESET_HL}takes photo from hypstar camera    hypypic -h for help"
 	#echo "${HL} cp2server	 ${RESET_HL}                 ./utils/hello_server.sh   copy sequence data back to NPL server "
 	echo "${HL} runseq	 	${RESET_HL}utils/run_service.sh    run a sequence"
 	echo "${HL} yapo		${RESET_HL}yocto auto-power-off. yapo stop to disable, yapo -h for help"
@@ -1415,9 +1415,10 @@ webpic() (
 	fi
 
 	set +e
-	utils/webcam_get_image.sh -c "$webcam_credent" -i "$webcam_ip" -d "OTHER/WEBCAM_${cam^^}/" 2>&1
+	set pipefail
+	export AV_LOG_FORCE_COLOR=1
+	cap_out=$(utils/webcam_get_image.sh -c "$webcam_credent" -i "$webcam_ip" -d "OTHER/WEBCAM_${cam^^}/" 2>&1 | tee /dev/fd/2)
 	cap_retcode=$?
-	set -e
 
 	if [[ "$cap_retcode" -ne 0 ]]; then
 		echo
@@ -1431,10 +1432,60 @@ webpic() (
 		echo "Is the webcam_$cam config in config_static.ini correct?${RESET_HL}"
 		echo
 	else
-		echo "${HL}$cam camera image has been stored in $HYPERNETS_TOOLS/OTHER/WEBCAM_${cam^^}/${RESET_HL}"
+		imgname=$(grep -o "[^']*WEBCAM_${cam^^}[^']*" <<< "$cap_out")
+		echo "${HL}$cam camera image has been stored as $imgname${RESET_HL}"
+
+		source utils/configparser.sh
+		ipServer=$(parse_config "credentials" config_static.ini)
+		remoteDir=$(parse_config "remote_dir" config_static.ini)
+		sshPort=$(parse_config "ssh_port" config_static.ini)
+
+		set +e
+		cap_file=$(sed -e "s%$HYPERNETS_TOOLS%%;s%^/%%" <<< $imgname)
+		rsync -e "ssh -p $sshPort" -t --relative "$cap_file" "$ipServer:$remoteDir"
+
+		if [[ $? -ne 0 ]]; then
+			echo "${XHL}Copying the image to $ipServer failed${RESET_HL}"
+		else
+			echo "${HL}Copied the image to $ipServer:$remoteDir/$cap_file${RESET_HL}"
+		fi
 	fi
 ) # webpic()
 
+
+hypypic()(
+	cd "$HYPERNETS_TOOLS"
+
+	set +e
+
+	OUTPUT_DIR="OTHER/HYPYCAM"
+	mkdir -p "$OUTPUT_DIR"
+	cap_file="$OUTPUT_DIR/$(date -u '+%Y%m%dT%H%M%S').jpg"
+	python -m  hypernets.hypstar.handler -p -b 3000000 -l INFO -d INFO -o "$cap_file"
+
+	if [[ $? -ne 0 ]]; then
+		echo "${XHL}hypstar camera capture failed."
+		echo "Is relay 3 switched on?${RESET_HL}"
+	else
+		#cap_file=$(grep "INFO:root:Saved to" <<< "$cap_out" | sed -e 's/INFO:root:Saved to //;s/\.$//')
+
+		echo "${HL}hypstar camera image has been stored as $HYPERNETS_TOOLS/$cap_file${RESET_HL}"
+
+		source utils/configparser.sh
+		ipServer=$(parse_config "credentials" config_static.ini)
+		remoteDir=$(parse_config "remote_dir" config_static.ini)
+		sshPort=$(parse_config "ssh_port" config_static.ini)
+
+		set +e
+		rsync -e "ssh -p $sshPort" -t --relative "$cap_file" "$ipServer:$remoteDir"
+
+		if [[ $? -ne 0 ]]; then
+			echo "${XHL}Copying the image to $ipServer failed${RESET_HL}"
+		else
+			echo "${HL}Copied the image to $ipServer:$remoteDir/$cap_file${RESET_HL}"
+		fi
+	fi
+) # hypypic()
 
 alias kill-service="sudo systemctl kill --signal=SIGKILL hypernets-sequence"
 alias journal="journalctl -b -u hypernets-sequence -e"
