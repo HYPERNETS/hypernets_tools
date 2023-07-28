@@ -30,7 +30,7 @@ else
 fi
 	
 if [ "$ID"  == "debian" ]; then
-	sudo apt install python3-pip tk make gcc python3-tk rsync python3-pysolar python3-crcmod python3-serial python3-matplotlib pipx net-tools ffmpeg
+	sudo apt install python3-pip tk make gcc python3-tk rsync python3-pysolar python3-crcmod python3-serial python3-matplotlib pipx net-tools ffmpeg sshfs
     [ ! -e /usr/bin/python ] && ln -s /usr/bin/python3 /usr/bin/python
 
 elif [ "$ID"  == "manjaro" ]; then
