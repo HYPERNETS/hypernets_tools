@@ -311,7 +311,7 @@ yapo() (
 			if [ "$next_wakeup_timestamp" = 0 ]; then
 				echo "${XHL}Yocto scheduled wakeup is disabled${RESET_HL}"
 			else
-				yocto_time=$(YRealTimeClock -f '[result]' -r 127.0.0.1 "$yoctowifibrd" get_dateTime)
+				yocto_time=$(YRealTimeClock -f '[result]' -r 127.0.0.1 "$yocto" get_dateTime)
 				yocto_timestamp=$(date -d "$yocto_time UTC" -u +%s)
 				delta=$(( "$next_wakeup_timestamp" - "$yocto_timestamp" ))
 				echo "${HL}Next Yocto wakeup is scheduled on $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset (in $delta s)${RESET_HL}"
