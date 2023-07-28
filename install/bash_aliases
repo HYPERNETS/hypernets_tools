@@ -1474,7 +1474,7 @@ hypypic()(
 	if [[ "$cap_retcode" -ne 0 ]]; then
 		echo "${XHL}hypstar camera capture failed."
 		echo "Is relay 3 switched on?${RESET_HL}"
-	elif [[ "$saved_to" == ""]]; then
+	elif [[ "$saved_to" == "" ]]; then
 		echo "${XHL}hypstar camera capture failed."
 		echo "Try again.${RESET_HL}"
 	else
