@@ -293,13 +293,13 @@ yapo() (
 		if [[ "$max_wakeup_time" -eq "0" ]]; then
 			echo "${HL}Yocto Auto-Power-Off is ${XHL}disabled! ${HL}PC will run for ${XHL}infinity...${RESET_HL}"
 
-		if [ -f "$HYPERNETS_TOOLS"/sleep.lock ]; then
-			prev_yapo_set=$(grep "last_yapo_set=" "$HYPERNETS_TOOLS"/sleep.lock | sed -e 's/[^0-9]//g')
-			echo "${HL}Last used Yocto Auto-Power-Off setting was $prev_yapo_set s${RESET_HL}"
-			echo "Use   yapo restore   to re-enable yocto-auto-power-off at ${HL}$prev_yapo_set s${RESET_HL}"
-		else
-			echo "Use   yapo set       to re-enable yocto-auto-power-off"
-		fi
+			if [ -f "$HYPERNETS_TOOLS"/sleep.lock ]; then
+				prev_yapo_set=$(grep "last_yapo_set=" "$HYPERNETS_TOOLS"/sleep.lock | sed -e 's/[^0-9]//g')
+				echo "${HL}Last used Yocto Auto-Power-Off setting was $prev_yapo_set s${RESET_HL}"
+				echo "Use   yapo restore   to re-enable yocto-auto-power-off at ${HL}$prev_yapo_set s${RESET_HL}"
+			else
+				echo "Use   yapo set       to re-enable yocto-auto-power-off"
+			fi
 			echo "See   yapo -h        for help"
 			exit 0
 		else 
@@ -313,6 +313,7 @@ yapo() (
 			if [ "$next_wakeup_timestamp" = 0 ]; then
 				echo "${XHL}Yocto scheduled wakeup is disabled${RESET_HL}"
 			else
+				yocto_time=$(YRealTimeClock -f '[result]' -r 127.0.0.1 "$yoctowifibrd" get_dateTime)
 				yocto_timestamp=$(date -d "$yocto_time UTC" -u +%s)
 				delta=$(( "$next_wakeup_timestamp" - "$yocto_timestamp" ))
 				echo "${HL}Next Yocto wakeup is scheduled on $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset (in $delta s)${RESET_HL}"
