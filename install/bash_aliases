@@ -22,12 +22,11 @@ commands() {
 	echo "${HL} ********************" 
 	echo "${HL} commands	${RESET_HL}to see this list"
 	#echo "${HL} guide  	${RESET_HL}Hypstar cheat sheet "
-	echo "${HL} schedule	${RESET_HL}view/adjust yocto schedules 1 & 2" #    Set yocto rtc time"
+	echo "${HL} schedule	${RESET_HL}view/adjust yocto schedules 1 & 2 and time zone"
 	echo "${HL} relay   	${RESET_HL}get/set yocto relays   relay -h for help"
 	echo "${HL} pt		${RESET_HL}Pan/Tilt position      pt -h for help"
 	#echo "${HL} vm    	${RESET_HL}vm on   vm off "
 	echo "${HL} now    	${RESET_HL}present status of: clock, meteo, rain, GPS, supply, wakeup"
-	#echo "${HL} webpic  	${RESET_HL}takes  webcam photos, Photos stored in ~/hypernets_tools/OTHER/Web-site~sky/  & Server/Sitename/ "
 	#echo "${HL} hypypic  	${RESET_HL}takes photo from hypstar camera. Photos stored in  ~/hypypics/   & Server/Sitename/ "
 	#echo "${HL} level    	${RESET_HL}boom leveling assistant "
 	echo "${HL} test-env  	${RESET_HL}displays hypstar latest environmental log"
@@ -38,6 +37,7 @@ commands() {
 	#echo "${HL} slog  	${RESET_HL}displays a summary log & index to logs of prevoius runs "
 	#echo "${HL} portal  	${RESET_HL}makes a portal via ~/Portal folder to Server/Sitename/ "
 	echo "${HL} gui		${RESET_HL}python -m hypernets.gui (if screen attached)"
+	echo "${HL} webpic 	${RESET_HL}takes webcam photo    webpic -h for help"
 	#echo "${HL} cp2server	 ${RESET_HL}                 ./utils/hello_server.sh   copy sequence data back to NPL server "
 	echo "${HL} runseq	 	${RESET_HL}utils/run_service.sh    run a sequence"
 	echo "${HL} yapo		${RESET_HL}yocto auto-power-off. yapo stop to disable, yapo -h for help"
@@ -649,7 +649,7 @@ schedule() (
 	
 	if [[ "${1-}" == "-h" ]] || [[ "${1-}" == "--help" ]]
 	then
-		echo "View & Adjust yocto schedules 1 & 2"
+		echo "View & Adjust yocto schedules 1 & 2 and time zone"
 		echo " notes:		-avoid overlaping sequences, max-runtime should be less than time between sequences"
 		exit
 	fi
@@ -1371,6 +1371,69 @@ schedule() (
 		clear
 	done # while [ 1 ]
 ) # schedule()
+
+
+webpic() (
+	cd "$HYPERNETS_TOOLS"
+
+	webpic_help() {
+		echo "webpic [-h|--help] site|sky"
+		echo
+		echo "Take webcam picture"
+		echo 
+		echo "  site    store site (relay 5) picture in $HYPERNETS_TOOLS/OTHER/WEBCAM_SITE/"
+		echo "  sky     store sky (relay 6) picture in $HYPERNETS_TOOLS/OTHER/WEBCAM_SKY/"
+		echo "  -h, --help      print this help"
+		echo
+		echo "eg: webpic site    webpic sky"
+		echo
+		exit -1
+	}
+		
+	if [[ "${1-}" == "-h" ]] || [[ "${1-}" == "--help" ]]; then
+		webpic_help
+	fi
+
+	cam="${1-}"
+	# bail out if no or unknown webcam requested
+	if [[ "$cam" != "site" ]] && [[ "$cam" != "sky" ]]; then 
+		echo "${XHL}Please specify either site or sky camera${RESET_HL}"
+		echo
+		webpic_help
+	fi
+
+	source utils/configparser.sh
+	config=$(parse_config "webcam_$cam" config_static.ini)
+	
+	webcam_credent=$(echo "$config" | cut -d "@" -f1)
+	webcam_ip=$(echo "$config" | cut -d "@" -f2)
+
+	# check if valid IP
+	if [[ ! "$webcam_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+		echo "${XHL}$cam camera IP '$webcam_ip' is invalid in config_static.ini${RESET_HL}"
+		exit -1
+	fi
+
+	set +e
+	utils/webcam_get_image.sh -c "$webcam_credent" -i "$webcam_ip" -d "OTHER/WEBCAM_${cam^^}/" 2>&1
+	cap_retcode=$?
+	set -e
+
+	if [[ "$cap_retcode" -ne 0 ]]; then
+		echo
+		if [[ "$cam" == "site" ]]; then
+			camrelay=5
+		else
+			camrelay=6
+		fi
+		echo "${XHL}$cam camera capture failed."
+		echo "Is relay $camrelay switched on?"
+		echo "Is the webcam_$cam config in config_static.ini correct?${RESET_HL}"
+		echo
+	else
+		echo "${HL}$cam camera image has been stored in $HYPERNETS_TOOLS/OTHER/WEBCAM_${cam^^}/${RESET_HL}"
+	fi
+) # webpic()
 
 
 alias kill-service="sudo systemctl kill --signal=SIGKILL hypernets-sequence"
