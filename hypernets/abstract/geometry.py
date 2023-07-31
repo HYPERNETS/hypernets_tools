@@ -134,16 +134,31 @@ class Geometry(object):
             azimuth_sun, zenith_sun = spa_from_datetime(now=now)
             zenith_sun = 180 - zenith_sun
 
+            # determine hemisphere
+            latitude = float(config["GPS"]["latitude"])
+            if latitude >= 0:
+                hemisphere_offset = 0
+                hemisphere_conv = pos
+                hemisphere_txt = "northern"
+            else:
+                # convert southern hemisphere geometry to northern hemisphere
+                # for azimuth_switch check
+                hemisphere_offset = 180
+                hemisphere_conv = neg
+                hemisphere_txt = "southern"
+
             # Point to the sun
             if pan_ref == 'sun':
                 # TODO : move to flag geometry condition
-                if azimuth_sun <= azimuth_switch:
-                    debug(f"Azimuth sun ({azimuth_sun}) is less than azimuth "
-                          f"switch ({azimuth_switch}) --> +{self.pan_abs}°")
+                if (hemisphere_offset + hemisphere_conv(azimuth_sun)) % 360 <= (hemisphere_offset + hemisphere_conv(azimuth_switch)) % 360:
+                    debug(f"Sun azimuth ({azimuth_sun:.2f}) has not yet reached the azimuth "
+                          f"switch ({azimuth_switch:.2f}) at {hemisphere_txt} hemisphere "
+                          f"--> {self.pan_abs:+.2f}°")
                     self.pan_abs = azimuth_sun + self.pan_abs
                 else:
-                    debug(f"Azimuth sun ({azimuth_sun}) is more than azimuth "
-                          f"switch ({azimuth_switch}) --> -{self.pan_abs}°")
+                    debug(f"Sun azimuth ({azimuth_sun:.2f}) has passed the azimuth "
+                          f"switch ({azimuth_switch:.2f}) at {hemisphere_txt} hemisphere "
+                          f"--> {-self.pan_abs:+.2f}°")
                     self.pan_abs = azimuth_sun - self.pan_abs
 
             if tilt_ref == 'sun':
@@ -162,6 +177,10 @@ class Geometry(object):
         self.tilt_abs = reverse_tilt(self.tilt_abs)
         if reverse_tilt is neg:
             self.pan_abs = self.pan_abs + 180
+
+        # force to [0...360] range
+        self.pan_abs = self.pan_abs % 360
+        self.tilt_abs = self.tilt_abs % 360
 
 
 if __name__ == '__main__':

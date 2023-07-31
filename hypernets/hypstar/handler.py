@@ -35,7 +35,7 @@ class HypstarHandler(Hypstar):
             # just in case instrument sent BOOTED packet while we were
             # switching baudrates, let's test if it's there
             try:
-                super().__init__(instrument_port)
+                super().__init__(instrument_port, loglevel=instrument_loglevel)
             except IOError as e:
                 error("Did not get instrument BOOTED packet in {}s".format(boot_timeout)) # noqa
                 exit(27)
@@ -45,14 +45,13 @@ class HypstarHandler(Hypstar):
 
         else:  # Got the boot packet or boot packet is not expected (gui mode)
             try:
-                super().__init__(instrument_port)
+                super().__init__(instrument_port, loglevel=instrument_loglevel)
 
             except Exception as e:
                 error(f"{e}")
                 exit(6)
 
         try:
-            self.set_log_level(instrument_loglevel)
             self.set_baud_rate(HypstarSupportedBaudRates(instrument_baudrate))
 
             # due to the bug in PSU HW revision 3 12V regulator might not start
@@ -66,7 +65,9 @@ class HypstarHandler(Hypstar):
             # so we retry a few times before giving up
             for i in range(retry_count := 5):
                 self.get_hw_info()
-                if not self.hw_info.optical_multiplexer_available:
+                if self.hw_info.optical_multiplexer_available:
+                    break
+                else:
                     if i < retry_count:
                         debug("MUX+SWIR+TEC hardware not available, retrying in 5 seconds")
                         sleep(5)

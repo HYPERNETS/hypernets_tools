@@ -176,14 +176,19 @@ class FrameRadiometer(LabelFrame):
     def check_if_hypstar_exists(self):
         if self.hypstar is None:
             try:
-                self.hypstar = HypstarHandler(instrument_port=self.master.serial_port, instrument_baudrate=self.master.baudrate, expect_boot_packet=False)
-                self.hypstar.set_log_level(int(HypstarLogLevel[self.master.loglevel]))
+                self.hypstar = HypstarHandler(instrument_port=self.master.serial_port, 
+                                              instrument_baudrate=self.master.baudrate, 
+                                              expect_boot_packet=False, 
+                                              instrument_loglevel=int(HypstarLogLevel[self.master.loglevel]))
                 self.hypstar.set_baud_rate(HypstarSupportedBaudRates(self.master.baudrate))
                 self.calibration_coefficients = self.hypstar.get_calibration_coeficients_basic()
 
             except Exception as e:
                 showerror("Error", str(e))
                 return False
+            except SystemExit as e:
+                return False
+
         return True
 
     def general_callback(self):
@@ -211,6 +216,8 @@ class FrameRadiometer(LabelFrame):
 
         except Exception as e:
             showerror("Error", str(e))
+        except SystemExit as e:
+            pass
 
     def configure_items_output(self):
         output_frame = LabelFrame(self, text="Output")
@@ -365,8 +372,13 @@ class FrameRadiometer(LabelFrame):
     def get_instrument_hw_info(self):
         if not self.check_if_hypstar_exists():
             return
-        self.hypstar.get_hw_info()
-        showinfo("Hardware Infos", str(self.hypstar.hw_info))
+        try:
+            self.hypstar.get_hw_info()
+            showinfo("Hardware Infos", str(self.hypstar.hw_info))
+        except Exception as e:
+            showerror("Error", str(e))
+        except SystemExit as e:
+            pass
 
     def get_instrument_env_log(self):
         if not self.check_if_hypstar_exists():
