@@ -16,12 +16,16 @@
 set -o nounset                              # Treat unset variables as an error
 set -euo pipefail                           # Bash Strict Mode
 
-
 parse_config () {
 	keyword="$1"
 	config_file="$2"
-	value=$(awk -F "[=]" '/^'$keyword'/ {
-	print $2; exit}' $config_file)
+
+	if [[ ! -f "$config_file" ]]; then
+		>&2 echo "Config file $config_file not found"
+		exit -1
+	fi
+	
+	value=$(awk -F "[=]" '/^'$keyword'/ {print $2; exit}' $config_file)
 	value=$(echo "$value" | tr -d ' ')
 	echo $value
 }
