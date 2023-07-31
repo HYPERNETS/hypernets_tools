@@ -186,6 +186,9 @@ class FrameRadiometer(LabelFrame):
             except Exception as e:
                 showerror("Error", str(e))
                 return False
+            except SystemExit as e:
+                return False
+
         return True
 
     def general_callback(self):
@@ -213,6 +216,8 @@ class FrameRadiometer(LabelFrame):
 
         except Exception as e:
             showerror("Error", str(e))
+        except SystemExit as e:
+            pass
 
     def configure_items_output(self):
         output_frame = LabelFrame(self, text="Output")
@@ -367,8 +372,13 @@ class FrameRadiometer(LabelFrame):
     def get_instrument_hw_info(self):
         if not self.check_if_hypstar_exists():
             return
-        self.hypstar.get_hw_info()
-        showinfo("Hardware Infos", str(self.hypstar.hw_info))
+        try:
+            self.hypstar.get_hw_info()
+            showinfo("Hardware Infos", str(self.hypstar.hw_info))
+        except Exception as e:
+            showerror("Error", str(e))
+        except SystemExit as e:
+            pass
 
     def get_instrument_env_log(self):
         if not self.check_if_hypstar_exists():
