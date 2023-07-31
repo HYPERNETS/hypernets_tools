@@ -18,6 +18,7 @@ def show_interactive_plots(spectra):
     bprev = Button(axprev, 'Previous')
     bprev.on_clicked(spectra.prev_spectrum)
 
+    spectra.shown = True
     plt.show()
 
 
@@ -32,6 +33,7 @@ class Spectra(list[Spectrum]):
         self.fancy_mode = fancy_mode
         self.cc = cc
         self.index = 0
+        self.shown = False
 
         if spectrum is None:
             # Open the file and create a list of Spectrum
@@ -45,7 +47,7 @@ class Spectra(list[Spectrum]):
                 index += current_spectrum.total
         else:
             self.append(Spectrum(spectrum))
-        print(f"{len(self)} spectra red.")
+        print(f"{len(self)} spectra read.")
 
         self.update()
 

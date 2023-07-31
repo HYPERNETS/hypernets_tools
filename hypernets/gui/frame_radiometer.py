@@ -186,6 +186,9 @@ class FrameRadiometer(LabelFrame):
             except Exception as e:
                 showerror("Error", str(e))
                 return False
+            except SystemExit as e:
+                return False
+
         return True
 
     def general_callback(self):
@@ -213,6 +216,8 @@ class FrameRadiometer(LabelFrame):
 
         except Exception as e:
             showerror("Error", str(e))
+        except SystemExit as e:
+            pass
 
     def configure_items_output(self):
         output_frame = LabelFrame(self, text="Output")
@@ -270,25 +275,44 @@ class FrameRadiometer(LabelFrame):
         prev_spec.grid(sticky=W,  column=1, row=10, columnspan=1)
         next_spec.grid(sticky=W,  column=2, row=10, columnspan=1)
 
+
     def prev_spec(self):
         if self.spectra is None:
             showerror("Error", "Please take an acquisition")
             return
+
+        # plot window has been shown and closed, re-init
+        if self.spectra.shown is True:
+            self.make_output()
+
         self.spectra.prev_spectrum(None)
         self.update_output()
+
 
     def next_spec(self):
         if self.spectra is None:
             showerror("Error", "Please take an acquisition")
             return
+
+        # plot window has been shown and closed, re-init
+        if self.spectra.shown is True:
+            self.make_output()
+
         self.spectra.next_spectrum(None)
         self.update_output()
 
+
     def show_plot(self, nofile=False):
-        if not nofile and self.last_file_path is None:
+        if not nofile and self.last_file_path is None or self.spectra is None:
+            showerror("Error", "Please take an acquisition")
             return
-        # self.make_output()
+        
+        # plot window has been shown and closed, re-init
+        if self.spectra.shown is True:
+            self.make_output()
+
         show_interactive_plots(self.spectra)
+
 
     def make_output(self, spec=None):
         if self.last_file_path is None and spec is None:
@@ -348,8 +372,13 @@ class FrameRadiometer(LabelFrame):
     def get_instrument_hw_info(self):
         if not self.check_if_hypstar_exists():
             return
-        self.hypstar.get_hw_info()
-        showinfo("Hardware Infos", str(self.hypstar.hw_info))
+        try:
+            self.hypstar.get_hw_info()
+            showinfo("Hardware Infos", str(self.hypstar.hw_info))
+        except Exception as e:
+            showerror("Error", str(e))
+        except SystemExit as e:
+            pass
 
     def get_instrument_env_log(self):
         if not self.check_if_hypstar_exists():
@@ -366,25 +395,34 @@ class FrameRadiometer(LabelFrame):
         self.option_clear()
         self.master.option_clear()
 
+
     def set_swir_temperature(self):
         TEC = 0  # TODO : tunable from config / gui ?
         if not self.check_if_hypstar_exists():
             return
-        output = self.hypstar.set_SWIR_module_temperature(TEC)
 
-        if isinstance(output, Exception):
-            showerror("Error", str(output))
-        else:
-            showinfo("Thermal Control", f"Thermal Control setted to {TEC}.")
+        print(f"Stabilising SWIR sensor temperature to {TEC} 'C...")
+        try:
+            self.hypstar.set_SWIR_module_temperature(TEC)
+        except Exception as e:
+            showerror("Error", str(e))
+            return
+
+        showinfo("Thermal Control3", f"SWIR temperature set to {TEC} 'C")
+
 
     def unset_swir_temperature(self):
         if not self.check_if_hypstar_exists():
             return
-        output = self.hypstar.shutdown_SWIR_module_thermal_control()
-        if isinstance(output, Exception):
-            showerror("Error", str(output))
-        else:
-            showinfo("Thermal Control", "Thermal Control unsetted.")
+
+        try:
+            self.hypstar.shutdown_SWIR_module_thermal_control()
+        except Exception as e:
+            showerror("Error", str(e))
+            return
+
+        showinfo("Thermal Control", "SWIR Thermal Control is disabled")
+
 
     def enable_vm(self):
         if not self.check_if_hypstar_exists():
@@ -392,16 +430,17 @@ class FrameRadiometer(LabelFrame):
 
         self.vm_enabled = not self.vm_enabled
         if self.vm_enabled:
-            self.enable_vm_button_text.set("Turn VM off")
+            self.enable_vm_button_text.set("Turn VM electronics off")
             self.hypstar.VM_enable(True)
         else:
-            self.enable_vm_button_text.set("Turn VM on")
+            self.enable_vm_button_text.set("Turn VM electronics on")
             self.hypstar.VM_enable(False)
 
         output = self.hypstar.VM_enable(self.vm_enabled)
         if isinstance(output, Exception):
             showerror("Error", str(output))
         pass
+
 
     def measure_vm(self):
         if not self.check_if_hypstar_exists():
@@ -413,11 +452,19 @@ class FrameRadiometer(LabelFrame):
                 self.vm_light_source.value, it, self.vm_current.get())
 
         spec = spec.getBytes()
+
+        # turn off VM after measuring
+        self.enable_vm_button_text.set("Turn VM electronics on")
+        self.hypstar.VM_enable(False)
+        self.vm_enabled = False
+
         self.make_output(spec=spec)
         self.show_plot(nofile=True)
 
+
     def read_cal(self):
         pass
+
 
     def __del__(self):
         if self.hypstar is not None:
