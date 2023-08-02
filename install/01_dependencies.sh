@@ -3,6 +3,9 @@
 set -o nounset
 set -euo pipefail
 
+XHL=$(tput setaf 9) ## red
+RESET_HL=$(tput sgr0) ## reset all text formatting
+
 if [[ $EUID -ne 0 ]]; then
 	echo "This script must be run as root, use sudo $0 instead" 1>&2
 	exit 1
@@ -29,6 +32,11 @@ else
 	exit 1
 fi
 	
+if [ "$ID" != "debian" ] && [ "$ID" != "manjaro" ]; then
+	echo "${XHL}Error: only Debian and Manjaro are supported distributions${RESET_HL}"
+	exit 1
+fi
+
 if [ "$ID"  == "debian" ]; then
 	sudo apt install python3-pip tk make gcc python3-tk rsync python3-pysolar python3-crcmod python3-serial python3-matplotlib net-tools ffmpeg sshfs python3-geopy
 

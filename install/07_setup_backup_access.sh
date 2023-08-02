@@ -31,6 +31,11 @@ else
 	exit 1
 fi
 
+if [ "$ID" != "debian" ] && [ "$ID" != "manjaro" ]; then
+	echo "${XHL}Error: only Debian and Manjaro are supported distributions${RESET_HL}"
+	exit 1
+fi
+
 source utils/configparser.sh
 
 sshIf=$(parse_config "backup_ssh_interface" config_static.ini)

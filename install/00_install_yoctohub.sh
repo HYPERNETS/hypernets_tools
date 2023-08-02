@@ -3,6 +3,9 @@
 set -o nounset
 set -euo pipefail
 
+XHL=$(tput setaf 9) ## red
+RESET_HL=$(tput sgr0) ## reset all text formatting
+
 function usage(){
 	printf "Usage sudo %s [-nv][-h] :\n" "$0"
 	printf "  -v  Verbose Mode.\n"
@@ -46,6 +49,11 @@ if [ -f /etc/os-release ]; then
 else
 	echo "Error: impossible to detect OS system version."
 	echo "Not a systemd freedesktop.org distribution?"
+	exit 1
+fi
+
+if [ "$ID" != "debian" ] && [ "$ID" != "manjaro" ]; then
+	echo "${XHL}Error: only Debian and Manjaro are supported distributions${RESET_HL}"
 	exit 1
 fi
 

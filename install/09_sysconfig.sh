@@ -31,11 +31,16 @@ else
 	exit 1
 fi
 
+if [ "$ID" != "debian" ] && [ "$ID" != "manjaro" ]; then
+	echo "${XHL}Error: only Debian and Manjaro are supported distributions${RESET_HL}"
+	exit 1
+fi
+
 user=$(logname)
 
 ## uninstall unnecessary large packages
 set +e
-if [ "$ID"  == "debian" ]; then
+if [ "$ID" == "debian" ]; then
 	echo
 	echo "${HL}Uninstalling needless large packages${RESET_HL}"
 	apt purge libreoffice* gimp-data
@@ -45,7 +50,7 @@ set -e
 
 set +e
 ## disable services
-if [ "$ID"  == "debian" ]; then
+if [ "$ID" == "debian" ]; then
 	service_array=("bluetooth.service" "unattended-upgrades.service" "apt-daily.service" "apt-daily.timer" "apt-daily-upgrade.service" "apt-daily-upgrade.timer" "colord.service" "cups-browsed.service" "cups.service")
 
 	for srv in "${service_array[@]}"
@@ -111,9 +116,9 @@ echo "SystemMaxUse=1G" >> /etc/systemd/journald.conf
 
 
 # add user to groups
-if [ "$ID"  == "debian" ]; then
+if [ "$ID" == "debian" ]; then
 	group_array=("sudo" "systemd-journal")
-elif [ "$ID"  == "manjaro" ]; then
+elif [ "$ID" == "manjaro" ]; then
 	group_array=("wheel" "systemd-journal")
 fi
 

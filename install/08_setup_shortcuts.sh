@@ -1,5 +1,8 @@
 #!/usr/bin/bash
 
+XHL=$(tput setaf 9) ## red
+RESET_HL=$(tput sgr0) ## reset all text formatting
+
 if [[ ${PWD##*/} != "hypernets_tools"* ]]; then
 	echo "This script must be run from hypernets_tools folder" 1>&2
 	echo "Use : ./install/${0##*/} instead"
@@ -12,6 +15,11 @@ if [ -f /etc/os-release ]; then
 else
 	echo "Error: impossible to detect OS system version."
 	echo "Not a systemd freedesktop.org distribution?"
+	exit 1
+fi
+
+if [ "$ID" != "debian" ] && [ "$ID" != "manjaro" ]; then
+	echo "${XHL}Error: only Debian and Manjaro are supported distributions${RESET_HL}"
 	exit 1
 fi
 
