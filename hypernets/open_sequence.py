@@ -283,6 +283,38 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
     terminate_lightsensor_thread(monitor_pd_thread, monitor_pd_event)
 
+    # By the end of the sequence GPS has hopefully got a fix.
+    # Log a warning message if GPS fix differs more than 100 m from the
+    # location in the config file
+    try:
+        from configparser import ConfigParser
+        config = ConfigParser()
+        config.read("config_dynamic.ini")
+        config_latitude = config["GPS"]["latitude"]
+        config_longitude = config["GPS"]["longitude"]
+
+        from hypernets.yocto.gps import get_gps
+        gps_latitude, gps_longitude, gps_datetime = get_gps(return_float=True)
+
+        if gps_datetime is not None and gps_datetime != "" and gps_datetime != "N/A":
+            from geopy.distance import geodesic
+            distance_m = geodesic((gps_latitude, gps_longitude), (config_latitude, config_longitude)).m
+            if (distance_m > 100):
+                warning(f"Difference between coordinates from GPS ({gps_latitude:.6f}, {gps_longitude:.6f}) "
+                        f"and config_dynamic.ini ({config_latitude}, {config_longitude}) "
+                        f"is over 100 m ({distance_m:.1f} m))")
+            else:
+                debug(f"Difference between coordinates from GPS ({gps_latitude}, {gps_longitude}) "
+                        f"and config_dynamic.ini ({config_latitude}, {config_longitude}) "
+                      f"is {distance_m} m")
+
+    except KeyError as key:
+        warning(f" {key} missing from config_dynamic.ini.")
+
+    except Exception as e:
+        error(f"Config Error: {e}.")
+
+
     replace(seq_path, final_seq_path)
     info(f"Created sequence : {final_seq_path}")
 
