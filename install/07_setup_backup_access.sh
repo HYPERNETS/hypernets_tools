@@ -122,19 +122,10 @@ fi
 if [ "$ID"  == "debian" ]; then
 	apt install openssh-server
 
-	cat << EOF > /etc/ssh/sshd_config.d/ssh_backup_sshd_config.conf
-ListenAddress $sshIp
-ListenAddress 127.0.0.1
-EOF
-
 	systemctl stop ssh.service
 	systemctl enable ssh.service
 	systemctl start ssh.service
 elif [ "$ID"  == "manjaro" ]; then
-	sed -i '/^ListenAddress/d' /etc/ssh/sshd_config
-	echo "ListenAddress $sshIp" >> /etc/ssh/sshd_config
-	echo "ListenAddress 127.0.0.1" >> /etc/ssh/sshd_config
-	
 	systemctl stop sshd.service
 	systemctl enable sshd.service
 	systemctl start sshd.service
