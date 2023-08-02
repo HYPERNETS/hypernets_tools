@@ -443,29 +443,19 @@ exit_actions() {
     if [ $return_value -eq 0 ] ; then
         echo "[INFO]  Success"
     else
-    	echo "[INFO]  Hysptar scheduled job exited with code $return_value";
+		echo "[WARNING]  Hysptar scheduled job exited with code $return_value";
 
-		# It is raining
-		if [ $return_value -eq 88 ]; then
-			echo "[WARNING] Stopping due to rain"
-			shutdown_sequence $return_value
+		# There is no point in trying again in case of some errors:
+		# 30 - sequence file not found
+		# 88 - rainig
+		if [ $return_value -ne 30 ] && [ $return_value -ne 88 ]; then
+			sleep 1
+
+			echo "[WARNING]  Second try : "
+			set +e
+			python3 -m hypernets.open_sequence -f $sequence_file $extra_args
+			set -e
 		fi
-
-		# FIXME : sudo issue
-		# if [ $return_value -eq 27 ]; then
-		# 	echo "[INFO] Trying to reload and trigger USB rules..."
-		# 	sudo udevadm control --reload
-		# 	echo $?
-		# 	sudo udevadm trigger
-		# 	echo $?
-		# fi
-
-		sleep 1
-
-		echo "[INFO]  Second try : "
-		set +e
-		python3 -m hypernets.open_sequence -f $sequence_file $extra_args
-		set -e
     fi
 	shutdown_sequence $return_value
 }

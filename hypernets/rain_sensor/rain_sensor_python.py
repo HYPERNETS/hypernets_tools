@@ -15,7 +15,7 @@ class RainSensor(object):
         # self.module = CDLL("rain_sensor_module.so")
 
         if self.module.check_gpio_access() < 0:  # If no write access to GPIO
-            debug("No write access to GPIO throught the module.")
+            debug("No write access to GPIO through the module.")
             del self.module
             debug("Module deleted.")
         else:
