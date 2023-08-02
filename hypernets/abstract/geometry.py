@@ -49,7 +49,7 @@ class Geometry(object):
     def __str__(self):
         ref_pan, ref_tilt = Geometry.int_to_reference(self.reference)
         str_output = f"{self.pan:.2f} ({ref_pan}) ; {self.tilt:.2f} ({ref_tilt})" # noqa
-        str_output += f" --> [{self.pan_abs:.2f} ; {self.tilt_abs:.2f}]"
+        str_output += f" --> [{self.pan_abs:.2f} ; {self.tilt_abs:.2f}] (abs)"
         str_output += f" -- {self.flags}"
         return str_output
 

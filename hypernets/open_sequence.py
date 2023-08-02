@@ -232,15 +232,30 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         if not instrument_standalone:
             geometry.get_absolute_pan_tilt()
             info(f"--> Requested Position : {geometry}")
-            try:
-                pan_real, tilt_real = move_to_geometry(geometry, wait=True)
-                pan_real = float(pan_real) / 100
-                tilt_real = float(tilt_real) / 100
-                info(f"--> final pan : {pan_real} ; final tilt : {tilt_real}")
-                info("-"*72)
 
-            except TypeError:
-                pan_real, tilt_real = -999, -999
+            # try up to 2 times moving the pan-tilt
+            for i in range(2):
+                try:
+                    pan_real, tilt_real = move_to_geometry(geometry, wait=True)
+                    pan_real = float(pan_real) / 100
+                    tilt_real = float(tilt_real) / 100
+
+                    pan_delta = (pan_real + 360) % 360 - (geometry.pan_abs + 360) % 360
+                    tilt_delta = (tilt_real + 360) % 360 - (geometry.tilt_abs + 360) % 360
+
+                    if abs(pan_delta) > 1.0 or abs(tilt_delta) > 1.0:
+                        warning(f"pan-tilt did not reach the requested position")
+                        warning(f"--> requested : pan = {geometry.pan_abs:.2f}, tilt = {geometry.tilt_abs:.2f}")
+                        warning(f"--> reported  : pan = {pan_real:.2f}, tilt = {tilt_real:.2f}")
+                        warning(f"--> delta     : pan = {pan_delta:+.1f}, tilt = {tilt_delta:+.1f}") 
+                    else:
+                        info(f"--> final pan (abs) : {pan_real}; final tilt (abs) : {tilt_real}")
+                        info(f"--> from target     : pan = {pan_delta:+.1f}, tilt = {tilt_delta:+.1f}")
+                        info("-"*72)
+                        break
+
+                except TypeError:
+                    pan_real, tilt_real = -999, -999
 
         for request in requests:
             iter_line += 1
@@ -289,7 +304,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
     if not instrument_standalone:
         terminate_lightsensor_thread(monitor_pd_thread, monitor_pd_event)
-    
+
         # By the end of the sequence GPS has hopefully got a fix.
         # Log a warning message if GPS fix differs more than 100 m from the
         # location in the config file
@@ -299,10 +314,10 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             config.read("config_dynamic.ini")
             config_latitude = config["GPS"]["latitude"]
             config_longitude = config["GPS"]["longitude"]
-    
+
             from hypernets.yocto.gps import get_gps
             gps_latitude, gps_longitude, gps_datetime = get_gps(return_float=True)
-    
+
             if gps_datetime is not None and gps_datetime != "" and gps_datetime != b'N/A':
                 from geopy.distance import geodesic
                 distance_m = geodesic((gps_latitude, gps_longitude), (config_latitude, config_longitude)).m
@@ -314,13 +329,12 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                     debug(f"Difference between coordinates from GPS ({gps_latitude}, {gps_longitude}) "
                             f"and config_dynamic.ini ({config_latitude}, {config_longitude}) "
                           f"is {distance_m} m")
-    
+
         except KeyError as key:
             warning(f" {key} missing from config_dynamic.ini.")
-    
+
         except Exception as e:
             error(f"Config Error: {e}.")
-
 
     replace(seq_path, final_seq_path)
     info(f"Created sequence : {final_seq_path}")

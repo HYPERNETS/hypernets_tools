@@ -156,7 +156,7 @@ def move_to(ser, pan=None, tilt=None, wait=False):
         estimated_time = pt_time_estimation(initial_position, (pan, tilt))
 
         debug(f"Initial position :\t{initial_position}\t(10^-2 degrees)")
-        debug(f"Estimated Time : \t{estimated_time}s")
+        debug(f"Estimated Time : \t{estimated_time:.1f}s")
 
     if pan is not None:
         # Sync Byte + address + cmd1 + pan
