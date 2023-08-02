@@ -110,19 +110,15 @@ shutdown_sequence() {
 				echo "[INFO]  Next Yocto wakeup is scheduled on $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset (in $delta s)"
 			fi
 		fi # log next scheduled yocto wakeup if yocto command line API is installed
-
-
     fi # [[ "$bypassYocto" != "yes" ]] && [[ "$startSequence" == "yes" ]]
 
-	# Sleep inhibited by sleep.lock
-	if [ -f sleep.lock ]; then
-		keepPc="on"
-		sleepLocked=1
-	fi
+	## Log network traffic
+	## interface1 Rx Tx,interface2 Rx Tx,....
+	traffic=$(grep : /proc/net/dev | sed -e 's/^[[:space:]]\+//;s/[[:space:]]\+/ /g;s/://g'| cut -d " " -f 1,2,10 | paste -sd ",")
+	echo "[INFO]  Network traffic:$traffic"
 
+	# check minimum uptime
     if [[ "$keepPc" == "off" ]]; then
-	    echo "[INFO]  Option : Keep PC OFF"
-
 		uptime=$(sed -e 's/\..*//' /proc/uptime)
 
 		## minimum allowed uptime is 2 minutes for successful sequence (exit code 0)
@@ -141,11 +137,16 @@ shutdown_sequence() {
 
 			sleep $sleep_duration
 		fi
+	fi # "$keepPc" == "off"
 
-		## Log network traffic
-		## interface1 Rx Tx,interface2 Rx Tx,....
-		traffic=$(grep : /proc/net/dev | sed -e 's/^[[:space:]]\+//;s/[[:space:]]\+/ /g;s/://g'| cut -d " " -f 1,2,10 | paste -sd ",")
-		echo "[INFO]  Network traffic:$traffic"
+	# Sleep inhibited by sleep.lock
+	if [ -f sleep.lock ]; then
+		keepPc="on"
+		sleepLocked=1
+	fi
+
+    if [[ "$keepPc" == "off" ]]; then
+	    echo "[INFO]  Option : Keep PC OFF"
 
 	    echo "[INFO]  Send Yoctopuce To sleep (or not)"
 		set +e
