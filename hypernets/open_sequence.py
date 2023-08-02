@@ -34,21 +34,10 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     # Check if it is raining
     if not instrument_standalone and check_rain:
         try:
-            debug("Checking rain sensor")
             rain_sensor = RainSensor()
-            if rain_sensor.read_value() == 1:
+            if is_raining(rain_sensor):
                 warning("Skipping sequence due to rain")
-
-                # get the absolute position of nadir
-                reference = Geometry.reference_to_int("hyper", "hyper")
-                park = Geometry(reference, tilt=0)
-                park.get_absolute_pan_tilt()
-
-                # park radiometer to nadir 
-                # just in case it wasn't parked at the end of the last sequence
-                info("Parking radiometer to nadir")
-                move_to(ser=None, tilt=park.tilt_abs, wait=True)
-
+                park_to_nadir()
                 exit(88) # exit code 88 
         except Exception as e:
             error(f"{e}")
@@ -187,21 +176,10 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         # Check if it is raining
         if check_rain:
             try:
-                debug("Checking rain sensor")
-                if rain_sensor.read_value() == 1:
+                if is_raining(rain_sensor):
                     warning("Aborting sequence due to rain")
-
-                    # get the absolute position of nadir
-                    reference = Geometry.reference_to_int("hyper", "hyper")
-                    park = Geometry(reference, tilt=0)
-                    park.get_absolute_pan_tilt()
-
-                    # park radiometer to nadir
-                    info("Parking radiometer to nadir")
-                    move_to(ser=None, tilt=park.tilt_abs, wait=True)
-
+                    park_to_nadir()
                     exit(88) # exit code 88 
-
             except Exception as e:
                 error(f"{e}")
                 error("Disabling further rain sensor checks")
@@ -344,6 +322,29 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
     if instrument_is_requested:
         del instrument_instance
+
+
+def is_raining(rain_sensor=None):
+    debug("Checking rain sensor")
+
+    if rain_sensor is None:
+        rain_sensor = RainSensor()
+
+    if rain_sensor.read_value() == 1:
+        return True
+    else:
+        return False
+
+
+def park_to_nadir():
+    # get the absolute position of nadir
+    reference = Geometry.reference_to_int("hyper", "hyper")
+    park = Geometry(reference, tilt=0)
+    park.get_absolute_pan_tilt()
+
+    # park radiometer to nadir 
+    info("Parking radiometer to nadir")
+    move_to(ser=None, tilt=park.tilt_abs, wait=True)
 
 
 if __name__ == '__main__':
