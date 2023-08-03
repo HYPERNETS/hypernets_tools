@@ -457,15 +457,16 @@ pt() (
 		echo
 		echo "  Pan-tilt control"
 		echo "********************"
-		echo "pt [-h|--help] [abs|sun] [new_pan new_tilt]"
-		echo "pt                        without options returns the current pan-tilt position"
-		echo "   new_pan new_tilt       move pan-tilt while accounting for the offsets in config_dynamic.ini"
-		echo "   abs new_pan new_tilt   move pan-tilt to absolute position"
-		echo "   sun new_pan new_tilt   move pan-tilt to position relative to the sun"
+		echo "pt [-h|--help] [abs|sun|delta] [new_pan new_tilt]"
+		echo "pt                          without options returns the current pan-tilt position"
+		echo "   new_pan new_tilt         move pan-tilt while accounting for the offsets in config_dynamic.ini"
+		echo "   abs new_pan new_tilt     move pan-tilt to absolute position"
+		echo "   sun new_pan new_tilt     move pan-tilt to position relative to the sun"
+		echo "   delta new_pan new_tilt   move pan-tilt relative to the current position"
 		echo
 		echo "pt sun  without arguments points to the sun"
 		echo "use x as new value for the axis that has to stay in the current position"
-		echo "eg: pt 270 90   pt abs 270 90   pt x 0   pt sun"
+		echo "eg: pt 270 90   pt abs 270 90   pt x 0   pt sun   pt delta x -5"
 		echo
 		exit 
 	fi
@@ -483,10 +484,12 @@ pt() (
 	if [[ "${1-}" == "abs" ]]; then
 		abspos=1
 		sunpos=0
+		deltapos=0
 		shift 1
 	elif [[ "${1-}" == "sun" ]]; then
 		abspos=0
 		sunpos=1
+		deltapos=0
 		shift 1
 	
 		## if pan and tilt are empty then set to 0
@@ -545,9 +548,15 @@ EOF
 
 		echo
 		printf "${HL}Sun position: azimuth %.2f, zenith %.2f, elevation %.2f\n${RESET_HL}" "$sun_azimuth" "$sun_zenith" "$sun_elevation"
+	elif [[ "${1-}" == "delta" ]]; then
+		abspos=0
+		sunpos=0
+		deltapos=1
+		shift 1
 	else
 		abspos=0
 		sunpos=0
+		deltapos=0
 	fi
 
 	# check if pan-tilt relay is on
@@ -570,7 +579,7 @@ EOF
 	current_abs_pan=$(cut -f 1 <<< $current_abs_pos)
 	current_abs_tilt=$(cut -f 2 <<< $current_abs_pos)
 
-	## calculate relative position
+	## calculate current position in hypy coords
 	current_hyper_pan=$(_pt_abs2rel_pan "$current_abs_pan")
 	current_hyper_tilt=$(_pt_abs2rel_tilt "$current_abs_tilt")
 
@@ -590,35 +599,44 @@ EOF
 		( [[ "$1" =~ ^[+-]?[0-9]*\.?[0-9]+$ ]] || [[ "$1" == "x" ]] ) 2>/dev/null && ( [[ "$2" =~ ^[+-]?[0-9]*\.?[0-9]+$ ]] || [[ "$2" == "x" ]] ) 2>/dev/null
 		if [ $? -ne 0 ]; then
 			echo "${XHL}Invalid input, enter numeric pan and tilt values or x if no movement is required.${RESET_HL}"
+			echo "${XHL}See pt -h for help${RESET_HL}"
 			exit -1
 		fi
 		set -eu
 
-		if [[ "$1" == "x" ]]; then ## use current
+		# remove plus sign, if any
+		new_pan="${1#+}"
+		new_tilt="${2#+}"
+
+		if [[ "$new_pan" == "x" ]]; then ## use current
 			requested_abs_pan=$current_abs_pan
 		elif [ "$abspos" = 1 ]; then ## requested abs
-			requested_abs_pan="$1"
+			requested_abs_pan="$new_pan"
 		elif [ "$sunpos" = 1 ]; then ## requested sun
-			requested_rel_sun_pan=$(bc <<< "$sun_azimuth + ($1)")
+			requested_rel_sun_pan=$(bc <<< "$sun_azimuth + ($new_pan)")
 			requested_abs_pan=$(_pt_rel2abs_pan "$requested_rel_sun_pan")
+		elif [ "$deltapos" = 1 ]; then ## requested delta
+			requested_abs_pan=$(bc <<< "$current_abs_pan + ($new_pan)")
 		else ## requested hyper
-			requested_abs_pan=$(_pt_rel2abs_pan "$1")
+			requested_abs_pan=$(_pt_rel2abs_pan "$new_pan")
 		fi
 
-		if [[ "$2" == "x" ]]; then ## use current
+		if [[ "$new_tilt" == "x" ]]; then ## use current
 			requested_abs_tilt=$current_abs_tilt
 		elif [ "$abspos" = 1 ]; then ## requested abs
-			requested_abs_tilt="$2"
+			requested_abs_tilt="$new_tilt"
 		elif [ "$sunpos" = 1 ]; then ## requested sun, zenith is 180 in relative coords
-			requested_rel_sun_tilt=$(bc <<< "(180 - $sun_zenith + ($2))")
+			requested_rel_sun_tilt=$(bc <<< "(180 - $sun_zenith + ($new_tilt))")
 			requested_abs_tilt=$(_pt_rel2abs_tilt "$requested_rel_sun_tilt")
+		elif [ "$deltapos" = 1 ]; then ## requested delta
+			requested_abs_tilt=$(bc <<< "$current_abs_tilt + ($new_tilt)")
 		else ## requested hyper
-			requested_abs_tilt=$(_pt_rel2abs_tilt "$2")
+			requested_abs_tilt=$(_pt_rel2abs_tilt "$new_tilt")
 		fi
 
 		## force to 0...360 range
-		requested_abs_pan=$( bc <<< "($requested_abs_pan + 36000) % 360" )
-		requested_abs_tilt=$( bc <<< "($requested_abs_tilt + 36000) % 360" )
+		requested_abs_pan=$(bc <<< "($requested_abs_pan + 36000) % 360")
+		requested_abs_tilt=$(bc <<< "($requested_abs_tilt + 36000) % 360")
 	
 		printf "Moving to requested absolute position pan = %.1f, tilt = %.1f\n" "$requested_abs_pan" "$requested_abs_tilt"
 		python -m hypernets.geometry.pan_tilt -w -p "$requested_abs_pan" -t "$requested_abs_tilt" > /dev/null 2>&1
