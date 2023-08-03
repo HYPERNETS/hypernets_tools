@@ -26,6 +26,9 @@ if [[ ${PWD##*/} != "hypernets_tools"* ]]; then
 	exit 1
 fi
 
+# add ~/.local/bin to path, Yocto command line API is installed there in Manjaro
+PATH="$PATH:~/.local/bin"
+
 # Make Logs
 echo "Making Logs..."
 mkdir -p LOGS
@@ -133,7 +136,7 @@ do
 		msg_txt="Yocto API is not installed, can't read next scheduled wakeup"
 	fi
 
-	ssh -p $sshPort -t $ipServer "echo $msg_txt > $remoteDir/system_is_up" > /dev/null 2>&1
+	ssh -p $sshPort -t $ipServer "echo \"$msg_txt\" > $remoteDir/system_is_up" > /dev/null 2>&1
 	if [[ $? -eq 0 ]] ; then
 		echo "Server is up!"
 		break
