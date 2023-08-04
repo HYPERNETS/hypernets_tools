@@ -87,10 +87,6 @@ now() (
 
 	echo "Yocto meteo: $(python -m hypernets.yocto.meteo | sed -E -e 's/\(|\)|\[|\]|\"//g' | sed -e "s/'//2g" | sed '-es/,//'{7..1..2})"
 
-	if [ ! -f hypernets/rain_sensor/rain_sensor ]; then
-		(cd hypernets/rain_sensor/ && make)
-	fi
-
 	set +e
 	relay_on="$(python -m hypernets.yocto.relay -g -n4 2>&1 | grep -c True)"
 	set -e
@@ -103,7 +99,9 @@ now() (
 		echo "done"
 	fi
 
-	hypernets/rain_sensor/rain_sensor
+	set +e
+	python -m hypernets.rain_sensor -c 1 -s -l ERROR
+	set -e
 
 	# restore rain sensor relay state
 	if [ "$relay_on" = 0 ]; then

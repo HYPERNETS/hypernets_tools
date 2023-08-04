@@ -53,6 +53,17 @@ EOF
 chmod 755 /usr/local/sbin/unique-num
 
 
+# load GPIO chip kernel module
+if [[ ! $(grep "^gpio_f7188x" /etc/modules) ]]; then
+	echo "gpio_f7188x" >> /etc/modules
+fi
+
+set +e
+rmmod ftdi-sio > /dev/null 2>&1
+modprobe gpio_f7188x
+modprobe ftdi-sio
+set -e
+
 ### UDEV RULES:
 
 ## install rules
@@ -65,11 +76,18 @@ KERNEL=="ttyUSB*", SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", IMPORT{program}="/
 # allow rw access to pan-tilt port
 KERNEL=="$pantiltPort", SUBSYSTEM=="tty", MODE="0666"
 
+# allow rw access to rain sensor gpio port through libgpiod
+# we assume that gpio-f7188x is initialised before ftdi-cbus
+# and gpio-f7188x-7 is gpiochip7
+# The chip label has to be double-checked before using!
+# The chip label is unfortunately not listed in udevadm info --attribute-walk /dev/gpiochip7
+KERNEL=="gpiochip7", SUBSYSTEM=="gpio", DRIVERS=="gpio-f7188x", MODE="0666"
+
 EOF
 
 ## cleanup, reload and trigger
-rm -rf /dev/radiometer*
 udevadm control --reload-rules
+rm -rf /dev/radiometer*
 udevadm trigger
 sleep 1
 set +e

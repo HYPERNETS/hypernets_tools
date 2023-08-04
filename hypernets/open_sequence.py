@@ -15,7 +15,7 @@ from hypernets.hypstar.libhypstar.python.data_structs.environment_log import get
 
 from logging import debug, info, warning, error # noqa
 
-from hypernets.rain_sensor.rain_sensor_python import RainSensor
+from hypernets.rain_sensor import RainSensor
 
 from hypernets.abstract.geometry import Geometry
 from hypernets.geometry.pan_tilt import move_to_geometry, move_to
@@ -40,7 +40,6 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                 park_to_nadir()
                 exit(88) # exit code 88 
         except Exception as e:
-            error(f"{e}")
             error("Disabling further rain sensor checks")
             check_rain = False
 
