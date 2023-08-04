@@ -8,6 +8,26 @@ if [[ $EUID -ne 0 ]]; then
 	exit 1
 fi
 
+if [[ ${PWD##*/} != "hypernets_tools"* ]]; then
+	echo "This script must be run from hypernets_tools folder" 1>&2
+	echo "Use : sudo ./install/${0##*/} instead"
+	exit 1
+fi
+
+# Detection of what system we are currently running (i.e. debian or manjaro)
+if [ -f /etc/os-release ]; then
+	source /etc/os-release
+else
+	echo "Error: impossible to detect OS system version."
+	echo "Not a systemd freedesktop.org distribution?"
+	exit 1
+fi
+
+if [ "$ID" != "debian" ] && [ "$ID" != "manjaro" ]; then
+	echo "${XHL}Error: only Debian and Manjaro are supported distributions${RESET_HL}"
+	exit 1
+fi
+
 source utils/configparser.sh
 
 pantiltPort=$(parse_config "pantilt_port" config_dynamic.ini)
@@ -53,9 +73,17 @@ EOF
 chmod 755 /usr/local/sbin/unique-num
 
 
+
+
 # load GPIO chip kernel module
-if [[ ! $(grep "^gpio_f7188x" /etc/modules) ]]; then
-	echo "gpio_f7188x" >> /etc/modules
+if [ "$ID"  == "debian" ]; then
+	modules_file="/etc/modules"
+elif [ "$ID"  == "manjaro" ]; then
+	modules_file="/etc/modules-load.d/modules.conf"
+fi
+
+if [[ ! $(grep "^gpio_f7188x" "$modules_file") ]]; then
+	echo "gpio_f7188x" >> "$modules_file"
 fi
 
 set +e

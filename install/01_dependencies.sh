@@ -51,7 +51,7 @@ if [ "$ID"  == "debian" ]; then
     [ ! -e /usr/bin/python ] && ln -s /usr/bin/python3 /usr/bin/python
 
 elif [ "$ID"  == "manjaro" ]; then
-	sudo pacman -Sy python-pip tk make gcc python-pipx python-crcmod python-pyserial python-matplotlib python-geopy python-libgpiod net-tools
+	sudo pacman -Sy python-pip tk make gcc python-pipx python-crcmod python-pyserial python-matplotlib python-geopy libgpiod net-tools
 
 	sudo -u $user python -m pip install pysolar --break-system-packages
 	sudo -u $user python -m pipx install pyftdi
