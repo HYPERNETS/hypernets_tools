@@ -313,7 +313,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                                                  gps_latitude, gps_longitude)['azi1'] % 360
                 msg = (f"GPS fix ({gps_latitude:.6f}, {gps_longitude:.6f}) is {distance_m:.1f} m "
                       f"from location in config_dynamic.ini ({config_latitude}, {config_longitude}) "
-                      f"at bearing {bearing:.0f}°")
+                      f"at bearing {bearing:.0f}")
                 if (distance_m > 100):
                     warning(msg)
                 else:
