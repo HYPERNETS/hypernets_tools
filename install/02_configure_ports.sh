@@ -87,9 +87,7 @@ if [[ ! $(grep "^gpio_f7188x" "$modules_file") ]]; then
 fi
 
 set +e
-rmmod ftdi-sio > /dev/null 2>&1
-modprobe gpio_f7188x
-modprobe ftdi-sio
+modprobe -rq ftdi-sio gpio_f7188x 
 set -e
 
 ### UDEV RULES:
@@ -104,20 +102,26 @@ KERNEL=="ttyUSB*", SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", IMPORT{program}="/
 # allow rw access to pan-tilt port
 KERNEL=="$pantiltPort", SUBSYSTEM=="tty", MODE="0666"
 
-# allow rw access to rain sensor gpio port through libgpiod
-# we assume that gpio-f7188x is initialised before ftdi-cbus
-# and gpio-f7188x-7 is gpiochip7
-# The chip label has to be double-checked before using!
+# Allow rw access to rain sensor gpio port through libgpiod.
+# Normally gpio-f7188x is initialised before ftdi-sio
+# and gpio-f7188x-7 is gpiochip7, however, we must be sure we
+# are not messing with the wrong GPIO lines. 
 # The chip label is unfortunately not listed in udevadm info --attribute-walk /dev/gpiochip7
-KERNEL=="gpiochip7", SUBSYSTEM=="gpio", DRIVERS=="gpio-f7188x", MODE="0666"
+# Therefore we use this ugly workaround to detect which is the first
+# gpio-f7188x chip and add 7 to get the correct chip.
+# It is given a+rw permissions and /dev/rain_sensor is linked to it.
+KERNEL=="gpiochip*", SUBSYSTEM=="gpio", DRIVERS=="gpio-f7188x", ACTION=="add", RUN+="/usr/bin/bash -c 'chip_base=\$(ls /sys/devices/platform/gpio-f7188x/ | grep gpiochip | sort -n | head -n 1); ln -sf gpiochip\$((\${chip_base:8}+7)) /dev/rain_sensor; chmod -f a+rw /dev/rain_sensor"
 
 EOF
 
 ## cleanup, reload and trigger
 udevadm control --reload-rules
-rm -rf /dev/radiometer*
+sleep 1
+rm -f /dev/radiometer*
 udevadm trigger
 sleep 1
+modprobe gpio_f7188x
+modprobe ftdi-sio
+sleep 1
 set +e
-ls -l /dev/radiometer*
-set -e
+ls -l /dev/radiometer* /dev/rain_sensor
