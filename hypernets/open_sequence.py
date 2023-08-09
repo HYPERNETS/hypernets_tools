@@ -222,8 +222,35 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                 info(f"--> final pan : {pan_real} ; final tilt : {tilt_real}")
                 info("-"*72)
 
-            except TypeError:
-                pan_real, tilt_real = -999, -999
+            # try up to 2 times moving the pan-tilt
+            from logging import getLogger
+            logger = getLogger()
+            old_loglevel = logger.level
+            for i in range(2):
+                try:
+                    pan_real, tilt_real = move_to_geometry(geometry, wait=True)
+                    pan_real = float(pan_real) / 100
+                    tilt_real = float(tilt_real) / 100
+
+                    pan_delta = (pan_real + 360) % 360 - (geometry.pan_abs + 360) % 360
+                    tilt_delta = (tilt_real + 360) % 360 - (geometry.tilt_abs + 360) % 360
+
+                    if abs(pan_delta) > 1.0 or abs(tilt_delta) > 1.0:
+                        warning(f"pan-tilt did not reach the requested position")
+                        warning(f"--> requested : pan = {geometry.pan_abs:.2f}, tilt = {geometry.tilt_abs:.2f}")
+                        warning(f"--> reported  : pan = {pan_real:.2f}, tilt = {tilt_real:.2f}")
+                        warning(f"--> delta     : pan = {pan_delta:+.1f}, tilt = {tilt_delta:+.1f}") 
+                        logger.setLevel(DEBUG)
+                    else:
+                        info(f"--> final pan (abs) : {pan_real}; final tilt (abs) : {tilt_real}")
+                        info(f"--> from target     : pan = {pan_delta:+.1f}, tilt = {tilt_delta:+.1f}")
+                        info("-"*72)
+                        break
+
+                except TypeError:
+                    pan_real, tilt_real = -999, -999
+
+                logger.setLevel(old_loglevel)
 
         for request in requests:
             iter_line += 1
