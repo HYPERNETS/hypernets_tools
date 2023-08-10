@@ -145,8 +145,28 @@ def move_to(ser, pan=None, tilt=None, wait=False):
     debug(f"Before modulo: {pan}, {tilt}")
     if pan is not None:
         pan = round(pan * 100) % 36000
+        # workaround for buggy positioner firmware which does not accept
+        # 0xFF byte in the request
+        if pan & 0xff == 0xff:
+            warning(f"pan was {pan:#x}, adding 0.01")
+            pan += 1
+
+        if (((pan & 0xff00) >> 8) + pan & 0xff) & 0xff == 0xb3:
+            warning(f"pan request checksum would be 0xff, adding 0.01")
+            pan += 1
+
     if tilt is not None:
         tilt = round(tilt * 100) % 36000
+        # workaround for buggy positioner firmware which does not accept
+        # 0xFF byte in the request
+        if tilt & 0xff == 0xff:
+            warning(f"tilt was {tilt:#x}, adding 0.01")
+            tilt += 1
+
+        if (((tilt & 0xff00) >> 8) + tilt & 0xff) & 0xff == 0xb3:
+            warning(f"tilt request checksum would be 0xff, adding 0.01")
+            tilt += 1
+
     debug(f"After modulo: {pan}, {tilt}")
 
     info(f"Requested Position :\t({pan}, {tilt})\t(10^-2 degrees)")
