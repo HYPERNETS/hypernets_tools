@@ -163,7 +163,7 @@ def move_to(ser, pan=None, tilt=None, wait=False):
             warning(f"tilt was {tilt:#x}, adding 0.01")
             tilt += 1
 
-        if (((tilt & 0xff00) >> 8) + tilt & 0xff) & 0xff == 0xb3:
+        if (((tilt & 0xff00) >> 8) + tilt & 0xff) & 0xff == 0xb1:
             warning(f"tilt request checksum would be 0xff, adding 0.01")
             tilt += 1
 
