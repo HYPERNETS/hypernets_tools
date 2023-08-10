@@ -144,9 +144,9 @@ def move_to(ser, pan=None, tilt=None, wait=False):
     # Conversion FIXME : here modulo should fit pan/tilt range specification
     debug(f"Before modulo: {pan}, {tilt}")
     if pan is not None:
-        pan = int(pan*100) % 36000
+        pan = round(pan * 100) % 36000
     if tilt is not None:
-        tilt = int(tilt*100) % 36000
+        tilt = round(tilt * 100) % 36000
     debug(f"After modulo: {pan}, {tilt}")
 
     info(f"Requested Position :\t({pan}, {tilt})\t(10^-2 degrees)")
@@ -161,14 +161,14 @@ def move_to(ser, pan=None, tilt=None, wait=False):
     if pan is not None:
         # Sync Byte + address + cmd1 + pan
         data = bytearray([0xFF, 0x01, 0x00, 0x4b]) + pack(">H", pan)
-        debug("Pan Request :\t%s" % stringifyBinaryToHex(data))
         send_trame(data, ser)
+        debug("Pan Request :\t%s" % stringifyBinaryToHex(data))
 
     if tilt is not None:
         # Sync Byte + address + cmd1 + tilt
         data = bytearray([0xFF, 0x01, 0x00, 0x4d]) + pack(">H", tilt)
-        debug("Tilt Request :\t%s" % stringifyBinaryToHex(data))
         send_trame(data, ser)
+        debug("Tilt Request :\t%s" % stringifyBinaryToHex(data))
 
     if wait:
         # sleep(estimated_time)
