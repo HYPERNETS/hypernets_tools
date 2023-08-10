@@ -250,7 +250,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                 except TypeError:
                     pan_real, tilt_real = -999, -999
 
-                logger.setLevel(old_loglevel)
+            logger.setLevel(old_loglevel)
 
         for request in requests:
             iter_line += 1
