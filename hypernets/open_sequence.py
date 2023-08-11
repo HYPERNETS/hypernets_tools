@@ -248,6 +248,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                         break
 
                 except TypeError:
+                    warning(f"Failed to read the final position from pan-tilt")
                     pan_real, tilt_real = -999, -999
 
             logger.setLevel(old_loglevel)
