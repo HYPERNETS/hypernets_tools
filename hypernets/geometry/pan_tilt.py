@@ -10,17 +10,25 @@ from argparse import ArgumentTypeError, ArgumentParser
 from serial import Serial
 from struct import unpack, pack
 from time import sleep  # noqa
+from datetime import datetime
 
 from logging import debug, info, warning, error
 
 
 def pt_time_estimation(position_0, position_1,
-                       pan_speed=22.5, tilt_speed=6.5, unit=1e-2):
+                       pan_speed=20.0, tilt_speed=6.0, unit=1e-2):
     """
     Estimation of time to go from position_0 to position_1
-    FIXME : Does not take into account forbidden angle, and
-            rotation direction neither (shortest path is chosen)
-            works with
+
+    Pan switches direction at 0, tilt at 180, i.e tilt
+    movement from 180.00 to 180.01 makes full rotation.
+
+    Time estimation accounts for rotation direction as much
+    as possible, but due to backlash and tolerances
+    e.g. pan = 0 can also mean pan = 360.
+
+    Rotation speeds depend on supply voltage, defaults are rather conservative.
+    Does not account for acceleration/deceleration.
     """
     if position_0 is None or position_1 is None:
         return
@@ -31,12 +39,16 @@ def pt_time_estimation(position_0, position_1,
     if pan1 is None:
         pan_time = 0
     else:
-        pan_time = abs(pan1-pan0)/pan_speed
+        pan_time = abs(pan1 - pan0) / pan_speed
 
     if tilt1 is None:
         tilt_time = 0
     else:
-        tilt_time = abs(tilt1-tilt0)/tilt_speed
+        if ((tilt0 <= 18000 and tilt1 > 18000) or
+            (tilt1 <= 18000 and tilt0 > 18000)):
+            tilt_time = abs((tilt1 + 17999) % 36000 - (tilt0 + 17999) % 36000) / tilt_speed
+        else:
+            tilt_time = abs(tilt1 - tilt0) / tilt_speed
 
     return unit * max(pan_time, tilt_time)
 
@@ -71,8 +83,9 @@ def check_trame(data):
             warning("Bad length !")
         return False
 
+    debug(f"Pan-Tilt answer: {stringifyBinaryToHex(data)}")
+
     if sum(data[1:-1]) % 256 != data[-1]:
-        debug(f"Pan-Tilt answer: {stringifyBinaryToHex(data)}")
         warning("Bad Checksum !")
         return False
     return True
@@ -83,15 +96,12 @@ def query_position(ser):
     send_trame(data, ser)
     debug(f"Query pan : {stringifyBinaryToHex(data)}")
 
-    data = bytearray()
-    for _ in range(7):
-        data += ser.read()
+    data = ser.read(7)
 
     if not check_trame(data):
-        sleep(.5)
         return
 
-    _, _, _, cmd, pan, _ = unpack('>BBBBHB', data)
+    _, _, _, _, pan, _ = unpack('>BBBBHB', data)
 
     # convert unsigned to signed if over 400 deg
     # otherwise slightly negative would be around 655 deg
@@ -102,15 +112,12 @@ def query_position(ser):
     send_trame(data, ser)
     debug(f"Query tilt : {stringifyBinaryToHex(data)}")
 
-    data = bytearray()
-    for _ in range(7):
-        data += ser.read()
+    data = ser.read(7)
 
     if not check_trame(data):
-        sleep(.5)
         return
 
-    _, _, _, cmd, tilt, _ = unpack('>BBBBHB', data)
+    _, _, _, _, tilt, _ = unpack('>BBBBHB', data)
 
     # convert unsigned to signed if over 400 deg
     # otherwise slightly negative would be around 655 deg
@@ -176,7 +183,10 @@ def move_to(ser, pan=None, tilt=None, wait=False):
         estimated_time = pt_time_estimation(initial_position, (pan, tilt))
 
         debug(f"Initial position :\t{initial_position}\t(10^-2 degrees)")
-        debug(f"Estimated Time : \t{estimated_time:.1f}s")
+        if estimated_time is not None:
+            debug(f"Estimated Time : \t{estimated_time:.1f}s")
+        else:
+            debug(f"Estimated Time : unknown")
 
     if pan is not None:
         # Sync Byte + address + cmd1 + pan
@@ -191,35 +201,62 @@ def move_to(ser, pan=None, tilt=None, wait=False):
         debug("Tilt Request :\t%s" % stringifyBinaryToHex(data))
 
     if wait:
-        # sleep(estimated_time)
-        # for _ in range(int(estimated_time) * 2):
-        # FIXME : if problem, low up the precision
-        time_to_wait = 1
-        for _ in range(34):  # Wait MAX in second) (TODO : time the max)
-            sleep(time_to_wait / 2)
-            position_0 = query_position(ser)
-            sleep(time_to_wait / 2)
-            position_1 = query_position(ser)
-            if position_0 is not None and position_1 is not None:
-                debug(f"Position 0 : {position_0[0]/100}, {position_0[1]/100}")
-                debug(f"Position 1 : {position_1[0]/100}, {position_1[1]/100}")
-                debug("Estimated velocity : ")
-                debug(f"pan : {.02 * (position_1[0] - position_0[0])}, "
-                      f"tilt : {.02 * (position_1[1] - position_0[1])} "
-                      "(degrees.s^-1)")
-                debug("-"*60)
+        # full tilt rotation takes 65s at 10.8V supply, 58s at 12V
+        # estimated_time can be unknown or miscalculated so we can't use that
+        max_time_to_wait = 65 # seconds
+        start_time = datetime.utcnow()
 
-            if position_0 is not None and position_1 is not None and (
-                    position_0 == position_1 or
-                    # TODO : find a better metric
-                    (abs(position_0[0] - position_1[0]) <= 10 and
-                     abs(position_0[1] - position_1[1]) <= 10)):
+        i = 0
+        position_0 = None
+
+        while True:
+            i += 1
+            debug(f"{'-'*29} {i} {'-'*29}")
+            position_1 = query_position(ser)
+            time_1 = datetime.utcnow()
+
+            # time is up
+            # either we can't get position from the pan-tilt
+            # or the supply voltage is very low
+            # or the movement is mechanically blocked by something
+            if (time_1 - start_time).total_seconds() > max_time_to_wait:
+                debug("Movement takes too long, giving up")
                 break
 
-        final_position = query_position(ser)
-        info(f"Final position :\t{final_position}\t(10^-2 degrees)")
+            # pan-tilt didn't respond, retry
+            if position_1 is None:
+                continue
+
+            # no second position yet
+            if position_0 is None:
+                position_0 = position_1
+                time_0 = time_1
+                sleep(1)
+                continue
+
+            debug(f"Position 0 : {position_0[0]/100}, {position_0[1]/100}")
+            debug(f"Position 1 : {position_1[0]/100}, {position_1[1]/100}")
+            debug("Estimated velocity : ")
+            delta_t = (time_1 - time_0).total_seconds()
+            debug(f"pan : {(position_1[0] - position_0[0]) / (100 * delta_t):.1f}, "
+                  f"tilt : {(position_1[1] - position_0[1]) / (100 * delta_t):.1f} "
+                  "(degrees.s^-1)")
+
+            if (abs(position_0[0] - position_1[0]) <= 20 and
+                     abs(position_0[1] - position_1[1]) <= 10):
+                debug("Reached the destination")
+                debug("-"*60)
+                break
+            else:
+                debug("Not there yet")
+                position_0 = position_1
+                time_0 = time_1
+                sleep(1)
+                continue
+
+        info(f"Final position :\t{position_1}\t(10^-2 degrees)")
         ser.close()
-        return final_position
+        return position_1
 
 
 def move_to_geometry(geometry, wait=False):
