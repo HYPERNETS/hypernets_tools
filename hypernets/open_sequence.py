@@ -215,12 +215,6 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         if not instrument_standalone:
             geometry.get_absolute_pan_tilt()
             info(f"--> Requested Position : {geometry}")
-            try:
-                pan_real, tilt_real = move_to_geometry(geometry, wait=True)
-                pan_real = float(pan_real) / 100
-                tilt_real = float(tilt_real) / 100
-                info(f"--> final pan : {pan_real} ; final tilt : {tilt_real}")
-                info("-"*72)
 
             # try up to 2 times moving the pan-tilt
             from logging import getLogger
