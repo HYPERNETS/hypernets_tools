@@ -146,7 +146,8 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         vm_sn = "N/A"
 
     mdfile = open(path.join(seq_path, "metadata.txt"), "w")
-    mdfile.write(parse_config_metadata(instrument_sn = instrument_sn, vm_sn = vm_sn))
+    mdfile.write(parse_config_metadata(sequence_file = sequence_file, 
+                                       instrument_sn = instrument_sn, vm_sn = vm_sn))
 
     # Enabling SWIR TEC for the whole sequence is a tradeoff between
     # current consumption and execution time.
