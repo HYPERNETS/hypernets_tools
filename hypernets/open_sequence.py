@@ -8,6 +8,7 @@ from shutil import copy
 
 from hypernets.abstract.protocol import Protocol
 from hypernets.abstract.create_metadata import parse_config_metadata
+from hypernets.abstract.request import InstrumentAction
 
 from hypernets.hypstar.handler import HypstarHandler
 from hypernets.hypstar.libhypstar.python.hypstar_wrapper import HypstarLogLevel
@@ -269,10 +270,10 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                 instrument_instance.take_request(request, path_to_file=output)
 
             except Exception as e:
-		        if request.action == InstrumentAction.VALIDATION:
-		            error("LED source measurement failed, aborting sequence")
-		            park_to_nadir()
-		            exit(78) # exit code 78
+                if request.action == InstrumentAction.VALIDATION:
+                    error("LED source measurement failed, aborting sequence")
+                    park_to_nadir()
+                    exit(78) # exit code 78
 
                 error(f"Error : {e}")
                 nb_error += 1

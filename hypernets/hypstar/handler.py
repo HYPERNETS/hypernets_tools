@@ -221,7 +221,7 @@ class HypstarHandler(Hypstar):
 
         except Exception as e:
             error(f"(in take validation) {e}")
-			raise e
+            raise e
 
 
     def get_serials(self):
