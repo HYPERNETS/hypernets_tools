@@ -21,7 +21,7 @@ from hypernets.hypstar.libhypstar.python.data_structs.varia import \
 from hypernets.hypstar.libhypstar.python.data_structs.spectrum_raw  \
         import RadiometerEntranceType
 
-from logging import debug, info, error
+from logging import debug, info, warning, error
 
 
 class HypstarHandler(Hypstar):
@@ -110,9 +110,9 @@ class HypstarHandler(Hypstar):
                 raise Exception(f"{instrument_port} timed out!")
                 exit(27)
 
-        # if not islink(instrument_port):
-        #     raise ValueError(f"{instrument_port} is not a link!")
-        #     exit(27)
+        if not islink(instrument_port):
+             warning(f"{instrument_port} is not a link!")
+
 
     def take_request(self, request, path_to_file=None, gui=False):
 
@@ -198,6 +198,7 @@ class HypstarHandler(Hypstar):
 
         return True
 
+
     def take_validation(self, request, path_to_file):
         try:
             self.VM_enable(True)
@@ -207,8 +208,6 @@ class HypstarHandler(Hypstar):
             spectra = self.VM_measure(request.entrance, request.radiometer, request.it_vnir, int(request.vm_current_ma)/1000, request.number_cap)
             # spectra = self.VM_measure(request.entrance, ValidationModuleLightType.LIGHT_VIS, request.it_vnir, 1.0, scan_count=request.number_cap)
 
-            info("{spectra}")
-
             spectra_bin = b''
             for n, spectrum in enumerate(spectra):
                 spectra_bin += spectrum.getBytes()
@@ -216,10 +215,13 @@ class HypstarHandler(Hypstar):
             with open(path_to_file, "wb") as f:
                 f.write(spectra_bin)
 
+            info(f"Saved to {path_to_file}.")
+
             self.VM_enable(False)
 
         except Exception as e:
             error(f"(in take validation) {e}")
+			raise e
 
 
     def get_serials(self):

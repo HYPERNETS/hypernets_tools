@@ -269,8 +269,14 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                 instrument_instance.take_request(request, path_to_file=output)
 
             except Exception as e:
+		        if request.action == InstrumentAction.VALIDATION:
+		            error("LED source measurement failed, aborting sequence")
+		            park_to_nadir()
+		            exit(78) # exit code 78
+
                 error(f"Error : {e}")
                 nb_error += 1
+
 
             flags_dict[f"$spectra_file{iter_line}.it_vnir"] = request.it_vnir
             flags_dict[f"$spectra_file{iter_line}.it_swir"] = request.it_swir
