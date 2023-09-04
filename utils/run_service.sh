@@ -451,6 +451,15 @@ exit_actions() {
 		if [ $return_value -ne 30 ] && [ $return_value -ne 88 ]; then
 			sleep 1
 
+			## VM stabilisation failed
+			## power cycle, otherwise the second attempt fails as well
+			if [ $return_value -eq 78 ]; then
+				echo "[INFO]  Power cycling the radiometer"
+				python -m hypernets.yocto.relay -soff -n3
+				sleep 10
+				python -m hypernets.yocto.relay -son -n3
+			fi
+
 			echo "[WARNING]  Second try : "
 			set +e
 			python3 -m hypernets.open_sequence -f $sequence_file $extra_args
