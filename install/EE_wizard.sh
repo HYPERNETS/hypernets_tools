@@ -64,16 +64,21 @@ function auto_config_yocto(){
 
 	# if [[ -f "config_static.ini" ]] || [[ -f "config_dynamic.ini" ]]; then
 	if [[ -f "config_static.ini" ]]; then
-		echo "Error: configuration file found, please remove it first."
+		echo "Error: config_static.ini file found, please remove it first."
 		return
 	fi
 
-	echo "Please connect the Yocto-Pictor from the 'config port' and pressenter to continue"
+	echo "Please connect the Yocto-Pictor from the 'config port' and press
+    'enter' to continue"
 	read
 
 	echo "Copying configuration files"
 	sudo -u $SUDO_USER cp hypernets/resources/config_static.ini.template config_static.ini
-	# sudo -u $SUDO_USER cp hypernets/resources/config_dynamic.ini.template config_dynamic.ini
+
+	if [[ ! -f "config_dynamic.ini" ]]; then
+        echo "Copying the config_dynamic.ini file as it does not exist"
+        sudo -u $SUDO_USER cp hypernets/resources/config_dynamic.ini.template config_dynamic.ini
+    fi
 
 	echo 
 	echo "Running auto config for config_static.ini..."
@@ -110,12 +115,25 @@ function update_libhypstar(){
 	echo 
 	echo "-- Downloading and installing libhypstar..."
 	echo "------------------------------------------------"
-	sudo ./install/03_update_libhypstar.sh 
+    user="$SUDO_USER"
+
+    # Init
+    sudo -u $user git submodule init
+    sudo -u $user git submodule update
+
+    # Update and Install
+    cd hypernets/hypstar/libhypstar/
+    sudo -u $user git checkout main
+    sudo -u $user git pull
+    sudo -u $user make lib
+    sudo make install
+    cd -
+    # sudo ./install/03_update_libhypstar.sh 
 }
 
 
 function configure_port(){
-	echo 
+    echo 
 	echo 
 	echo "-- Configuration of the Hypstar Port..."
 	echo "------------------------------------------------"
@@ -125,8 +143,17 @@ function configure_port(){
 }
 
 
-function main_menu(){
+function setup_backdoor(){
+    echo 
+	echo 
+	echo "-- Seting up ssh server for backup access..."
+	echo "------------------------------------------------"
+	sudo ./install/07_setup_backup_access.sh
+}
 
+
+function main_menu(){
+while true; do
 	echo "------------------------------------------------"
 	PS3='Please select an option:'
 	options=(
@@ -137,6 +164,9 @@ function main_menu(){
 		"Install / Update libhypstar"
 		"Configure Hypstar Port"
 		# "Check installation before field deployment"
+		"Configure ssh server as backup access"
+		"Setup shortcut commands for convenience"
+		"Operating system configuration"
  		"Quit")
 
 	select opt in "${options[@]}"
@@ -171,14 +201,31 @@ function main_menu(){
 				break
 				;;
 			"${options[6]}")
+				setup_backdoor
+				break
+				;;
+			"${options[7]}")
+                ./install/08_setup_shortcuts.sh
+				break
+				;;
+			"${options[8]}")
+                install/09_sysconfig.sh
+				break
+				;;
+			"${options[9]}")
+                exit 0
+				break
+				;;
+			*)
 				echo "Not implemented!"
 				break
 				;;
-			*) 
+			*)
 				echo "Invalid choice!"
 				;;
 		esac
 	done
+done
 }
 
 # TODO: error handler

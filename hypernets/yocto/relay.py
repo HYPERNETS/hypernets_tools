@@ -69,6 +69,21 @@ def _set_state_relay_usb(id_relay, state, force=False):
 
     url_base = get_url_base_prefixed()
 
+    if state == "reset":
+        for i in id_relay:
+            # switch off
+            get = "api?ctx=relay" + str(i) + "&state=" + str(YRelay.STATE_A)
+            url = "/".join([url_base, get])
+            urlopen(url)
+
+            sleep(1)
+
+            # switch on
+            get = "api?ctx=relay" + str(i) + "&state=" + str(YRelay.STATE_B)
+            url = "/".join([url_base, get])
+            urlopen(url)
+        return
+    
     state = {"on": YRelay.STATE_B, "off": YRelay.STATE_A}[state]
 
     for i in id_relay:

@@ -8,12 +8,20 @@ from shutil import copy
 
 from hypernets.abstract.protocol import Protocol
 from hypernets.abstract.create_metadata import parse_config_metadata
+from hypernets.abstract.request import InstrumentAction
 
 from hypernets.hypstar.handler import HypstarHandler
 from hypernets.hypstar.libhypstar.python.hypstar_wrapper import HypstarLogLevel
-from hypernets.hypstar.libhypstar.python.data_structs.environment_log import EnvironmentLogEntry, get_csv_header
+from hypernets.hypstar.libhypstar.python.data_structs.environment_log import get_csv_header
 
 from logging import debug, info, warning, error # noqa
+
+from hypernets.rain_sensor import RainSensor
+
+from hypernets.abstract.geometry import Geometry
+from hypernets.geometry.pan_tilt import move_to_geometry, move_to
+
+from hypernets.yocto.lightsensor_logger import start_lightsensor_thread, terminate_lightsensor_thread
 
 
 def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
@@ -21,9 +29,28 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                       instrument_standalone=False,
                       instrument_swir_tec=0,
                       dump_environment_logs=False,
-                      DATA_DIR="DATA"):
+                      DATA_DIR="DATA",
+                      check_rain=False):
 
-    protocol = Protocol(sequence_file)
+    # Check if it is raining
+    if not instrument_standalone and check_rain:
+        try:
+            rain_sensor = RainSensor()
+            if is_raining(rain_sensor):
+                warning("Skipping sequence due to rain")
+                park_to_nadir()
+                exit(88) # exit code 88 
+        except Exception as e:
+            error("Disabling further rain sensor checks")
+            check_rain = False
+
+    try:
+        protocol = Protocol(sequence_file)
+    except FileNotFoundError as e:
+        error(f"{e}")
+        error(f"Failed to open sequence file '{sequence_file}'")
+        exit(30) # exit code 30
+
     info(protocol)
 
     # check if this protocol wants to use instrument
@@ -31,6 +58,9 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
     # we should check if any of the lines want to use SWIR and enable TEC :
     swir_is_requested = protocol.check_if_swir_requested()
+
+    # just print out info about presence or not of VM request
+    protocol.check_if_vm_requested()
 
     if not path.exists(DATA_DIR):  # TODO move management of output folder
         mkdir(DATA_DIR)
@@ -42,7 +72,25 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     seq_name = Protocol.create_seq_name(now=start, prefix="CUR")
 
     seq_path = path.join(DATA_DIR, seq_name)
+    final_seq_path = path.join(DATA_DIR, Protocol.create_seq_name(now=start))
+
+    suffix = ""
+
+    n = 0
+    while path.isdir(seq_path + suffix) or path.isdir(final_seq_path + suffix):
+        n += 1
+        error(f"Directory [{seq_path+suffix} or "
+              f"{final_seq_path+suffix}] already exists!")
+        suffix = f"-{n:03d}"
+
+    # XXX Draft!
+    seq_path = seq_path + suffix
+    seq_name = seq_name + suffix
     filepath = path.join(seq_path, "RADIOMETER")
+    final_seq_path = path.join(DATA_DIR, Protocol.create_seq_name(now=start,
+                               suffix=suffix))
+
+    info(f"Creating directories: {seq_path} and {filepath}...")
 
     mkdir(seq_path)
     mkdir(filepath)
@@ -51,7 +99,6 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     copy(sequence_file, path.join(seq_path, path.basename(sequence_file)))
 
     if not instrument_standalone:
-        from hypernets.geometry.pan_tilt import move_to_geometry
         from hypernets.yocto.meteo import get_meteo
         except_boot = True
 
@@ -67,6 +114,11 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
             except Exception as e:
                 meteo.write(e)
+
+        # Start monitor photodiode logging in a separate thread
+        monitor_pd_path = path.join(DATA_DIR, seq_name, "monitorPD.csv")
+        monitor_pd_thread, monitor_pd_event = start_lightsensor_thread(monitor_pd_path)
+
     else:
         except_boot = False
 
@@ -77,14 +129,26 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                                              expect_boot_packet=except_boot,
                                              boot_timeout=instrument_boot_timeout)   # noqa
 
-        instrument, visible, swir = instrument_instance.get_serials()
-        debug(f"SN : * instrument -> {instrument}")
-        debug(f"     * visible    -> {visible}")
-        if swir != 0:
-            debug(f"     * swir       -> {swir}")
+        instrument_sn, visible_sn, swir_sn, vm_sn = instrument_instance.get_serials()
+        debug(f"SN : * instrument -> {instrument_sn}")
+        debug(f"     * visible    -> {visible_sn}")
+        if swir_sn != 0:
+            debug(f"     * swir       -> {swir_sn}")
+        if vm_sn != 0:
+            debug(f"     * vm         -> {vm_sn}")
+            
+        (instrument_FW_major, instrument_FW_minor, instrument_FW_rev, 
+         vm_FW_major, vm_FW_minor, vm_FW_rev) = instrument_instance.get_firmware_versions()
+        debug(f"FW : * instrument -> {instrument_FW_major}.{instrument_FW_minor}.{instrument_FW_rev}")
+        if vm_sn != 0:
+            debug(f"     * vm         -> {vm_FW_major}.{vm_FW_minor}.{vm_FW_rev}")        
+    else:
+        instrument_sn = "N/A"
+        vm_sn = "N/A"
 
     mdfile = open(path.join(seq_path, "metadata.txt"), "w")
-    mdfile.write(parse_config_metadata())
+    mdfile.write(parse_config_metadata(sequence_file = sequence_file, 
+                                       instrument_sn = instrument_sn, vm_sn = vm_sn))
 
     # Enabling SWIR TEC for the whole sequence is a tradeoff between
     # current consumption and execution time.
@@ -113,6 +177,18 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         #     for key, value in flags_dict.items():
         #         print(f"\t- {key} : {value}")
 
+        # Check if it is raining
+        if check_rain:
+            try:
+                if is_raining(rain_sensor):
+                    warning("Aborting sequence due to rain")
+                    park_to_nadir()
+                    exit(88) # exit code 88 
+            except Exception as e:
+                error(f"{e}")
+                error("Disabling further rain sensor checks")
+                check_rain = False
+
         flag_condition = True
         for j, flag in enumerate(geometry.flags, start=1):
             try:
@@ -138,15 +214,37 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         if not instrument_standalone:
             geometry.get_absolute_pan_tilt()
             info(f"--> Requested Position : {geometry}")
-            try:
-                pan_real, tilt_real = move_to_geometry(geometry, wait=True)
-                pan_real = float(pan_real) / 100
-                tilt_real = float(tilt_real) / 100
-                info(f"--> final pan : {pan_real} ; final tilt : {tilt_real}")
-                info("-"*72)
 
-            except TypeError:
-                pan_real, tilt_real = -999, -999
+            # try up to 2 times moving the pan-tilt
+            from logging import getLogger
+            logger = getLogger()
+            old_loglevel = logger.level
+            for i in range(2):
+                try:
+                    pan_real, tilt_real = move_to_geometry(geometry, wait=True)
+                    pan_real = float(pan_real) / 100
+                    tilt_real = float(tilt_real) / 100
+
+                    pan_delta = (pan_real + 360) % 360 - (geometry.pan_abs + 360) % 360
+                    tilt_delta = (tilt_real + 360) % 360 - (geometry.tilt_abs + 360) % 360
+
+                    if abs(pan_delta) > 1.0 or abs(tilt_delta) > 1.0:
+                        warning(f"pan-tilt did not reach the requested position")
+                        warning(f"--> requested : pan = {geometry.pan_abs:.2f}, tilt = {geometry.tilt_abs:.2f}")
+                        warning(f"--> reported  : pan = {pan_real:.2f}, tilt = {tilt_real:.2f}")
+                        warning(f"--> delta     : pan = {pan_delta:+.1f}, tilt = {tilt_delta:+.1f}") 
+                        logger.setLevel(DEBUG)
+                    else:
+                        info(f"--> final pan (abs) : {pan_real}; final tilt (abs) : {tilt_real}")
+                        info(f"--> from target     : pan = {pan_delta:+.1f}, tilt = {tilt_delta:+.1f}")
+                        info("-"*72)
+                        break
+
+                except TypeError:
+                    warning(f"Failed to read the final position from pan-tilt")
+                    pan_real, tilt_real = -999, -999
+
+            logger.setLevel(old_loglevel)
 
         for request in requests:
             iter_line += 1
@@ -162,13 +260,24 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             try:
                 if dump_environment_logs:
                     # 0xFF returns live data, 0 returns last captured on FW > 0.15.24
-                    env = instrument_instance.get_env_log(0xff)
+                    if (instrument_FW_major, instrument_FW_minor, instrument_FW_rev) > (0, 15, 24):
+                        env_request = 0xff 
+                    else:
+                        env_request = 0
+
+                    env = instrument_instance.get_env_log(env_request)
                     info(env.get_csv_line())
                 instrument_instance.take_request(request, path_to_file=output)
 
             except Exception as e:
+                if request.action == InstrumentAction.VALIDATION:
+                    error("LED source measurement failed, aborting sequence")
+                    park_to_nadir()
+                    exit(78) # exit code 78
+
                 error(f"Error : {e}")
                 nb_error += 1
+
 
             flags_dict[f"$spectra_file{iter_line}.it_vnir"] = request.it_vnir
             flags_dict[f"$spectra_file{iter_line}.it_swir"] = request.it_swir
@@ -188,7 +297,46 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
     mdfile.close()
 
-    final_seq_path = path.join(DATA_DIR, Protocol.create_seq_name(now=start))
+    if not instrument_standalone:
+        terminate_lightsensor_thread(monitor_pd_thread, monitor_pd_event)
+
+        # By the end of the sequence GPS has hopefully got a fix.
+        # Log GPS fix distance and bearing from location in config file. 
+        # Warning log record if distance is over 100 m, otherwise info.
+        try:
+            from configparser import ConfigParser
+            config = ConfigParser()
+            config.read("config_dynamic.ini")
+            config_latitude = config["GPS"]["latitude"]
+            config_longitude = config["GPS"]["longitude"]
+        except KeyError as key:
+            warning(f" {key} missing from config_dynamic.ini.")
+
+        except Exception as e:
+            error(f"Config Error: {e}.")
+
+        try:
+            from hypernets.yocto.gps import get_gps
+            gps_latitude, gps_longitude, gps_datetime = get_gps(return_float=True)
+
+            if gps_datetime is not None and gps_datetime != "" and gps_datetime != b'N/A':
+                from geopy.distance import geodesic
+                from geographiclib.geodesic import Geodesic
+                distance_m = geodesic((gps_latitude, gps_longitude), 
+                                      (config_latitude, config_longitude)).m
+                bearing = Geodesic.WGS84.Inverse(float(config_latitude), float(config_longitude), 
+                                                 gps_latitude, gps_longitude)['azi1'] % 360
+                msg = (f"GPS fix ({gps_latitude:.6f}, {gps_longitude:.6f}) is {distance_m:.1f} m "
+                      f"from location in config_dynamic.ini ({config_latitude}, {config_longitude}) "
+                      f"at bearing {bearing:.0f}")
+                if (distance_m > 100):
+                    warning(msg)
+                else:
+                    info(msg)
+
+        except Exception as e:
+            error(f"Error: {e}")
+
     replace(seq_path, final_seq_path)
     info(f"Created sequence : {final_seq_path}")
 
@@ -198,13 +346,28 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     if instrument_is_requested:
         del instrument_instance
 
-#        if not instrument_standalone:
-#            if azimuth_sun <= 180:
-#                print(" -- Morning : +90 (=clockwise)")
-#                pan = azimuth_sun + pan  # clockwise
-#            else:
-#                print(" -- Afternoon : -90 (=counter-clockwise)")
-#                pan = azimuth_sun - pan  # clockwise
+
+def is_raining(rain_sensor=None):
+    debug("Checking rain sensor")
+
+    if rain_sensor is None:
+        rain_sensor = RainSensor()
+
+    if rain_sensor.read_value() == 1:
+        return True
+    else:
+        return False
+
+
+def park_to_nadir():
+    # get the absolute position of nadir
+    reference = Geometry.reference_to_int("hyper", "hyper")
+    park = Geometry(reference, tilt=0)
+    park.get_absolute_pan_tilt()
+
+    # park radiometer to nadir 
+    info("Parking radiometer to nadir")
+    move_to(ser=None, tilt=park.tilt_abs, wait=True)
 
 
 if __name__ == '__main__':
@@ -213,10 +376,6 @@ if __name__ == '__main__':
 
     log_fmt = '[%(levelname)-7s %(asctime)s] (%(module)s) %(message)s'
     dt_fmt = '%Y-%m-%dT%H:%M:%S'
-
-    # from logging import CRITICAL
-    # log_levels = {"CRITICAL": CRITICAL, "ERROR": ERROR, "WARNING": WARNING,
-    #               "INFO": INFO, "DEBUG": DEBUG}
 
     log_levels = {"ERROR": ERROR, "WARNING": WARNING, "INFO": INFO,
                   "DEBUG": DEBUG}
@@ -233,6 +392,10 @@ if __name__ == '__main__':
 
     parser.add_argument("--noyocto", action="store_true",
                         help="Run using instrument alone, no meteo or yocto stuff") #noqa
+
+    parser.add_argument("-r", "--check-rain", action="store_true",
+                        help="Check rain sensor and stop sequence if raining", #noqa
+                        default=False)
 
     parser.add_argument("-p", "--port", type=str,
                         help="Serial port used for communications with instrument", #noqa
@@ -273,4 +436,5 @@ if __name__ == '__main__':
                       instrument_boot_timeout=args.timeout,
                       instrument_standalone=args.noyocto,
                       instrument_swir_tec=args.swir_tec,
-                      dump_environment_logs=args.log_environment)
+                      dump_environment_logs=args.log_environment,
+                      check_rain=args.check_rain)

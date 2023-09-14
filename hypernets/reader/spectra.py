@@ -18,11 +18,12 @@ def show_interactive_plots(spectra):
     bprev = Button(axprev, 'Previous')
     bprev.on_clicked(spectra.prev_spectrum)
 
+    spectra.shown = True
     plt.show()
 
 
 class Spectra(list[Spectrum]):
-    def __init__(self, filename, figure=None, axes=None, fancy_mode=True):
+    def __init__(self, filename, figure=None, axes=None, fancy_mode=True, cc=None, spectrum=None):
 
         if figure is not None and axes is not None and fancy_mode is True:
             self.clim, self.col = make_color_list()
@@ -30,21 +31,23 @@ class Spectra(list[Spectrum]):
         self.figure = figure
         self.axes = axes
         self.fancy_mode = fancy_mode
-
+        self.cc = cc
         self.index = 0
-        self.cc = None
+        self.shown = False
 
-        # Open the file and create a list of Spectrum
-        with open(filename, 'rb') as fd:
-            spectra_file = fd.read()
+        if spectrum is None:
+            # Open the file and create a list of Spectrum
+            with open(filename, 'rb') as fd:
+                spectra_file = fd.read()
 
-        index = 0
-        while index < len(spectra_file):
-            current_spectrum = Spectrum(spectra_file[index:])
-            self.append(current_spectrum)
-            index += current_spectrum.total
-
-        print(f"{len(self)} spectra readed.")
+            index = 0
+            while index < len(spectra_file):
+                current_spectrum = Spectrum(spectra_file[index:])
+                self.append(current_spectrum)
+                index += current_spectrum.total
+        else:
+            self.append(Spectrum(spectrum))
+        print(f"{len(self)} spectra read.")
 
         self.update()
 
@@ -113,7 +116,8 @@ class Spectra(list[Spectrum]):
         if self.cc is not None:
             if s_typ == 'VIS':
                 x = [apply(i, list(self.cc.vnir_wavelength_coefficients)) for i in x] # noqa
-                y = [i/apply(i, list(self.cc.vnir_lin_coefs)) for i in y]
+                if self.cc.vnir_lin_coefs[0] != 0:
+                    y = [i/apply(i, list(self.cc.vnir_lin_coefs)) for i in y]
 
             elif s_typ == 'SWIR':
                 x = [apply(i, list(self.cc.swir_wavelength_coefs)) for i in x]

@@ -20,30 +20,77 @@
 set -o nounset                              # Treat unset variables as an error
 set -euo pipefail                           # Bash Strict Mode	
 
+if [[ ${PWD##*/} != "hypernets_tools"* ]]; then
+	echo "This script must be run from hypernets_tools folder" 1>&2
+	echo "Use : ./utils/${0##*/} instead"
+	exit 1
+fi
 
+# add ~/.local/bin to path, Yocto command line API is installed there in Manjaro
+PATH="$PATH:~/.local/bin"
+
+# Make Logs
+echo "Making Logs..."
+mkdir -p LOGS
 
 logNameBase=$(date +"%Y-%m-%d-%H%M")
 
-echo "Disk usage informations:" 
-df -h -text4
+suffixeName=""
+for i in {001..999}; do
+	if [ -f "LOGS/$logNameBase$suffixeName-sequence.log" ]; then 
+		echo "[DEBUG]  Error the log already exists! ($i)"
+		suffixeName=$(echo "-$i")
+	else
+		logNameBase=$(echo $logNameBase$suffixeName)
+		break
+	fi
+done
 
-diskUsageOuput="LOGS/disk-usage.log"
-dfOutput=$(df -text4 --output=used,avail,pcent)
 
-if [ ! -f  $diskUsageOuput ] ; then
-	echo "Creation of $diskUsageOuput"
-	echo -n "DateTime    " > $diskUsageOuput
-	echo "$dfOutput" | sed 2d >> $diskUsageOuput
-fi
+disk_usage() {
+    logNameBase=$1
 
-echo -n "$logNameBase " >> $diskUsageOuput
-echo "$dfOutput" | sed 1d >> $diskUsageOuput
+    echo "Disk usage informations:" 
+    df -h -text4
+	journalctl --disk-usage
+
+    diskUsageOuput="LOGS/disk-usage.log"
+    dfOutput=$(df -text4 --output=used,avail,pcent)
+
+    if [ ! -f  $diskUsageOuput ] ; then
+        echo "[INFO] Creation of $diskUsageOuput"
+        echo -n "DateTime    " > $diskUsageOuput
+        echo "$dfOutput" | sed 2d >> $diskUsageOuput
+    fi
+    echo -n "$logNameBase " >> $diskUsageOuput
+    echo "$dfOutput" | sed 1d >> $diskUsageOuput
+}
+
+make_log() {
+	logNameBase=$1
+	logName=$2
+
+	set +e
+	systemctl is-enabled hypernets-$logName.service > /dev/null
+	if [[ $? -eq 0 ]] ; then
+		echo "[DEBUG]  Making log: $logName..."
+		journalctl -b-1 -u hypernets-$logName --no-pager > LOGS/$logNameBase-$logName.log
+	else
+		echo "[DEBUG]  Skipping log: $logName."
+	fi
+	set -e
+}
+
+make_log $logNameBase sequence
+make_log $logNameBase hello
+make_log $logNameBase access
+make_log $logNameBase webcam
+disk_usage $logNameBase
 
 # We check if network is on
 echo "Waiting for network..."
 nm-online
 echo "Ok !"
-
 
 # Read config file :
 source utils/configparser.sh
@@ -61,35 +108,35 @@ if [ -z $autoUpdate ]; then
 	autoUpdate="no"
 fi
 
-# Make Logs
-echo "Making Logs..."
-mkdir -p LOGS
-
-
-
-journalctl -b-1 -u hypernets-sequence --no-pager > LOGS/$logNameBase-sequence.log
-journalctl -b-1 -u hypernets-hello --no-pager > LOGS/$logNameBase-hello.log
-journalctl -b-1 -u hypernets-access --no-pager > LOGS/$logNameBase-access.log
-
-set +e
-systemctl is-enabled hypernets-webcam.service > /dev/null
-if [[ $? -eq 0 ]] ; then
-	journalctl -b-1 -u hypernets-webcam --no-pager > LOGS/$logNameBase-webcam.log
-fi
-
-systemctl is-enabled hypernets-rain.service> /dev/null
-if [[ $? -eq 0 ]] ; then
-	journalctl -b-1 -u hypernets-rain --no-pager > LOGS/$logNameBase-rain.log
-fi
-set -e
-
 # We first make sure that server is up
 set +e
 for i in {1..30}
 do
 	# Update the datetime flag on the server
 	echo "(attempt #$i) Touching $ipServer:$remoteDir/system_is_up"
-	ssh -p $sshPort -t $ipServer "touch $remoteDir/system_is_up" > /dev/null 2>&1
+
+	# If yocto API is installed, write next scheduled wakeup time into 'system_is_up' file on server
+	if [[ $(command -v YWakeUpMonitor) ]]; then
+		source utils/configparser.sh
+		yocto=$(parse_config "yocto_prefix2" config_static.ini)
+		next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_nextWakeUp|sed -e 's/[[:space:]].*//')
+		yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yocto get_utcOffset)
+
+		if [ "$next_wakeup_timestamp" = 0 ]; then
+			msg_txt="Yocto scheduled wakeup is disabled!"
+		else
+			if [ "$yocto_offset" = 0 ]; then
+				utc_offset=""
+			else
+				utc_offset=$(printf "%+d" $(("$yocto_offset" / 3600)))
+			fi
+			msg_txt="Next Yocto wakeup is scheduled on $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset"
+		fi
+	else
+		msg_txt="Yocto API is not installed, can't read next scheduled wakeup"
+	fi
+
+	ssh -p $sshPort -t $ipServer "echo \"$msg_txt\" > $remoteDir/system_is_up" > /dev/null 2>&1
 	if [[ $? -eq 0 ]] ; then
 		echo "Server is up!"
 		break
@@ -116,12 +163,15 @@ fi
 # Send data
 echo "Syncing Data..."
 rsync -e "ssh -p $sshPort" -rt --exclude "CUR*" "DATA" "$ipServer:$remoteDir"
+
 echo "Syncing Logs..."
 rsync -e "ssh -p $sshPort" -rt "LOGS" "$ipServer:$remoteDir"
 
 if [ -d "OTHER" ]; then
 	echo "Syncing Directory OTHER..."
-	rsync -e "ssh -p $sshPort" -rt "OTHER" "$ipServer:$remoteDir"
+    # rt -> r XXX
+	rsync --ignore-existing -e "ssh -p $sshPort" -r "OTHER" "$ipServer:$remoteDir"
+	# rsync -e "ssh -p $sshPort" -rt "OTHER" "$ipServer:$remoteDir"
 fi
 
 echo "End."

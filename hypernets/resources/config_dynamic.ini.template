@@ -2,7 +2,20 @@
 [general]
 keep_pc = on
 start_sequence = no
-sequence_file = hypernets/resources/sequences_samples/your_sequence.csv
+
+sequence_file = hypernets/resources/sequences_samples/your_sequence.txt
+
+# To enable schedule2 (alternative) set checkup reason to 'yes'
+# and uncomment the 'sequence_file_alt' field
+# This way, the 'alternative' will be read instead of 'sequence_file' 
+# when using the yocto-pictor schedule2
+
+check_wakeup_reason = no
+# sequence_file_alt = hypernets/resources/sequences_samples/sequence_validation_v2.txt
+
+# check the rain sensor and abort the sequence if rain is detected
+check_rain = yes
+
 auto_update = no
 
 # Verbosity levels are : ERROR, WARNING, INFO, or DEBUG
@@ -23,7 +36,7 @@ elevation = 0.0
 offset_pan = 0
 offset_tilt = +60
 reverse_tilt = no
-pantilt_port = /dev/ttyS3
+pantilt_port = /dev/ttyS0
 azimuth_switch = 0
 
 [hypstar]
@@ -37,13 +50,17 @@ baudrate = 3000000
 loglevel = ERROR
 swir_tec = 0
 # outputs environmental readings to log before each capture with a single header at the beginning of log
-log_environment = no
+log_environment = yes
 
 [metadata]
 principal_investigator = Investigator Name
 datetime = {datetime}
 site_id = A Site ID
-hypstar_sn = 123456
+hypstar_sn = {hypstar_sn}
+led_sn = {led_sn}
 latitude = ${GPS:latitude}
 longitude = ${GPS:longitude}
 protocol_file_name = ${general:sequence_file}
+offset_pan = ${pantilt:offset_pan}
+offset_tilt = ${pantilt:offset_tilt}
+azimuth_switch = ${pantilt:azimuth_switch}

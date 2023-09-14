@@ -1,0 +1,1550 @@
+# HYPERNETS_TOOLS=~/hypernets_tools
+
+## define text highlights
+HL=$(tput setaf 12) ## blue
+XHL=$(tput setaf 9) ## red
+BOLD=$(tput bold)
+GREEN=$(tput setaf 10)
+RESET_HL=$(tput sgr0) ## reset all text formatting
+
+# print help
+commands() (
+	cd "$HYPERNETS_TOOLS"
+
+	dupcc=$(df -kh . | tail -n1 | awk '{print $5}') >/dev/null 2>&1
+	duchk="${dupcc//%}"
+
+	source utils/configparser.sh
+	ipServer=$(parse_config "credentials" config_static.ini)
+	remoteDir=$(parse_config "remote_dir" config_static.ini)
+
+	echo
+	if [[ "$duchk" -ge 80 ]]
+	then
+		echo "   Hypstar Commands    ${XHL}   DISK USAGE: $dupcc${RESET_HL}"
+	else
+		echo "   Hypstar Commands       DISK USAGE: $dupcc"
+	fi
+	echo "${HL} ********************" 
+	echo "${HL} commands	${RESET_HL}to see this list"
+	echo "${HL} schedule	${RESET_HL}view/adjust yocto schedules 1 & 2 and time zone"
+	echo "${HL} relay   	${RESET_HL}get/set yocto relays   relay -h for help"
+	echo "${HL} pt		${RESET_HL}Pan/Tilt position      pt -h for help"
+	#echo "${HL} vm    	${RESET_HL}vm on   vm off "
+	echo "${HL} now    	${RESET_HL}present status of: clock, meteo, rain, GPS, supply, wakeup"
+	#echo "${HL} level    	${RESET_HL}boom leveling assistant "
+	echo "${HL} test-env  	${RESET_HL}displays hypstar latest environmental log"
+	echo "${HL} test-env-live	${RESET_HL}displays hypstar environmental logs live"
+	echo "${HL} status  	${RESET_HL}sudo systemctl status hypernets-sequence"
+	echo "${HL} kill-service	${RESET_HL}kill hypernets-sequence service without going to sleep"
+	echo "${HL} journal  	${RESET_HL}journalctl -b -u hypernets-sequence -e (journal -f to follow)"
+	echo "${HL} portal  	${RESET_HL}makes a portal via ~/Portal folder to $ipServer/${remoteDir%/}/"
+	echo "${HL} gui		${RESET_HL}python -m hypernets.gui (if screen attached)"
+	echo "${HL} webpic 	${RESET_HL}take webcam photo    webpic -h for help"
+	echo "${HL} hypypic  	${RESET_HL}take photo from hypstar camera"
+	#echo "${HL} cp2server	 ${RESET_HL}                 ./utils/hello_server.sh   copy sequence data back to NPL server "
+	echo "${HL} runseq	 	${RESET_HL}utils/run_service.sh    run a sequence"
+	echo "${HL} yapo		${RESET_HL}yocto auto-power-off. yapo stop to disable, yapo -h for help"
+	echo "${HL} goto-sleep	${RESET_HL}power off and send yocto to sleep if wakeup is scheduled"
+	echo
+) # commands()
+
+
+# present status of: clock, meteo, rain, GPS, supply, wakeup
+now() (
+	cd "$HYPERNETS_TOOLS"
+
+	# check if Yocto command line API is installed
+	if [[ $(command -v YRealTimeClock) ]]; then
+		yocto_api_installed=1
+
+		source utils/configparser.sh
+		yocto=$(parse_config "yocto_prefix2" config_static.ini)
+	else
+		yocto_api_installed=0
+	fi
+
+	echo "System time is $(date '+%Y/%m/%d %H:%M:%S %Z')"
+
+	# get yocto time
+	if [ "$yocto_api_installed" = 1 ]; then
+		yocto_time=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yocto get_dateTime)
+		yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yocto get_utcOffset)
+		next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_nextWakeUp | sed -e 's/[[:space:]].*//')
+
+		if [ "$yocto_offset" = 0 ]; then
+			utc_offset=""
+		else
+			utc_offset=$(printf "%+d" $(($yocto_offset/3600)))
+		fi
+
+		if [ "$yocto_offset" = 0 ]; then
+			echo "Yocto time is  $yocto_time UTC$utc_offset"
+		else
+			echo "Yocto time is  $yocto_time UTC$utc_offset (UTC offset is $yocto_offset s)"
+		fi
+	fi
+
+	echo "Yocto meteo: $(python -m hypernets.yocto.meteo | sed -E -e 's/\(|\)|\[|\]|\"//g' | sed -e "s/'//2g" | sed '-es/,//'{7..1..2})"
+
+	set +e
+	relay_on="$(python -m hypernets.yocto.relay -g -n4 2>&1 | grep -c True)"
+	set -e
+
+	# rain sensor relay is off, switch on
+	if [ "$relay_on" = 0 ]; then
+		python -m hypernets.yocto.relay -son -n4
+		echo -n "Waiting for rain sensor initialisation..."
+		sleep 5
+		echo "done"
+	fi
+
+	set +e
+	python -m hypernets.rain_sensor -c 1 -s -l ERROR
+	set -e
+
+	# restore rain sensor relay state
+	if [ "$relay_on" = 0 ]; then
+		python -m hypernets.yocto.relay -soff -n4
+	fi
+
+	echo "Yocto GPS: $(python -m hypernets.yocto.gps)"
+	echo "Supply voltage is $(python -m hypernets.yocto.voltage) V"
+	echo "Wake up reason is $(python -m hypernets.yocto.wakeupreason)"
+
+	# get watchdog and wakeup timers
+	if [ "$yocto_api_installed" = 1 ]; then
+		max_wakeup_time=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_powerDuration)
+		sleep_countdown=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_sleepCountdown)
+
+		if [ "$max_wakeup_time" = 0 ]; then
+			echo "${XHL}Yocto Auto-Power-Off is disabled${RESET_HL}"
+		else
+			echo "${HL}Yocto Auto-Power-Off set to $max_wakeup_time s, ${XHL}powering off in $sleep_countdown s${RESET_HL}"
+		fi
+
+		# Sleep inhibited by sleep.lock
+		if [ -f sleep.lock ]; then
+			echo "${XHL}Yocto sleep is inhibited by $HYPERNETS_TOOLS/sleep.lock${RESET_HL}"
+		fi
+
+		if [ "$next_wakeup_timestamp" = 0 ]; then
+			echo "${XHL}Yocto scheduled wakeup is disabled${RESET_HL}"
+		else
+			yocto_timestamp=$(date -d "$yocto_time UTC" -u +%s)
+			delta=$(( "$next_wakeup_timestamp" - "$yocto_timestamp" ))
+			echo "${HL}Next Yocto wakeup is scheduled on $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset (in $delta s)${RESET_HL}"
+		fi
+	fi
+) #now()
+
+
+# returns states or with args sets relay n state    eg: relay 5 on   relay 6 off ...
+relay() (
+	cd "$HYPERNETS_TOOLS"
+
+	if [[ "${1-}" == "-h" ]] || [[ "${1-}" == "--help" ]]; then
+		echo
+		echo "Yocto relays"
+		echo "relay [-h|--help] [relay_number on|off]"
+		echo "relay -h      print this help"
+		echo "relay         print current relay states"
+		echo "relay 3 on    switch on HYPSTAR relay #3"
+		echo "relay 3 off   switch off HYPSTAR relay #3"
+		echo
+		exit 1
+	fi
+
+	if [[ "${2-}" == "on" ]] || [[ "${2-}" == "off" ]]; then
+		python -m hypernets.yocto.relay -s "$2" -n $1
+	fi
+
+	echo -e "PC\tPT\tHYP\tRS\tCAM1\tCAM2"
+	echo -e  "1\t2\t3\t4\t5\t6"
+	python -m hypernets.yocto.relay -g -n1 -n2 -n3 -n4 -n5 -n6 2>&1 | grep -E -o  "(True|False)" | sed -e "s/False/${XHL}OFF${RESET_HL}/g;s/True/${GREEN}ON${RESET_HL}/g" | paste -s
+) # relay()
+
+
+# displays hypstar test_env once
+test-env() (
+	cd "$HYPERNETS_TOOLS"
+
+	set +e
+	relay_on=$(python -m hypernets.yocto.relay -g -n3 2>&1 | grep -c True)
+	set -e
+
+	if [ "$relay_on" = 0 ]; then
+		echo "${XHL}Radiometer relay #3 is off${RESET_HL}"
+		exit
+	fi
+
+	cd hypernets/hypstar/libhypstar/ 
+
+	if [ -f build/test_env ]; then
+		build/test_env | grep -v -e "DEBUG" -e "TRACE"
+	else
+		make test_env | grep -v -e "DEBUG" -e "TRACE"
+	fi
+) # test-env()
+
+
+# displays hypstar test_env live
+test-env-live() (
+	cd "$HYPERNETS_TOOLS"
+
+	set +e
+	relay_on=$(python -m hypernets.yocto.relay -g -n3 2>&1 | grep -c True)
+	set -e
+
+	if [ "$relay_on" = 0 ]; then
+		echo "${XHL}Radiometer relay #3 is off${RESET_HL}"
+		exit
+	fi
+
+	cd hypernets/hypstar/libhypstar/ 
+
+	if [ -f build/test_env_live ]; then
+		build/test_env_live | grep -v -e "DEBUG" -e "TRACE"
+	else
+		make test_env_live | grep -v -e "DEBUG" -e "TRACE"
+	fi
+) # test-env-live()
+
+
+# power off and send yocto to sleep if wakeup is scheduled
+goto-sleep() (
+	cd "$HYPERNETS_TOOLS"
+
+	source utils/configparser.sh
+	keep_pc=$(parse_config "keep_pc" config_dynamic.ini)
+
+	if [[ "$keep_pc" != "off" ]]; then
+		echo "${XHL}Set keep_pc = off first in config_dynamic.ini${RESET_HL}"
+		exit -1	
+	fi
+
+	# dummy sudo for quick elevation of privileges later during poweroff
+	# yocto sleep timer is only 10 s
+	sudo sleep 0
+
+	# forced sleep
+	if [[ "${1-}" == "--force" ]]; then
+		echo "${XHL}Forcing sleep${RESET_HL}"
+		force="--force"
+	fi
+
+	set +e
+    python -m hypernets.yocto.sleep_monitor ${force-}
+	yocto_sleep=$?
+	set -e
+
+	if [[ "$yocto_sleep" -eq 0 ]]; then
+		# All OK, shuttig down
+		echo "${XHL}Powering off${RESET_HL}"
+		sleep 1
+		sudo poweroff
+	fi
+
+	# Something went wrong
+	if [[ "$yocto_sleep" -eq 1 ]]; then
+		echo "${XHL}Yocto unreachable !!${RESET_HL}"
+	elif [[ "$yocto_sleep" -eq 255 ]]; then
+		echo "${XHL}Yocto scheduled wakeup is disabled!!!"
+		echo "${BOLD}Waking up is possible ONLY by manually pressing 'WAKE' button!!!${RESET_HL}"
+		echo
+		echo "${XHL}Use 'goto-sleep --force' to force sleep${RESET_HL}"
+	fi
+) # goto-sleep()
+
+
+## Yocto-Auto-Power-Off configuration
+yapo() (
+	cd "$HYPERNETS_TOOLS"
+
+	yoption="${1-}"
+	new_max_runtime="${2-}"
+
+	# check if Yocto command line API is installed
+	if [[ $(command -v YWakeUpMonitor) ]]; then
+		source utils/configparser.sh
+		yocto=$(parse_config "yocto_prefix2" config_static.ini)
+	else
+		echo "${XHL}Yocto API is not installed${RESET_HL}"
+		exit -1
+	fi
+
+	if [[ "$yoption" == "-h" ]] || [[ "$yoption" == "--help" ]]; then
+		echo
+		echo "Yocto~Auto~Power~Off"
+		echo "yapo                  without options returns the time in seconds until yocto turns PC power off"
+		echo "     set 180->99999   sets yocto max run time (in secs)   ${XHL}(3 minutes minimum!)${RESET_HL}"
+		echo "     stop             prevents yocto powering off for   infinity..."
+		echo "     restore          restores last used yocto max run time"
+		echo "     reset            resets the yocto power-off countdown timer"
+		echo "eg:  yapo set 720      yapo stop       yapo reset"
+		echo
+		exit 
+	fi
+	
+	max_wakeup_time=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_powerDuration)
+	next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_nextWakeUp|sed -e 's/[[:space:]].*//')
+	sleep_countdown=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_sleepCountdown)
+	yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yocto get_utcOffset)
+		
+	if [[ "${yoption-}" == "" ]]; then ######## display yocto-auto-power-off status ###############
+		if [[ "$max_wakeup_time" -eq "0" ]]; then
+			echo "${HL}Yocto Auto-Power-Off is ${XHL}disabled! ${HL}PC will run for ${XHL}infinity...${RESET_HL}"
+
+			if [ -f "$HYPERNETS_TOOLS"/sleep.lock ]; then
+				prev_yapo_set=$(grep "last_yapo_set=" "$HYPERNETS_TOOLS"/sleep.lock | sed -e 's/[^0-9]//g')
+				echo "${HL}Last used Yocto Auto-Power-Off setting was $prev_yapo_set s${RESET_HL}"
+				echo "Use   yapo restore   to re-enable yocto-auto-power-off at ${HL}$prev_yapo_set s${RESET_HL}"
+			else
+				echo "Use   yapo set       to re-enable yocto-auto-power-off"
+			fi
+			echo "See   yapo -h        for help"
+			exit 0
+		else 
+			echo "${HL}Yocto Auto-Power-Off set to $max_wakeup_time s, ${XHL}powering off in $sleep_countdown s${RESET_HL}"
+			if [ "$yocto_offset" = 0 ]; then
+				utc_offset=""
+			else
+				utc_offset=$(printf "%+d" $(("$yocto_offset" / 3600)))
+			fi
+			
+			if [ "$next_wakeup_timestamp" = 0 ]; then
+				echo "${XHL}Yocto scheduled wakeup is disabled${RESET_HL}"
+			else
+				yocto_time=$(YRealTimeClock -f '[result]' -r 127.0.0.1 "$yocto" get_dateTime)
+				yocto_timestamp=$(date -d "$yocto_time UTC" -u +%s)
+				delta=$(( "$next_wakeup_timestamp" - "$yocto_timestamp" ))
+				echo "${HL}Next Yocto wakeup is scheduled on $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset (in $delta s)${RESET_HL}"
+			fi
+
+			echo "Enter:   yapo stop    to disable yocto-auto-power-off"
+			echo "         yapo reset   to reset the countdown timer"
+		fi
+	elif [[ "${yoption-}" == "stop" ]]; then ############ disable yocto-auto-power-off ################
+		if [[ "$max_wakeup_time" -ne "0" ]]; then
+			echo "${HL}Auto-Power-Off setting was $max_wakeup_time s${RESET_HL}"
+
+			YWakeUpMonitor -r 127.0.0.1 -s "$yocto" set_powerDuration 0 >/dev/null 2>&1
+			echo "${XHL}Yocto Auto-Power-Off is now disabled${RESET_HL}"
+
+			# make a sleep.lock file in hypernets_tools/
+			cat << EOF > "$HYPERNETS_TOOLS"/sleep.lock
+# This is a sleep.lock file for hypernets_tools
+# which inhibits sending Yocto to sleep and powering off the PC
+# even if the automated sequence was started with keep_pc = off
+# in config_dynamic.ini
+# 
+# Delete this file to re-enable sleep or even better, 
+# use   yapo set   which re-enables yocto auto-power-off and 
+# deletes this file or see   yapo -h   for help.
+#
+# The last used yocto auto-power-off setting was
+last_yapo_set=$max_wakeup_time
+EOF
+
+			echo "${HL}Saved the previous setting into ${HYPERNETS_TOOLS}/sleep.lock${RESET_HL}"
+		else
+			echo "${HL}Yocto Auto-Power-Off was already ${XHL}disabled${RESET_HL}"
+		fi
+	elif [[ $yoption == "set" ]]; then #################### Set max run time ##########################
+		# check is not empty & is an integer
+		set +eu
+		[ -n "$new_max_runtime" ] && [ "$new_max_runtime" -eq "$new_max_runtime" ] 2>/dev/null
+		if [ $? -ne 0 ]; then
+			echo "${XHL}Invalid input, yapo set requires max runtime in seconds as second parameter.${RESET_HL}"
+			echo
+			exit -1
+		fi
+		set -eu
+
+		if (( "$new_max_runtime" < 180 )); then  # LIMIT YOCTO MAXRUNTIME TO NO LESS THAN 3 MINS 
+			new_max_runtime=180
+			echo "${XHL}Requested runtime limit is too short, using minimum allowed value ${new_max_runtime} s${RESET_HL}"
+		fi
+
+		YWakeUpMonitor -r 127.0.0.1 -s "$yocto" set_powerDuration $new_max_runtime >/dev/null 2>&1
+		set_max_wakeup_time=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 "$yocto" get_powerDuration)
+		echo "${HL}Auto-Power-Off set to power off after ${XHL}$set_max_wakeup_time seconds${RESET_HL}"
+		
+		if [ -f "$HYPERNETS_TOOLS"/sleep.lock ]; then
+			rm -f "$HYPERNETS_TOOLS"/sleep.lock
+			echo "${HL}Removed ${HYPERNETS_TOOLS}/sleep.lock${RESET_HL}"
+		fi
+	elif [[ "${yoption-}" == "restore" ]]; then #################### Restore last used max run time from sleep.lock ##########################
+		if [ ! -f "$HYPERNETS_TOOLS"/sleep.lock ]; then
+			echo "${XHL}${HYPERNETS_TOOLS}/sleep.lock file not found, last used yocto max run time is unknown${RESET_HL}"
+			echo "${HL}Use   yapo set   to set new yocto-auto-power-off time${RESET_HL}"
+			echo
+			exit -1
+		fi
+
+		set +eu
+
+		prev_yapo_set=$(grep "last_yapo_set=" "$HYPERNETS_TOOLS"/sleep.lock | sed -e 's/[^0-9]//g')
+
+		# check if not empty and is valid integer
+		[ -n "$prev_yapo_set" ] && [ "$prev_yapo_set" -eq "$prev_yapo_set" ] 2>/dev/null
+		if [ $? -ne 0 ]; then
+			echo "${XHL}Invalid last used yocto max run time found from ${HYPERNETS_TOOLS}/sleep.lock${RESET_HL}"
+			echo "${HL}Use   yapo set   to set new yocto-auto-power-off time${RESET_HL}"
+			echo
+			exit -1
+		fi
+		set -eu
+
+		# use recursive yapo set for restoring
+		yapo set "$prev_yapo_set"
+	elif [[ "${yoption-}" == "reset" ]]; then #################### Reset shutdown counter max run time ##########################
+		if [[ "$max_wakeup_time" -ne "0" ]]; then
+			YWakeUpMonitor -r 127.0.0.1 "$yocto" set_sleepCountdown "$max_wakeup_time" >/dev/null 2>&1
+			new_sleep_countdown=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 "$yocto" get_sleepCountdown)
+			echo "${HL}Auto-Power-Off reset to power off after ${XHL}$new_sleep_countdown seconds${RESET_HL}"
+		else
+			echo "${HL}Yocto Auto-Power-Off was already ${XHL}disabled${RESET_HL}"
+		fi
+	else
+		echo "Unknown option, run yapo -h for help"
+	fi
+) # yapo()
+
+
+## helper functions for converting between absolute and relative positions
+## force to 0...360 range
+_pt_abs2rel_pan() {
+	if [[ "$reverse_tilt" == "yes" ]]; then
+		printf "%.1f" $( bc <<< "($1 - ($offset_pan) - 180 + 36000) % 360" )
+	else
+		printf "%.1f" $( bc <<< "($1 + ($offset_pan) + 36000) % 360" )
+	fi
+}
+
+_pt_abs2rel_tilt() {
+	if [[ "$reverse_tilt" == "yes" ]]; then
+		printf "%.1f" $( bc <<< "(- ($1) - ($offset_tilt) + 36000) % 360" )
+	else
+		printf "%.1f" $( bc <<< "($1 + ($offset_tilt) + 36000) % 360" )
+	fi
+}
+
+_pt_rel2abs_pan() {
+	if [[ "$reverse_tilt" == "yes" ]]; then
+		printf "%.1f" $( bc <<< "($1 + ($offset_pan) + 180 + 36000) % 360" )
+	else
+		printf "%.1f" $( bc <<< "($1 - ($offset_pan) + 36000) % 360" )
+	fi
+}
+
+_pt_rel2abs_tilt() {
+	if [[ "$reverse_tilt" == "yes" ]]; then
+		printf "%.1f" $( bc <<< "(- ($1 + ($offset_tilt)) + 36000) % 360" )
+	else
+		printf "%.1f" $( bc <<< "($1 - ($offset_tilt) + 36000) % 360" )
+	fi
+}
+
+
+## Pan-Tilt control
+pt() (
+	cd "$HYPERNETS_TOOLS"
+
+	if [[ "${1-}" == "-h" ]] || [[ "${1-}" == "--help" ]]; then
+		echo
+		echo "  Pan-tilt control"
+		echo "********************"
+		echo "pt [-h|--help] [abs|sun|delta] [new_pan new_tilt]"
+		echo "pt                          without options returns the current pan-tilt position"
+		echo "   new_pan new_tilt         move pan-tilt while accounting for the offsets in config_dynamic.ini"
+		echo "   abs new_pan new_tilt     move pan-tilt to absolute position"
+		echo "   sun new_pan new_tilt     move pan-tilt to position relative to the sun"
+		echo "   delta new_pan new_tilt   move pan-tilt relative to the current position"
+		echo
+		echo "pt sun  without arguments points to the sun"
+		echo "use x as new value for the axis that has to stay in the current position"
+		echo "eg: pt 270 90   pt abs 270 90   pt x 0   pt sun   pt delta x -5"
+		echo
+		exit 
+	fi
+
+	source utils/configparser.sh
+	offset_tilt=$(parse_config "offset_tilt" config_dynamic.ini)
+	offset_pan=$(parse_config "offset_pan" config_dynamic.ini)
+	reverse_tilt=$(parse_config "reverse_tilt" config_dynamic.ini)
+
+	# remove plus sign, if any
+	offset_tilt=${offset_tilt#+}
+	offset_pan=${offset_pan#+}
+
+	# use absolute position
+	if [[ "${1-}" == "abs" ]]; then
+		abspos=1
+		sunpos=0
+		deltapos=0
+		shift 1
+	elif [[ "${1-}" == "sun" ]]; then
+		abspos=0
+		sunpos=1
+		deltapos=0
+		shift 1
+	
+		## if pan and tilt are empty then set to 0
+		if [ -z "${1-}" ]; then set -- "0" "0"; fi 
+
+		## calculate sun position
+		python_script=$(cat << EOF
+from hypernets.geometry.spa_hypernets import spa_from_datetime
+
+azimuth_sun, zenith_sun = spa_from_datetime()
+print(f"{azimuth_sun:.2f}\t{zenith_sun:.2f}")
+EOF
+		)
+
+		spa=$(python -c "$python_script")
+		sun_azimuth=$(cut -f 1 <<< $spa)
+		sun_zenith=$(cut -f 2 <<< $spa)
+
+		sun_elevation=$(bc <<< "90 - $sun_zenith")
+
+		latitude=$(parse_config "latitude" config_dynamic.ini)
+		longitude=$(parse_config "longitude" config_dynamic.ini)
+		elevation=$(parse_config "elevation" config_dynamic.ini)
+
+		# remove plus sign, if any
+		latitude=${latitude#+}
+		longitude=${longitude#+}
+		elevation=${elevation#+}
+
+		# get gps position and time
+		gps=$(python -m hypernets.yocto.gps  | sed -e "s/, /\t/g; s/[()]//g; s/b\?'//g")
+		gps_latitude=$(cut -f 1 <<< $gps)
+		gps_longitude=$(cut -f 2 <<< $gps)
+		gps_datetime=$(cut -f 3 <<< $gps)
+		if [ "$gps_datetime" = "N/A" ]; then gps_hasfix=0; else gps_hasfix=1; fi
+
+		echo "${HL}Using parameters from config_dynamic.ini:${RESET_HL}"
+		if [ "$gps_hasfix" = 1 ]; then
+			echo "latitude = $latitude (GPS: $gps_latitude)"
+			echo "longitude = $longitude (GPS: $gps_longitude)"
+		else
+			echo "latitude = $latitude"
+			echo "longitude = $longitude"
+		fi
+		echo "elevation = $elevation"
+		echo "offset_pan = $offset_pan"
+		echo "offset_tilt = $offset_tilt"
+		echo "reverse_tilt = $reverse_tilt"
+		echo "Using system time $(date '+%Y/%m/%d %H:%M:%S %Z')"
+
+		if [ "$gps_hasfix" = 1 ]; then
+			echo "GPS time is       $gps_datetime UTC"
+		else
+			echo "${HL}No GPS fix${RESET_HL}"
+		fi
+
+		echo
+		printf "${HL}Sun position: azimuth %.2f, zenith %.2f, elevation %.2f\n${RESET_HL}" "$sun_azimuth" "$sun_zenith" "$sun_elevation"
+	elif [[ "${1-}" == "delta" ]]; then
+		abspos=0
+		sunpos=0
+		deltapos=1
+		shift 1
+	else
+		abspos=0
+		sunpos=0
+		deltapos=0
+	fi
+
+	# check if pan-tilt relay is on
+	relay_state=$(python -m hypernets.yocto.relay -g -n2 2>&1 | grep -E -o "(True|False)")
+	if [[ "$relay_state" != "True" ]]; then 
+		echo  "${XHL}Relay 2 is off! Turn on to operate pan-tilt${RESET_HL}"
+		exit -1
+	fi
+
+	## read absolute position
+	set +e
+	current_abs_pos=$(python -m hypernets.geometry.pan_tilt -g 2>&1 | grep "Absolute positions: " | grep -Eo '[0-9]+([.][0-9]+)?' | paste -s) # pan	tilt
+	set -e
+
+	if [[ "$current_abs_pos" == "" ]]; then
+		echo "${XHL}Failed to read current position from pan-tilt!${RESET_HL}"
+		exit -1
+	fi
+
+	current_abs_pan=$(cut -f 1 <<< $current_abs_pos)
+	current_abs_tilt=$(cut -f 2 <<< $current_abs_pos)
+
+	## calculate current position in hypy coords
+	current_hyper_pan=$(_pt_abs2rel_pan "$current_abs_pan")
+	current_hyper_tilt=$(_pt_abs2rel_tilt "$current_abs_tilt")
+
+	############### print current position #################
+	if [[ "${1-}" == "" ]]; then
+		echo "Current parameters"
+		echo "offset_pan = $offset_pan"
+		echo "offset_tilt = $offset_tilt"
+		echo "reverse_tilt = $reverse_tilt"
+		echo
+		echo "Current positions"
+		printf "abs:   pan = %.1f, tilt = %.1f\n" "$current_abs_pan" "$current_abs_tilt"
+		printf "hyper: pan = %.1f, tilt = %.1f\n" "$current_hyper_pan" "$current_hyper_tilt"
+	else ################## go to position ###################
+		set +eu
+		# check pan and tilt parameters are not empty and are numbers or "x"
+		( [[ "$1" =~ ^[+-]?[0-9]*\.?[0-9]+$ ]] || [[ "$1" == "x" ]] ) 2>/dev/null && ( [[ "$2" =~ ^[+-]?[0-9]*\.?[0-9]+$ ]] || [[ "$2" == "x" ]] ) 2>/dev/null
+		if [ $? -ne 0 ]; then
+			echo "${XHL}Invalid input, enter numeric pan and tilt values or x if no movement is required.${RESET_HL}"
+			echo "${XHL}See pt -h for help${RESET_HL}"
+			exit -1
+		fi
+		set -eu
+
+		# remove plus sign, if any
+		new_pan="${1#+}"
+		new_tilt="${2#+}"
+
+		if [[ "$new_pan" == "x" ]]; then ## use current
+			requested_abs_pan=$current_abs_pan
+		elif [ "$abspos" = 1 ]; then ## requested abs
+			requested_abs_pan="$new_pan"
+		elif [ "$sunpos" = 1 ]; then ## requested sun
+			requested_rel_sun_pan=$(bc <<< "$sun_azimuth + ($new_pan)")
+			requested_abs_pan=$(_pt_rel2abs_pan "$requested_rel_sun_pan")
+		elif [ "$deltapos" = 1 ]; then ## requested delta
+			requested_abs_pan=$(bc <<< "$current_abs_pan + ($new_pan)")
+		else ## requested hyper
+			requested_abs_pan=$(_pt_rel2abs_pan "$new_pan")
+		fi
+
+		if [[ "$new_tilt" == "x" ]]; then ## use current
+			requested_abs_tilt=$current_abs_tilt
+		elif [ "$abspos" = 1 ]; then ## requested abs
+			requested_abs_tilt="$new_tilt"
+		elif [ "$sunpos" = 1 ]; then ## requested sun, zenith is 180 in relative coords
+			requested_rel_sun_tilt=$(bc <<< "(180 - $sun_zenith + ($new_tilt))")
+			requested_abs_tilt=$(_pt_rel2abs_tilt "$requested_rel_sun_tilt")
+		elif [ "$deltapos" = 1 ]; then ## requested delta
+			requested_abs_tilt=$(bc <<< "$current_abs_tilt + ($new_tilt)")
+		else ## requested hyper
+			requested_abs_tilt=$(_pt_rel2abs_tilt "$new_tilt")
+		fi
+
+		## force to 0...360 range
+		requested_abs_pan=$(bc <<< "($requested_abs_pan + 36000) % 360")
+		requested_abs_tilt=$(bc <<< "($requested_abs_tilt + 36000) % 360")
+	
+		printf "Moving to requested absolute position pan = %.1f, tilt = %.1f\n" "$requested_abs_pan" "$requested_abs_tilt"
+		python -m hypernets.geometry.pan_tilt -w -p "$requested_abs_pan" -t "$requested_abs_tilt" > /dev/null 2>&1
+
+		## read new abs positions
+		new_abs_pos=$(python -m hypernets.geometry.pan_tilt -g 2>&1 | grep -Eo '[0-9]+([.][0-9]+)?' | paste -s) # pan	tilt
+		new_abs_pan=$(cut -f 1 <<< $new_abs_pos)
+		new_abs_tilt=$(cut -f 2 <<< $new_abs_pos)
+	
+		## calculate relative position
+		new_hyper_pan=$(_pt_abs2rel_pan "$new_abs_pan")
+		new_hyper_tilt=$(_pt_abs2rel_tilt "$new_abs_tilt")
+
+		## calculate residuals
+		residual_pan=$( bc <<< "$new_abs_pan - $requested_abs_pan" )
+		residual_tilt=$( bc <<< "$new_abs_tilt - $requested_abs_tilt" )
+
+		echo
+		echo "New positions"
+		printf "abs:   pan = %.1f, tilt = %.1f, residuals: pan = %.1f, tilt = %.1f\n" "$new_abs_pan" "$new_abs_tilt" "$residual_pan" "$residual_tilt"
+		printf "hyper: pan = %.1f, tilt = %.1f\n" "$new_hyper_pan" "$new_hyper_tilt"
+	fi
+) # pt()
+
+
+## Yocto schedules
+schedule() (
+	cd "$HYPERNETS_TOOLS"
+
+	marray=()
+	
+	skipread=0
+	
+	if [[ "${1-}" == "-h" ]] || [[ "${1-}" == "--help" ]]
+	then
+		echo "View & Adjust yocto schedules 1 & 2 and time zone"
+		echo " notes:		-avoid overlaping sequences, max-runtime should be less than time between sequences"
+		exit
+	fi
+	
+	# check if Yocto command line API is installed
+	if [[ $(command -v YWakeUpMonitor) ]]; then
+		source utils/configparser.sh
+		yoctowifibrd=$(parse_config "yocto_prefix2" config_static.ini)
+	else
+		echo "${XHL}Yocto API is not installed${RESET_HL}"
+		exit -1
+	fi
+	
+	
+	clear
+	
+	yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yoctowifibrd get_utcOffset)
+	if [ "$yocto_offset" = 0 ]; then
+		utc_offset=""
+	else
+		utc_offset=$(printf "%+d" $(("$yocto_offset" / 3600)))
+	fi
+	
+	while [ 1 ]
+	do
+		if [[ "$skipread" -eq 0 ]] #skip to schedule adjust if pressed redo
+		then
+			tput cup 0 0 
+			echo
+			echo "${HL}                Yocto Schedule                 ${RESET_HL}"
+			echo  "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ "
+			
+			yerrl=1
+			while [ "$yerrl" -eq 1 ] #check for yocto comms
+			do
+				yerr=$(YRealTimeClock -r 127.0.0.1 "$yoctowifibrd" get_dateTime 2>&1) #get yocto dt
+				if [ "$yerr" = "ERR: No module found" ]
+				then
+					echo "${XHL}   YOCTOPUCE HAS SLITHERED AWAY!! ${RESET_HL}    "
+					sleep 0.5
+					tput cuu 1
+					echo "                                       "
+					sleep 0.5
+					tput cuu 1
+				else
+					yerrl=0
+				fi
+			done
+			
+			echo -n "    Rugged PC date & time:  "
+			date '+%Y/%m/%d %H:%M:%S %Z'
+			echo -n "    Yocto date & time is:   "
+			yocto_time=$(YRealTimeClock -f '[result]' -r 127.0.0.1 "$yoctowifibrd" get_dateTime)
+			if [ "$yocto_offset" = 0 ]; then
+				echo "$yocto_time UTC"
+			else
+				echo "$yocto_time UTC$utc_offset (UTC offset is $yocto_offset s)"
+			fi
+	
+			next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 "$yoctowifibrd" get_nextWakeUp|sed -e 's/[[:space:]].*//')
+			if [ "$next_wakeup_timestamp" = 0 ]; then
+				echo "${XHL}    Yocto scheduled wakeup is disabled${RESET_HL}"
+			else
+				yocto_timestamp=$(date -d "$yocto_time UTC" -u +%s)
+				delta=$(( "$next_wakeup_timestamp" - "$yocto_timestamp" ))
+				echo "    Next wake up is at:     $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset (in $delta s)"
+			fi
+			
+			
+			echo  "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+			echo -n "Enter option: ${HL}"
+			echo "1 - adjust schedule 1 "
+			echo "              2 - adjust schedule 2 (validation)"
+			echo "              3 - adjust Yocto time zone"
+			echo "              E - Exit"
+			echo "  any other key - Refresh ${RESET_HL}"
+			
+			#loop waiting for key press & displaying time until yocto shutdown
+			loopy=1
+			
+			set +e
+			while [ "$loopy" -eq 1 ] 
+			do
+				tput civis     # -- invisible #hide the cursor
+			
+				read -s -t 0.1 -n1 ch #don echo input, timeout after 0.1s, accept 1st keypress, put into var ch
+				if [ $? = 0 ] #read length is 0 after 0s timeout exit
+				then	
+					tput cup 6 0
+			
+					loopy=0 #exit loop
+					break
+				fi
+			
+				#CHECK FOR YOCTO COMMS
+				yerr=$(YRealTimeClock -r 127.0.0.1 "$yoctowifibrd" get_dateTime 2>&1) #get yocto dt
+				yer=${yerr:0:20}
+				if [ "$yer" = "ERR: No module found" ]
+				then
+					loopy=0
+					ch=" "	
+				fi
+			done
+			set -e
+		fi
+		skipread=0
+		tput cup 15 1 
+		tput cnorm  
+		
+		
+		
+		#################### #Adjust schedule #######################################################
+		if [ "$ch" = "1" ] # Schedule 1
+		then
+			schedy=1
+			ch=99
+		elif [ "$ch" = "2" ] # Schedule 2 (validation)
+		then
+			schedy=2
+			ch=99
+		fi
+		
+		
+		if [ "$ch" = "99" ] 
+		then
+			clear
+			echo
+		
+			echo "${HL}                Yocto Schedule                 ${RESET_HL}"
+			echo  "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ "
+			
+			
+			nwku=$(YWakeUpMonitor -r 127.0.0.1 any get_nextWakeUp) #get yocto nextwakeup
+			
+			value=${nwku#*=}  # print everything after the = 
+			valu=$(echo "$value" | grep -o -E '[0-9]+' | head -1 | sed -e 's/^0\+//') #remove the 1st number only
+			
+			echo "     ${HL}Schedule $schedy${RESET_HL}  "
+			echo "Visible parameters are active, \"_\" marks inactive"
+			echo "All inactive is equivalent to all set for a single field"
+			echo "All inactive for all fields disables the schedule"
+			months=$(YWakeUpSchedule -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$schedy" get_months)
+			months=${months#*= [}  # print everything after the =
+			months=${months%"]."}  #remove the trailing dot.
+			echo "Months format:       [JFMAMJJASOND] "
+			months=$(echo "$months" | tr . _)
+			echo "Months as set:       [$months] "
+			day=$(YWakeUpSchedule -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$schedy" get_weekDays)
+			day=${day#*= [}  # print everything after the =
+			day=${day%"]."}  #remove the trailing dot.
+			echo "Days format:         [MTWTFSS]"
+			day=$(echo "$day" | tr . _)
+			echo "Days as set:         [$day]     "
+			hours=$(YWakeUpSchedule -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$schedy" get_hours)
+			hours=${hours#*= [}  # print everything after the =
+			hours=${hours%"]."}  #remove the trailing dot.
+			echo "Hours format:        [0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23]  "
+			hrsasset=""
+			for (( hn=0;hn<=24;hn++ )) ; do
+				L=$(echo ${hours:$hn:1})
+				if [[ $hn -gt 9 ]] && [[ $hn -lt 20 ]] #space before 0->10
+				then
+					if [[ "$L" = "." ]]
+					then
+						hrsasset="${hrsasset}_"
+					else
+						hrsasset="${hrsasset}1"
+					fi
+				fi
+				if [[ $hn -gt 19 ]] && [[ $hn -lt 24 ]]
+				then
+					if [[ "$L" = "." ]]
+					then
+						hrsasset="${hrsasset}_"
+					else
+						hrsasset="${hrsasset}2"
+					fi
+				fi
+				if [[ "$L" = "." ]] # . are too messy to read with all the commas, just space instead
+				then
+					L="_" # $(echo -n " ") #..........................................................................
+				fi	
+				hrsasset="${hrsasset}$L"
+				if [[ $hn -lt 23 ]] #omit 1st comma
+				then
+					hrsasset="${hrsasset}," #DELIMETER!
+				fi
+			done
+			hours="$hrsasset"
+			hours=$(echo "$hours" | tr , " ")   #swap , delimiter for space
+			echo "Hours as set:        [$hours] "
+			
+			minbin=$(YWakeUpSchedule -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$schedy" get_minutes)
+			minbin=${minbin#*= }  # print everything after the =
+			minbin=${minbin%"."}  #remove the trailing dot.
+			echo "Start minutes format:[0,21,45] example values, starts sequences at 00th, 21st & 45th minutes "
+			#display yocto apo status
+			papot=$(YWakeUpMonitor -r 127.0.0.1 "$yoctowifibrd" get_powerDuration) #get yocto dt
+			papot=${papot#*= }  # print everything after the =space 
+			papot="${papot%"."}"
+			if [[ "$papot" -gt 59 ]] #omit 1st comma
+			then
+				sec2mins=$papot 
+				sec2mins=$(printf '%dh:%dm:%ds\n' $((sec2mins/3600)) $((sec2mins%3600/60)) $((sec2mins%60)))
+			else 
+				sec2mins="unlimited"
+			fi
+			echo "Note Maximum run time currently is${XHL} $sec2mins. ${RESET_HL}Avoid overlap!"
+			echo -n "Start minutes as set:"
+			#Convert minutes decimal value format to binary
+			db=$(echo "obase=2;$minbin" | bc) #convert to binary 
+			dbn=$(echo "${#db}") #number of digits
+			#Convert binary to minutes values
+			minsasset="["
+			cma=0
+			
+			mni=-1
+			for (( mn=$dbn;mn>=0;mn-- )) ; do #count thru db 0->60, 1 bit/minute, count backwards as lsn is on the right
+				L=$(echo ${db:$mn:1}) #step thru db array checking 1 char(mn) at a time
+				if [[ "$L" -eq 1 ]] #every "1" record the mn value
+				then
+					if [[ "$cma" -eq 1 ]] #omit 1st comma
+					then
+						minsasset="${minsasset},"
+					fi
+					minsasset="${minsasset}$mni"
+					cma=1
+				fi 
+				mni=$((mni + 1))
+			done
+			minsasset="${minsasset}]"
+			echo "$minsasset"
+			
+			echo
+			
+			set +e
+			while true;
+			do
+				echo "Press \"A\" to adjust schedule, \"E\" to exit                                   "
+				read -t 0.1 -s -n 1 sc
+				if [[ "$sc" =~ ^([aA])$ ]] || [[ "$sc" =~ ^([eE])$ ]] 
+				then
+					echo
+					break
+				fi
+			tput cuu 1
+			done
+			set -e
+			
+			############ ADJUST SCHED ###################
+			if [[ "$sc" =~ ^([aA])$ ]] 
+			then
+				tput cuu 2 #put cursor back up 2 lines
+				echo "${HL}     Schedule $schedy Adjustment${RESET_HL}                                         "
+				echo "Visible parameters are active, \"_\" marks inactive"
+				echo "Months format:       [JFMAMJJASOND]   "
+				echo "Adjust months:       [$months] "
+				field=$months
+				fieldformat="JFMAMJJASOND"
+				fieldlength=12
+				xc=35 #xvalue at end of field to blank from
+				i=0  #this is the position of the current letter in the string #12 #$((xc - fieldlength))
+				y=22
+				yy="$y" #reference y position
+				tput cup "$y" 0 #put cursor
+				echo "Select: <- ->    Toggle: \"|spacebar|\"    Done: \"Enter\"    Main Menu: \"M\"     " 
+				y=20
+				adjv="Adjust months:       "
+				fieldn=1
+				#Loop through adjustments, step to next field with D, 
+				loopy=1
+				looopy=1
+				xj=1  #the amount to jump cursor forwards/backward with arrows
+				nf=1
+				
+				mins="$minsasset"
+				mins=${mins#*[}  # print everything after the =
+				mins=${mins%"]"}  #remove the trailing dot.
+				while [ "$loopy" -eq 1 ]
+				do     
+					L=""
+					tput cup $y 0 #put cursor
+					echo -n "$adjv[$field]"
+					
+					x=$((fieldlength - i))
+					x=$((x + 1))
+					tput cub "$x"  #put cursor wrt position in year
+					tput cnorm     # -- show the cursor
+				
+					#Get input & check for arrow keys (read options remove the arrow ^[[ parts)
+				    IFS="" read -r -sn1 userinput
+					tput civis     # -- invisible #hide the cursor
+			    	case "$userinput" in
+			        	C) userinput="zzzz" ;; #right
+			        	D) userinput="zzzzz" ;; #left
+				   	esac
+					# toggle the char with spacebar press
+					if [[ "$userinput" = " " ]]
+					then
+						tput cuf "$x"  #put cursor wrt position in year
+						L=$(echo ${fieldformat:i:1}) #char n  in the reference format
+						hmmm=$(echo ${field:i:1}) # char n in the adjusting
+						if [[ "$fieldn" -eq 3 ]] # hours field, correct for varying x jump 
+						then
+							if [[ "$i" -gt 18 ]]
+							then
+								i=$((i + 1)) #position to 2nd digit (1st digit gets saved at end of if then)
+								if [[ "$hmmm" = "_" ]]
+								then
+									hmmm=$L #the corresponding char in the format
+									Lnext=$(echo ${fieldformat:i:1}) #char n  in the reference forma
+									field=$(echo ${field:0:i}$Lnext${field:i+1}) #update the adjusted field at next position too
+								else
+									hmmm="_"
+									field=$(echo ${field:0:i}$hmmm${field:i+1}) #update the adjusted field at next position too
+								fi
+								i=$((i - 1)) #repositiuon back to 1st digit
+							else
+								if [[ "$hmmm" = "_" ]]
+								then
+									hmmm="$L" #the corresponing char in the format
+								else
+									hmmm="_"
+								fi	
+							fi
+						else  #all other fields
+							if [[ "$hmmm" = "_" ]]
+							then
+								hmmm="$L" #the corresponing char in the format
+							else
+								hmmm="_"
+							fi
+						fi
+						field=$(echo ${field:0:i}$hmmm${field:i+1}) #update the adjusted field at position i
+					fi
+				
+					if [[ "$fieldn" -eq 3 ]] #correct for x jump while arrow backwards on hours
+					then
+						if [[ "$i" -gt 18 ]]
+						then
+							xj=3
+						else
+							xj=2
+						fi
+						if [[ "$userinput" = "zzzzz" ]] && [[ "$i" -gt 17 ]] && [[ "$i" -lt 22 ]] #echo backwards 1  check is not < jan
+						then
+							xj=2
+						fi
+					fi
+				
+					if [[ "$userinput" = "zzzzz" ]] && [[ "$i" -gt 0 ]] #echo backwards 1  check is not < jan
+					then
+						tput cub "$xj" #move backwards
+						i=$((i - xj))
+					fi
+				
+					if [[ "$userinput" = "zzzz" ]] && [[ "$i" -lt "$fieldlength"-"$xj" ]] #echo forwards 1 check is not > dec
+					then
+						tput cuf "$xj" #move forwards
+						i=$((i + xj))
+					fi
+					#Done so load next fields
+					if [[ "$userinput" = "" ]]
+					then	
+						y=$((y + nf)) #move cursor down 
+						
+						tput cup "$y" 0 #put cursor
+						fieldn=$((fieldn + 1))  #next field to plow
+						if [[ "$fieldn" -eq 2 ]]
+						then
+							months="$field"
+							echo "Days format:         [MTWTFSS]"
+							echo 
+							fieldformat="MTWTFSS"
+							fieldlength=7
+							field="$day"
+							adjv="Adjust days:         "
+							xc=30 #clear remains on the line after xc
+							i=0
+						fi
+						if [[ "$fieldn" -eq 3 ]]
+						then
+							day="$field"
+							echo "Hours format:        [0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23]  "
+							echo 
+							fieldformat="0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23"
+							fieldlength=61
+							field=$hours
+							adjv="Adjust hours:        "
+							xc=84 #clear remains on the line after xc
+							xj=2 #jump cursor by 2 bcoz commas
+							i=0
+						fi
+						if [[ "$fieldn" -eq 4 ]]
+						then
+							hours="$field"
+							break
+						fi
+			
+						y=$((y + 1)) #move cursor down 
+						yt=$((y + 2))
+						tput cup "$yt" 0 #put cursor
+						if [[ "$fieldn" -lt 6 ]]
+						then
+			   				echo "Select: <- ->    Toggle: \"|spacebar|\"    Done: \"Enter\"    Main Menu: \"M\"     " 
+						fi
+						tput cuu 2 #put cursor back up 2 lines
+					fi
+			
+					#clear screen
+					tput cup "$y" 0 #put cursor to x origin
+					tput cuf "$xc" #put cursor to end of field
+					tput el #clear to end of line
+			
+					#exit & save
+					if [[ "$userinput" =~ ^([sS])$ ]] || [[ "$loopy" -eq 0 ]]
+					then
+						loopy=0
+					fi
+			
+					#redo
+					if [[ "$userinput" =~ ^([rR])$ ]] #redo
+					then
+						echo "  Give it another crack then....  "
+						loopy=0
+					fi
+			
+					#exit
+					if [[ "$userinput" =~ ^([mM])$ ]]    
+					then
+						loopy=0
+						echo " Bailed "
+					fi
+				done
+			
+				if [[ "$fieldn" -eq 4 ]]
+				then
+					echo -n "Minutes as set:      "
+					echo "$minsasset"
+			
+					fieldformat="a,b,c,d"
+					fieldlength=34
+					field=$mins
+					echo "Enter minutes:                                                                         "
+					tput cub 141 #put cursor to start of line
+					tput cuf 21 #put cursor to end of field
+					tput el #clear to end of line
+					echo
+					echo "   Separate with commas   \"Enter\" when done or to leave as is   \"X\" to clear all   " 
+					tput cuu 3
+					tput cuf 21 #put cursor to end of field
+					echo
+					tput cub 141 #put cursor to start of line
+					tput cuf 21 #put cursor to end of field
+					tput cuu 1
+			
+					tput cnorm
+					read ma
+					fieldn=5
+				fi
+				if [[ "$fieldn" -eq 5 ]]
+				then
+					minutes="$ma"
+					if [[ "$ma" == "" ]]
+					then
+						minutes="$minsasset"
+					elif [[ "$ma" =~ ^([xX])$ ]]
+					then
+						minutes=""
+					fi
+					minutes=${minutes/]/}
+					minutes=${minutes#[}
+	
+					# set to -1 if no minutes set (empty or only spaces)
+					if [[ -z "${minutes// }" ]]; then 
+						minutes="-1"
+					fi
+			
+					echo 
+					echo "   DONE                                                                                                                 "
+					echo
+					tput cuu 2 #put cursor back up 1 line
+					sleep 1
+					echo "                 Re-do: \"R\"   Save & exit: \"S\"   Main Menu: \"M\" (without save)                                    " 
+					while [ "$looopy" -eq 1 ]
+					do   
+						#Get input & check for arrow keys (read options remove the arrow ^[[ parts)
+				    	read -r -sn1 userinput
+						if [[ "$userinput" =~ ^([sS])$ ]] || [[ "$userinput" =~ ^([mM])$ ]] || [[ "$userinput" =~ ^([rR])$ ]] #save
+						then
+							looopy=0
+							loopy=0
+						fi				
+					done
+				fi
+				# convert to yocto format & save
+				if [[ "$userinput" =~ ^([sS])$ ]]
+				then
+					echo
+					echo
+					#re-deliniate & backwards format for yocto
+					months=$(echo "$months" | tr _ . )
+			 		read -a mfarray <<< $(echo "$months" | sed 's/./& /g') # put a space btween each char
+					mfbinarray=() #clear array
+					for (( mfn=0;mfn<=11;mfn++ )) ; do #loop until end of array
+						rev=$((12 - mfn))
+						mfnn=${mfarray[$mfn]}
+						if [[ $mfnn = "." ]] # remove leading 1 in 10's
+						then
+							mfbinarray[$rev]="0" 
+						else
+							mfbinarray[$rev]="1"
+						fi
+					done
+					months=$(echo "${mfbinarray[*]}") #put array contents back into minss var
+					months=$(echo "$months" | sed -r 's/[ ]+//g') #replace space with nufn
+					months=$(echo "obase=10; ibase=2; $months" | bc)
+					#save to yocto
+					YWakeUpSchedule -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$schedy" set_months $months
+			
+					day=$(echo "$day" | tr _ . )
+			 		read -a darray <<< $(echo "$day" | sed 's/./& /g') # put a space btween each char
+					dbinarray=() #clear array
+					for (( dn=0;dn<=6;dn++ )) ; do #loop until end of array
+						rev=$((7 - dn))
+						dnn=${darray[$dn]}
+						if [[ "$dnn" = "." ]] # remove leading 1 in 10's
+						then
+							dbinarray[$rev]="0"
+						else
+							dbinarray[$rev]="1"
+						fi
+					done
+					day=$(echo "${dbinarray[*]}") #put array contents back into minss var
+					day=$(echo "$day" | sed -r 's/[ ]+//g') #replace space with nufn
+					day=$(echo "obase=10; ibase=2; $day" | bc)
+					#save to yocto
+					YWakeUpSchedule -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$schedy" set_weekDays "$day"
+			 
+					harray=($(echo $hours)) #put hours into array
+					for (( hn=23;hn>=0;hn-- )) ; do #loop until last num
+						hnn=${harray[$hn]}
+						if [[ ${hnn:0:1} == "_" ]]; then continue; fi ## skip if not set
+						if [ $hnn -ge 10 ] && [ $hnn -lt 20 ] # remove leading 1 in 10's
+						then
+							harray[$hn]=$((hnn - 10))
+						fi
+						if [ "$hnn" -ge 20 ] # remove leading 2 in 20's
+						then
+							harray[$hn]=$((hnn - 20))
+						fi
+					done
+					hours=$(echo "${harray[*]}") #put array contents back into hours var
+					hours=$(echo "$hours" | sed -r 's/[_]+/./g') #replace _ with .
+					harray=($(echo "$hours")) # put hours back into an array
+					hbinarray=() #clear array
+					for (( hn=0;hn<=23;hn++ )) ; do #loop until end of array
+						rev=$((24 - hn))
+						hnn=${harray[$hn]}
+						if [[ $hnn = "." ]] # remove leading 1 in 10's
+						then
+							hbinarray[$rev]="0"
+						else
+							hbinarray[$rev]="1"
+						fi
+					done
+					hours=$(echo "${hbinarray[*]}") #put array contents back into minss var
+					hours=$(echo "$hours" | sed -r 's/[ ]+//g') #replace space with nufn
+					hours=$(echo "obase=10; ibase=2; $hours" | bc)
+					#save to yocto
+					YWakeUpSchedule -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$schedy" set_hours "$hours"
+			
+					minsbinarray=() #clear mins array
+					marray=($(echo "$minutes" | tr "," "\n")) #remove the , put into an array
+					len=${#marray[@]} # number of vars in arrays
+					arn=$((len - 1))
+					mnn=${marray[$arn]} # 1st num in array (ie 1st num from right)
+					for (( mn=59;mn>=0;mn-- )) ; do #loop until last num creating binary num
+						revvar=$((60 - mn))
+						if [[ "$mn" -eq "$mnn" ]] #check var against loop mn
+						then 
+							arn=$((arn - 1))
+							mnn=${marray[$arn]} #load next bit to look for	
+							minsbinarray[$revvar]="1"
+						else
+							minsbinarray[$revvar]="0"
+						fi
+					done
+					b2d=$(echo "${minsbinarray[*]}") #put array contents back into minss var
+					b2d=$(echo "$b2d" | sed -r 's/[ ]+//g') #replace space with nufn
+					dec=$(echo "obase=10; ibase=2; $b2d" | bc)
+					#save to yocto
+					#last one with -s for saving to flash
+					YWakeUpSchedule -s -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$schedy" set_minutes "$dec"
+			
+					echo
+					#all saved to yocto!
+					echo "${RESET_HL}          Schedule is set! "
+					sleep 1
+				fi # "$userinput" =~ ^([sS])$   Save
+			
+			
+				#redo
+				if [[ "$userinput" =~ ^([rR])$ ]] #redo
+				then
+					echo "  Give it another crack then....  "
+					ch=2
+					skipread=1
+				fi
+			
+				#exit
+				if [[ "$userinput" =~ ^([aA])$ ]]    
+				then
+					loopy=0
+					echo " Bailed "
+				fi
+				echo
+				echo
+				tput cuu 3 #put cursor back up 3 lines
+				tput cuf 22 #put cursor 22 chars along the line
+			fi
+		
+			echo "${RESET_HL}"
+			sleep 1
+		fi # "$ch" = "99" schedule adjustment
+
+
+		########### Yocto time zone adjustment ##############
+		if [ "$ch" = "3" ] # yocto time zone
+		then
+			clear
+			echo 
+			echo -n "Yocto date & time is:   "
+			yocto_time=$(YRealTimeClock -f '[result]' -r 127.0.0.1 "$yoctowifibrd" get_dateTime)
+			echo "$yocto_time UTC$utc_offset"
+			echo 
+
+			set +e
+			while true; do
+				echo "Press \"A\" to adjust Yocto time zone, \"E\" to exit                             "
+				read -t 0.1 -s -n 1 sc
+				if [[ "$sc" =~ ^([aA])$ ]] || [[ "$sc" =~ ^([eE])$ ]] 
+				then
+					echo
+					break
+				fi
+			tput cuu 1
+			done
+			set -e
+
+			if [[ "$sc" =~ ^([aA])$ ]] 
+			then
+				echo -n "Enter new time zone: UTC"
+				read tz
+
+				echo
+
+				if [[ "$tz" == "" ]]; then
+					tz=0
+				else
+					set +e
+					[ "$tz" -eq "$tz" ] 2>/dev/null
+			        if [ $? -ne 0 ] || [[ "$tz" -gt "12" ]] || [[ "$tz" -lt "-12" ]]; then
+						echo "${XHL}UTC$tz is invalid time zone${RESET_HL}"
+						tz="${utc_offset:-0}"
+						sleep 2	
+					fi
+					set -e
+				fi
+
+				if [[ "$tz" -eq 0 ]]; then
+					new_utc_offset=""
+				else
+					new_utc_offset=$(printf "%+d" "$tz")
+				fi
+				new_yocto_offset=$(("$tz" * 3600))
+
+				if [[ "$yocto_offset" -eq "$new_yocto_offset" ]]; then
+					echo "Keeping current Yocto time zone UTC$utc_offset"
+				else
+					echo "Setting Yocto time zone to UTC$new_utc_offset"
+					echo
+					YRealTimeClock -s -r 127.0.0.1 $yoctowifibrd set_utcOffset "$new_yocto_offset"
+					
+					echo
+					echo "${XHL} Warning!!"
+					echo " It may take up to one minute until the Yocto"
+					echo " adjusts the clock to new time zone${RESET_HL}"
+					sleep 5
+
+					# read new offset 
+					yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yoctowifibrd get_utcOffset)
+					if [ "$yocto_offset" = 0 ]; then
+						utc_offset=""
+					else
+						utc_offset=$(printf "%+d" $(("$yocto_offset" / 3600)))
+					fi
+				fi
+
+				sleep 1
+			fi
+		fi # [ "$ch" = "3" ] # yocto time zone
+	
+
+		######### EXIT #########
+		if [[ "$ch" =~ ^([eE])$ ]] 
+		then
+			tput cuu 3
+			tput cub 20
+			echo "                             "
+			echo  "The end "
+			exit
+		fi
+		
+		
+		#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		sleep 1
+		clear
+	done # while [ 1 ]
+) # schedule()
+
+
+webpic() (
+	cd "$HYPERNETS_TOOLS"
+
+	webpic_help() {
+		echo "webpic [-h|--help] site|sky"
+		echo
+		echo "Take webcam picture"
+		echo 
+		echo "  site    store site (relay 5) picture in $HYPERNETS_TOOLS/OTHER/WEBCAM_SITE/"
+		echo "  sky     store sky (relay 6) picture in $HYPERNETS_TOOLS/OTHER/WEBCAM_SKY/"
+		echo "  -h, --help      print this help"
+		echo
+		echo "eg: webpic site    webpic sky"
+		echo
+		exit -1
+	}
+		
+	if [[ "${1-}" == "-h" ]] || [[ "${1-}" == "--help" ]]; then
+		webpic_help
+	fi
+
+	cam="${1-}"
+	# bail out if no or unknown webcam requested
+	if [[ "$cam" != "site" ]] && [[ "$cam" != "sky" ]]; then 
+		echo "${XHL}Please specify either site or sky camera${RESET_HL}"
+		echo
+		webpic_help
+	fi
+
+	source utils/configparser.sh
+	config=$(parse_config "webcam_$cam" config_static.ini)
+	
+	webcam_credent=$(echo "$config" | cut -d "@" -f1)
+	webcam_ip=$(echo "$config" | cut -d "@" -f2)
+
+	# check if valid IP
+	if [[ ! "$webcam_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+		echo "${XHL}$cam camera IP '$webcam_ip' is invalid in config_static.ini${RESET_HL}"
+		exit -1
+	fi
+
+	set +e
+	set pipefail
+	export AV_LOG_FORCE_COLOR=1
+	cap_out=$(utils/webcam_get_image.sh -c "$webcam_credent" -i "$webcam_ip" -d "OTHER/WEBCAM_${cam^^}/" 2>&1 | tee /dev/fd/2)
+	cap_retcode=$?
+
+	if [[ "$cap_retcode" -ne 0 ]]; then
+		echo
+		if [[ "$cam" == "site" ]]; then
+			camrelay=5
+		else
+			camrelay=6
+		fi
+		echo "${XHL}$cam camera capture failed."
+		echo "Is relay $camrelay switched on?"
+		echo "Is the webcam_$cam config in config_static.ini correct?${RESET_HL}"
+		echo
+	else
+		imgname=$(grep -o "[^']*WEBCAM_${cam^^}[^']*" <<< "$cap_out")
+		echo "${HL}$cam camera image has been stored as $imgname${RESET_HL}"
+
+		source utils/configparser.sh
+		ipServer=$(parse_config "credentials" config_static.ini)
+		remoteDir=$(parse_config "remote_dir" config_static.ini)
+		sshPort=$(parse_config "ssh_port" config_static.ini)
+
+		set +e
+		cap_file=$(sed -e "s%$HYPERNETS_TOOLS%%;s%^/%%" <<< $imgname)
+		rsync -e "ssh -p $sshPort" -t --relative "$cap_file" "$ipServer:$remoteDir"
+
+		if [[ $? -ne 0 ]]; then
+			echo "${XHL}Copying the image to $ipServer failed${RESET_HL}"
+		else
+			echo "${HL}Copied the image to $ipServer:${remoteDir%/}/$cap_file${RESET_HL}"
+		fi
+	fi
+) # webpic()
+
+
+hypypic()(
+	cd "$HYPERNETS_TOOLS"
+
+	OUTPUT_DIR="OTHER/HYPYCAM"
+	mkdir -p "$OUTPUT_DIR"
+	cap_file="$OUTPUT_DIR/$(date -u '+%Y%m%dT%H%M%S').jpg"
+
+    set +e
+    set pipefail
+	cap_out=$(python -m  hypernets.hypstar.handler -p -b 3000000 -l INFO -d INFO -o "$cap_file" 2>&1 | tee /dev/fd/2)
+	cap_retcode=$?
+
+	saved_to=$(grep "INFO:root:Saved to" <<< "$cap_out" | sed -e 's/INFO:root:Saved to //;s/\.$//')
+	
+	if [[ "$cap_retcode" -ne 0 ]]; then
+		echo "${XHL}hypstar camera capture failed."
+		echo "Is relay 3 switched on?${RESET_HL}"
+	elif [[ "$saved_to" == "" ]]; then
+		echo "${XHL}hypstar camera capture failed."
+		echo "Try again.${RESET_HL}"
+	else
+		echo "${HL}hypstar camera image has been stored as $HYPERNETS_TOOLS/$saved_to${RESET_HL}"
+
+		source utils/configparser.sh
+		ipServer=$(parse_config "credentials" config_static.ini)
+		remoteDir=$(parse_config "remote_dir" config_static.ini)
+		sshPort=$(parse_config "ssh_port" config_static.ini)
+
+		set +e
+		rsync -e "ssh -p $sshPort" -t --relative "$saved_to" "$ipServer:$remoteDir"
+
+		if [[ $? -ne 0 ]]; then
+			echo "${XHL}Copying the image to $ipServer failed${RESET_HL}"
+		else
+			echo "${HL}Copied the image to $ipServer:${remoteDir%/}/$saved_to${RESET_HL}"
+		fi
+	fi
+) # hypypic()
+
+
+portal()(
+	cd "$HYPERNETS_TOOLS"
+
+	mkdir -p ~/Portal
+
+	source utils/configparser.sh
+	ipServer=$(parse_config "credentials" config_static.ini)
+	remoteDir=$(parse_config "remote_dir" config_static.ini)
+	sshPort=$(parse_config "ssh_port" config_static.ini)
+	
+	if mountpoint -q ~/Portal; then
+		echo "${HL}Portal is already open${RESET_HL}"
+		exit
+	fi
+
+	set +e
+	echo "${HL}$(readlink -m ~/Portal)/ ---> linking to: ---> $ipServer:${remoteDir%/}/${RESET_HL}"
+	sshfs -p $sshPort "$ipServer:${remoteDir%/}/" ~/Portal
+
+	if [[ $? -eq 0 ]]; then
+		echo "${HL}Portal is open${RESET_HL}"
+	else
+		echo "${XHL}Failed to open Portal${RESET_HL}"
+	fi
+) # portal()
+
+alias kill-service="sudo systemctl kill --signal=SIGKILL hypernets-sequence"
+alias journal="journalctl -b -u hypernets-sequence -e"
+alias status="sudo systemctl status hypernets-sequence"
+alias gui="(cd \"$HYPERNETS_TOOLS\" && python -m hypernets.gui)"
+alias runseq="(cd \"$HYPERNETS_TOOLS\" && ./utils/run_service.sh --test-run)"
+
+# print the help
+commands

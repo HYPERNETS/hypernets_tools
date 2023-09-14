@@ -3,6 +3,9 @@
 set -o nounset
 set -euo pipefail
 
+XHL=$(tput setaf 9) ## red
+RESET_HL=$(tput sgr0) ## reset all text formatting
+
 function usage(){
 	printf "Usage sudo %s [-nv][-h] :\n" "$0"
 	printf "  -v  Verbose Mode.\n"
@@ -18,64 +21,95 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 VERBOSE=0
-VERSION=0
 
 if [ -z "${1-0}" ] ; then usage ; fi
 while getopts 'hvn:' OPTION; do
 	case "$OPTION" in
 		v) VERBOSE=1;;
-		n) VERSION="$OPTARG" ;;
 		?|h) usage ;;
 	esac
 done
 
 if [ "$VERBOSE" -eq 1 ] ; then
 	echo "(Verbose Mode On)" 
-	echo "VERSION provided : $VERSION" 
 fi
 
-if [ "$VERSION" -eq 0 ] ; then 
-	output=$(wget https://www.yoctopuce.com/FR/common/getLastFirmwareLink.php -O -)
-	VERSION=$(echo $output | cut -d',' -f1 | cut -d':' -f2)
-	echo "Last version found on www.yoctopuce.com : $VERSION"
+if [[ ${PWD##*/} != "hypernets_tools"* ]]; then
+	echo "This script must be run from hypernets_tools folder" 1>&2
+	echo "Use : sudo ./install/${0##*/} instead"
+	exit 1
 fi
-last_virtualhub="VirtualHub.linux.$VERSION.zip"
-virtualhub_link="http://www.yoctopuce.com/FR/downloads/$last_virtualhub"
 
-cd /tmp
-rm -rf Yoctopuce "$last_virtualhub" # In case of previous error
-wget "$virtualhub_link" # Script will stop here if E404 is raised
+user="$SUDO_USER"
 
-mkdir Yoctopuce
-unzip "$last_virtualhub" -d Yoctopuce/
+
+# Detection of what system we are currently running (i.e. debian or manjaro)
+if [ -f /etc/os-release ]; then
+	source /etc/os-release
+else
+	echo "Error: impossible to detect OS system version."
+	echo "Not a systemd freedesktop.org distribution?"
+	exit 1
+fi
+
+if [ "$ID" != "debian" ] && [ "$ID" != "manjaro" ]; then
+	echo "${XHL}Error: only Debian and Manjaro are supported distributions${RESET_HL}"
+	exit 1
+fi
+
+if [ ! "$ID"  == "debian" ]; then
+	echo "Linux distribution not supported."
+	echo "Please manually install the Yoctopuce virtualhub"
+	echo "https://www.yoctopuce.com/EN/virtualhub.php"
+	echo
+	echo "and Yoctopuce command line API"
+	echo "https://www.yoctopuce.com/EN/libraries.php"
+	echo "Download linux intel and copy the contents of Binaries/linux/64bits/"
+	echo "into ~/.local/bin/"
+	exit 1
+fi
+
+wget -qO - https://www.yoctopuce.com/apt/KEY.gpg |  sudo apt-key add -
+echo "deb https://www.yoctopuce.com/ apt/stable/" | sudo tee /etc/apt/sources.list.d/yoctopuce.list 
+
+sudo apt update
+sudo apt install virtualhub
+sudo apt install yoctolib-cmdlines
 
 set +e
+# FIXME
+echo "Stop existing Virtualhub service (in case of update)"
 systemctl stop yvirtualhub.service
 systemctl disable yvirtualhub.service
 set -e
 
-# udev rules :
-sudo cp Yoctopuce/udev_conf/51-yoctopuce_all.rules /etc/udev/rules.d/
+echo "Creating user rules for all users.."
+echo 
 
-# - 1: copy VirtualHub binary to /usr/sbin
-cp Yoctopuce/64bits/VirtualHub /usr/sbin
+cat > /etc/udev/rules.d/51-yoctopuce_all.rules << EOF
+# udev rules to allow write access to all users for Yoctopuce USB devices
+SUBSYSTEM=="usb", ATTR{idVendor}=="24e0", MODE="0666"
+EOF
 
-# - 2: ensure that the /usr/sbin/Virtualhub
-chmod +x /usr/sbin/VirtualHub
+echo "Creating systemd startup script..."
+echo 
 
-cp -f Yoctopuce/startup_script/yvirtualhub.service /etc/systemd/system/
+cat > /etc/systemd/system/yvirtualhub.service  << EOF
+[Unit]
+Description=Yoctopuce VirtualHub
+After=network.target
+
+[Service]
+ExecStart=/usr/sbin/VirtualHub -c /etc/vhub.byn
+Type=simple
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
 systemctl daemon-reload
 systemctl start yvirtualhub.service
 systemctl enable yvirtualhub.service
 
-rm -rf Yoctopuce "$last_virtualhub"
-cd -
 echo "Installation  VirtualHub done."
 echo "---------------------------------------------------------------"
-
-# echo "Try to run the VirtualHub with /usr/sbin/VirtualHub"
-# echo "and go to this webpage"
-# midori -e win-new -e goto "http://localhost:4444" &
-# journalctl -eu yvirtualhub --follow
-
-# Note previous used version of VirtualHub : 40924

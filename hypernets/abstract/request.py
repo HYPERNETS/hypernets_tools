@@ -5,7 +5,6 @@ from datetime import datetime
 from hypernets.hypstar.libhypstar.python.data_structs.spectrum_raw import \
     RadiometerType, RadiometerEntranceType
 
-
 class RadiometerExt(IntEnum):
     NONE = 0
 
@@ -13,7 +12,14 @@ class RadiometerExt(IntEnum):
 class EntranceExt(IntEnum):
     NONE = -1
     PICTURE = 3
+    VM = 4
 
+# KL: duplicate EntranceExt just in case, for IDK what it does
+class InstrumentAction(IntEnum):
+    NONE = -1
+    MEASUREMENT = 1
+    PICTURE = 3
+    VALIDATION = 4
 
 class Request(object):
     def __init__(self):
@@ -22,6 +28,8 @@ class Request(object):
         self.it_swir = 0
         self.radiometer = None
         self.entrance = None
+        self.action = InstrumentAction.NONE
+        self.vm_current_ma = 1000 #current in milliamps (to avoid messing with unpacking formats for sequence files)
 
     def __str__(self):
         if self.entrance == EntranceExt.NONE and self.number_cap == 0:
@@ -29,14 +37,17 @@ class Request(object):
 
         output_str = f"{self.number_cap}."
 
-        if self.radiometer == RadiometerExt.NONE:
+        if self.action == InstrumentAction.PICTURE:
             output_str += "picture"
-
-        else:
-            output_str += f"{self.radiometer.name}.{self.entrance.name}."
-            output_str += f"{self.it_vnir}.{self.it_swir}"
+            return output_str
+        elif self.action == InstrumentAction.VALIDATION:
+            output_str += "VAL."
+        output_str += f"{self.radiometer.name}.{self.entrance.name}."
+        output_str += f"{self.it_vnir}.{self.it_swir}"
             # output_str += f"{self.total_measurement_time}"
 
+        if self.action == InstrumentAction.VALIDATION:
+            output_str += f".{self.vm_current_ma}"
         return output_str
 
     def __repr__(self):
@@ -61,20 +72,39 @@ class Request(object):
         request = cls()
         request.number_cap = int(number_cap)
 
-        if measurement == ("picture",):
+        if measurement == ("picture", ):
             request.radiometer = RadiometerExt.NONE
             request.entrance = EntranceExt.PICTURE
+            request.action = InstrumentAction.PICTURE
             return request
 
-        else:
-            # TODO : manage different type of params
-            rad, ent, it_vnir, it_swir = measurement
+        elif measurement[0] == "validation":
+            request.radiometer = RadiometerExt.NONE
+            request.entrance = EntranceExt.VM
+            request.action = InstrumentAction.VALIDATION
+            measurement = measurement[1:]   # drop action info, we can then parse reminder same way as for simple measurement
 
-            request.radiometer, request.entrance = \
+            # if we have specific VM current requested, drop that from tuple so we can use default processing
+            if len(measurement) > 4:
+                request.vm_current_ma = measurement[4]
+                measurement = measurement[:4]
+        else:
+            # TODO : manage different type of params (KL: ?)
+            request.action = InstrumentAction.MEASUREMENT
+
+        rad, ent, it_vnir, it_swir = measurement
+        request.radiometer, request.entrance = \
                 Request.mode_action_to_radiometer_entrance(rad, ent)
 
-            request.it_vnir = int(it_vnir)
-            request.it_swir = int(it_swir)
+        if request.action == InstrumentAction.VALIDATION:
+            if request.radiometer == RadiometerType.SWIR or \
+                    request.radiometer == RadiometerType.BOTH:
+                raise ValueError(f"SWIR validation not supported yet")
+            if request.entrance == RadiometerEntranceType.DARK:
+                raise ValueError(f"Dark validation measurement does not make sense")
+
+        request.it_vnir = int(it_vnir)
+        request.it_swir = int(it_swir)
 
         return request
 
@@ -109,6 +139,7 @@ class Request(object):
                          RadiometerEntranceType.RADIANCE: 0x10,
                          RadiometerEntranceType.IRRADIANCE: 0x08,
                          EntranceExt.PICTURE: 0x02,
+                         EntranceExt.VM: 0x04,
                          EntranceExt.NONE: 0x03}
 
         # EntranceExt.CALIBRATION: 0x01,
