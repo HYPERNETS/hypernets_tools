@@ -183,7 +183,14 @@ if [[ ! "$bypassYocto" == "yes" ]] ; then
 		else
 			set -e
 			echo "[INFO]  Starting VirtualHub..."
-			/usr/bin/VirtualHub
+            if [[ "$ID" == "manjaro" ]]; then
+			    /usr/bin/VirtualHub &
+            elif [[ "$ID" == "debian" ]]; then
+                /usr/sbin/VirtualHub &
+            else
+                echo "[ERROR] Not able to identify the distribution."
+                exit 0
+            fi
 			sleep 2
 			echo "[INFO]  ok"
 		fi
