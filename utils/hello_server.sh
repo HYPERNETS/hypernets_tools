@@ -162,7 +162,22 @@ fi
 
 # Send data
 echo "Syncing Data..."
-rsync -e "ssh -p $sshPort" -rt --exclude "CUR*" "DATA" "$ipServer:$remoteDir"
+
+rsync -e "ssh -p $sshPort" -rt --exclude "CUR*" --exclude "metadata.txt" \
+	"DATA" "$ipServer:$remoteDir"
+
+if [ $? -eq 0 ]; then
+
+	rsync -e "ssh -p $sshPort" -aimt --include "*/" --include "metadata.txt" \
+		--exclude "*" "DATA" "$ipServer:$remoteDir"
+
+	if [ $? -eq 0 ]; then
+		echo "[INFO] All data and metadata files have been successfully uploaded."
+	fi
+
+else
+	echo "[WARNING] Error during the uploading data process!"
+fi
 
 echo "Syncing Logs..."
 rsync -e "ssh -p $sshPort" -rt "LOGS" "$ipServer:$remoteDir"
