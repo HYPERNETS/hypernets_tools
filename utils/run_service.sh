@@ -307,20 +307,11 @@ exit_actions() {
     else
 		echo "[WARNING]  Hysptar scheduled job exited with code $return_value";
 
-		# It is raining
-		if [ $return_value -eq 88 ]; then
-			echo "[WARNING] Stopping due to rain"
-			shutdown_sequence
-		fi
-
-		# FIXME : sudo issue
-		# if [ $return_value -eq 27 ]; then
-		# 	echo "[INFO] Trying to reload and trigger USB rules..."
-		# 	sudo udevadm control --reload
-		# 	echo $?
-		# 	sudo udevadm trigger
-		# 	echo $?
-		# fi
+		# There is no point in trying again in case of some errors:
+		# 30 - sequence file not found
+		# 88 - rainig
+		if [ $return_value -ne 30 ] && [ $return_value -ne 88 ]; then
+			sleep 1
 
 			echo "[WARNING]  Second try : "
 			set +e

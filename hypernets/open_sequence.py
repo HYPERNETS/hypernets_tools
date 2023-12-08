@@ -55,7 +55,13 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             error("Disabling further rain sensor checks")
             check_rain = False
 
-    protocol = Protocol(sequence_file)
+    try:
+        protocol = Protocol(sequence_file)
+    except FileNotFoundError as e:
+        error(f"{e}")
+        error(f"Failed to open sequence file '{sequence_file}'")
+        exit(30) # exit code 30
+
     info(protocol)
 
     # check if this protocol wants to use instrument
