@@ -72,7 +72,7 @@ function wait_up(){
 
 	if [ $p -ne 0 ] ; then
 		if [ "$VERBOSE" -eq 1 ] ; then
-			echo Timeout : "$IP_ADDRESS" is unreachable.
+			echo "[ERROR] Timeout : $IP_ADDRESS is unreachable."
 		fi	
 		exit 1
 	else
