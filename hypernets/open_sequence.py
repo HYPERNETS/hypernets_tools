@@ -131,14 +131,26 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                                              expect_boot_packet=except_boot,
                                              boot_timeout=instrument_boot_timeout)   # noqa
 
-        instrument, visible, swir = instrument_instance.get_serials()
-        debug(f"SN : * instrument -> {instrument}")
-        debug(f"     * visible    -> {visible}")
-        if swir != 0:
-            debug(f"     * swir       -> {swir}")
+        instrument_sn, visible_sn, swir_sn, vm_sn = instrument_instance.get_serials()
+        debug(f"SN : * instrument -> {instrument_sn}")
+        debug(f"     * visible    -> {visible_sn}")
+        if swir_sn != 0:
+            debug(f"     * swir       -> {swir_sn}")
+        if vm_sn != 0:
+            debug(f"     * vm         -> {vm_sn}")
+            
+        (instrument_FW_major, instrument_FW_minor, instrument_FW_rev, 
+         vm_FW_major, vm_FW_minor, vm_FW_rev) = instrument_instance.get_firmware_versions()
+        debug(f"FW : * instrument -> {instrument_FW_major}.{instrument_FW_minor}.{instrument_FW_rev}")
+        if vm_sn != 0:
+            debug(f"     * vm         -> {vm_FW_major}.{vm_FW_minor}.{vm_FW_rev}")        
+    else:
+        instrument_sn = "N/A"
+        vm_sn = "N/A"
 
     mdfile = open(path.join(seq_path, "metadata.txt"), "w")
-    mdfile.write(parse_config_metadata())
+    mdfile.write(parse_config_metadata(sequence_file = sequence_file, 
+                                       instrument_sn = instrument_sn, vm_sn = vm_sn))
 
     # Enabling SWIR TEC for the whole sequence is a tradeoff between
     # current consumption and execution time.
@@ -261,7 +273,12 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             try:
                 if dump_environment_logs:
                     # 0xFF returns live data, 0 returns last captured on FW > 0.15.24
-                    env = instrument_instance.get_env_log(0xff)
+                    if (instrument_FW_major, instrument_FW_minor, instrument_FW_rev) > (0, 15, 24):
+                        env_request = 0xff 
+                    else:
+                        env_request = 0
+
+                    env = instrument_instance.get_env_log(env_request)
                     info(env.get_csv_line())
                 instrument_instance.take_request(request, path_to_file=output)
 
@@ -313,10 +330,6 @@ if __name__ == '__main__':
 
     log_fmt = '[%(levelname)-7s %(asctime)s] (%(module)s) %(message)s'
     dt_fmt = '%Y-%m-%dT%H:%M:%S'
-
-    # from logging import CRITICAL
-    # log_levels = {"CRITICAL": CRITICAL, "ERROR": ERROR, "WARNING": WARNING,
-    #               "INFO": INFO, "DEBUG": DEBUG}
 
     log_levels = {"ERROR": ERROR, "WARNING": WARNING, "INFO": INFO,
                   "DEBUG": DEBUG}
