@@ -211,16 +211,13 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 	voltage=$(python -m hypernets.yocto.voltage)
 	echo "[INFO]  Supply voltage: $voltage V"
 
+	# log wake up reason
+	set +e
+	wakeupreason=$(python -m hypernets.yocto.wakeupreason)
+	set -e
+	echo "[INFO]  Wake up reason is : $wakeupreason."
+
 	if [[ "$checkWakeUpReason" == "yes" ]] ; then
-		echo "[INFO]  Check Wake up reason..."
-		set +e
-		wakeupreason=$(python -m hypernets.yocto.wakeupreason)
-		set -e
-
-		echo "[DEBUG]  Wake up reason is : $wakeupreason."
-        
-
-
 		if [[ "$wakeupreason" != "SCHEDULE"* ]]; then
 			echo "[WARNING]  $wakeupreason is not a reason to start the sequence."
 			startSequence="no"
