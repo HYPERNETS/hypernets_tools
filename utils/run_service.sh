@@ -61,6 +61,11 @@ shutdown_sequence() {
 	    	echo "[INFO]  Set relay #4 to OFF."
 		    python -m hypernets.yocto.relay -soff -n4
 		fi
+		
+		## Log network traffic
+		## interface1 Rx Tx,interface2 Rx Tx,....
+		traffic=$(grep : /proc/net/dev | sed -e 's/^[[:space:]]\+//;s/[[:space:]]\+/ /g;s/://g'| cut -d " " -f 1,2,10 | paste -sd ",")
+		echo "[INFO]  Network traffic:$traffic"
     fi
 
     if [[ "$keepPc" == "off" ]]; then
