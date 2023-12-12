@@ -138,7 +138,7 @@ rsync -e "ssh -p $sshPort" -rt --exclude "CUR*" --exclude "metadata.txt" \
 if [ $? -eq 0 ]; then
 
 	rsync -e "ssh -p $sshPort" -aimt --include "*/" --include "metadata.txt" \
-		--exclude "*" "DATA" "$ipServer:$remoteDir"
+		--exclude "CUR*" --exclude "*" "DATA" "$ipServer:$remoteDir"
 
 	if [ $? -eq 0 ]; then
 		echo "[INFO] All data and metadata files have been successfully uploaded."
