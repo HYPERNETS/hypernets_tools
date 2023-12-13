@@ -172,7 +172,7 @@ rsync -e "ssh -p $sshPort" -rt --exclude "CUR*" --exclude "metadata.txt" \
 
 if [ $? -eq 0 ]; then
 
-	rsync -e "ssh -p $sshPort" -aimt --include "*/" --include "metadata.txt" \
+	rsync -e "ssh -p $sshPort" -aimt --include "metadata.txt" \
 		--exclude "CUR*" --exclude "*" "DATA" "$ipServer:$remoteDir"
 
 	if [ $? -eq 0 ]; then
