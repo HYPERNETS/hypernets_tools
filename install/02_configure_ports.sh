@@ -110,14 +110,14 @@ KERNEL=="$pantiltPort", SUBSYSTEM=="tty", MODE="0666"
 # Therefore we use this ugly workaround to detect which is the first
 # gpio-f7188x chip and add 7 to get the correct chip.
 # It is given a+rw permissions and /dev/rain_sensor is linked to it.
-KERNEL=="gpiochip*", SUBSYSTEM=="gpio", DRIVERS=="gpio-f7188x", ACTION=="add", RUN+="/usr/bin/bash -c 'chip_base=\$(ls /sys/devices/platform/gpio-f7188x/ | grep gpiochip | sort -n | head -n 1); ln -sf gpiochip\$((\${chip_base:8}+7)) /dev/rain_sensor; chmod -f a+rw /dev/rain_sensor"
+KERNEL=="gpiochip*", SUBSYSTEM=="gpio", DRIVERS=="gpio-f7188x", ACTION=="add", RUN+="/usr/bin/bash -c 'chip_base=\$\$(ls /sys/devices/platform/gpio-f7188x/ | grep gpiochip | sort -n | head -n 1); ln -sf gpiochip\$\$((\$\${chip_base:8}+7)) /dev/rain_sensor; chmod -f a+rw /dev/rain_sensor'"
 
 EOF
 
 ## cleanup, reload and trigger
 udevadm control --reload-rules
 sleep 1
-rm -f /dev/radiometer*
+rm -f /dev/radiometer* /dev/rain_sensor
 udevadm trigger
 sleep 1
 modprobe gpio_f7188x
