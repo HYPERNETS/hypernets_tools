@@ -167,6 +167,25 @@ fi
 echo "[INFO]  Running on ${PRETTY_NAME-}"
 
 
+## log hypernets_tools repo and branch
+set +e
+hn_tools_repo=$(git config --get remote.origin.url)
+if [[ $? -ne 0 ]] ; then
+	set -e
+	echo "[WARNING]  hypernets_tools is not inside a git working tree"
+else
+	git update-index -q --refresh > /dev/null 2>&1
+	hn_tools_branch=$(git branch --show-current)
+	hn_tools_commit=$(git rev-parse --short HEAD)
+	if [[ $(git status --porcelain) != "" ]]; then
+		hn_tools_commit="${hn_tools_commit}-mod"
+	fi
+
+	echo "[INFO]  Running hypernets_tools from $hn_tools_repo branch $hn_tools_branch commit $hn_tools_commit"
+fi
+set -e
+
+
 if [[ "$bypassYocto" != "yes" ]] ; then
 
     if [[ "$debugYocto" == "yes" ]] ; then
