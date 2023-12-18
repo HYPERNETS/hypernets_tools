@@ -225,8 +225,8 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                     pan_real = float(pan_real) / 100
                     tilt_real = float(tilt_real) / 100
 
-                    pan_delta = (pan_real + 360) % 360 - (geometry.pan_abs + 360) % 360
-                    tilt_delta = (tilt_real + 360) % 360 - (geometry.tilt_abs + 360) % 360
+                    pan_delta = ((pan_real - geometry.pan_abs) + 180) % 360 - 180
+                    tilt_delta = ((tilt_real - geometry.tilt_abs) + 180) % 360 - 180
 
                     if abs(pan_delta) > 1.0 or abs(tilt_delta) > 1.0:
                         warning(f"pan-tilt did not reach the requested position")
