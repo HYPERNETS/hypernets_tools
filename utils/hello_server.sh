@@ -24,6 +24,11 @@ set -euo pipefail                           # Bash Strict Mode
 echo "Making Logs..."
 mkdir -p LOGS
 
+if [ ! -d "ARCHIVE" ]; then
+  echo "Creating archive directory..."
+  mkdir ARCHIVE
+fi
+
 logNameBase=$(date +"%Y-%m-%d-%H%M")
 
 suffixeName=""
@@ -129,17 +134,34 @@ if [[ ! "$autoUpdate" == "no" ]] ; then
 	set -e
 fi
 
+# Copying files to archive directory
+echo "Copying data to archive directory..."
+cp -RT DATA ARCHIVE
+
+if [ -d LOGS ]; then
+  echo "Copying logs to archive directory..."
+  cp -RT LOGS ARCHIVE
+fi
+
+if [ -d OTHER ]; then
+  echo "Copying other to archive directory..."
+  cp -RT OTHER ARCHIVE
+fi
+
 # Send data
 echo "Syncing Data..."
-rsync -e "ssh -p $sshPort" -rt --exclude "CUR*" "DATA" "$ipServer:$remoteDir"
+rsync -e "ssh -p $sshPort" -rt --exclude "CUR*" --remove-source-files "DATA" "$ipServer:$remoteDir" && \
+find DATA/ -mindepth 1 -depth -type d  -empty -exec rmdir {} \;
 
 echo "Syncing Logs..."
-rsync -e "ssh -p $sshPort" -rt "LOGS" "$ipServer:$remoteDir"
+rsync -e "ssh -p $sshPort" -rt --remove-source-files "LOGS" "$ipServer:$remoteDir" && \
+find DATA/ -mindepth 1 -depth -type d  -empty -exec rmdir {} \;
 
 if [ -d "OTHER" ]; then
 	echo "Syncing Directory OTHER..."
     # rt -> r XXX
-	rsync --ignore-existing -e "ssh -p $sshPort" -r "OTHER" "$ipServer:$remoteDir"
+rsync --ignore-existing -e "ssh -p $sshPort" -r --remove-source-files "OTHER" "$ipServer:$remoteDir" && \
+find DATA/ -mindepth 1 -depth -type d  -empty -exec rmdir {} \;
 	# rsync -e "ssh -p $sshPort" -rt "OTHER" "$ipServer:$remoteDir"
 fi
 
