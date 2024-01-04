@@ -30,6 +30,11 @@ last_boot_timestamp=${last_boot_timestamp::-6}
 
 logNameBase=$(date +"%Y-%m-%d-%H%M" -d @$last_boot_timestamp)
 
+if [ ! -d "ARCHIVE" ]; then
+  echo "Creating archive directory..."
+  mkdir ARCHIVE
+fi
+
 suffixeName=""
 for i in {001..999}; do
 	if [ -f "LOGS/$logNameBase$suffixeName-sequence.log" ]; then 
@@ -133,16 +138,31 @@ if [[ ! "$autoUpdate" == "no" ]] ; then
 	set -e
 fi
 
+# Copying files to archive directory
+echo "Copying data to archive directory..."
+cp -RT DATA ARCHIVE
+
+if [ -d LOGS ]; then
+  echo "Copying logs to archive directory..."
+  cp -RT LOGS ARCHIVE
+fi
+
+if [ -d OTHER ]; then
+  echo "Copying other to archive directory..."
+  cp -RT OTHER ARCHIVE
+fi
+
 # Send data
 echo "Syncing Data..."
 
 rsync -e "ssh -p $sshPort" -rt --exclude "CUR*" --exclude "metadata.txt" \
-	"DATA" "$ipServer:$remoteDir"
+	--remove-source-files "DATA" "$ipServer:$remoteDir"
 
 if [ $? -eq 0 ]; then
 
 	rsync -e "ssh -p $sshPort" -aim --exclude "CUR*" --include "*/" \
-		--include "metadata.txt" --exclude "*" "DATA" "$ipServer:$remoteDir"
+		--include "metadata.txt" --exclude "*" --remove-source-files "DATA" "$ipServer:$remoteDir" && \
+  find DATA/ -mindepth 1 -depth -type d  -empty -exec rmdir {} \;
 
 	if [ $? -eq 0 ]; then
 		echo "[INFO] All data and metadata files have been successfully uploaded."
@@ -155,12 +175,14 @@ else
 fi
 
 echo "Syncing Logs..."
-rsync -e "ssh -p $sshPort" -rt "LOGS" "$ipServer:$remoteDir"
+rsync -e "ssh -p $sshPort" -rt --remove-source-files "LOGS" "$ipServer:$remoteDir" && \
+find DATA/ -mindepth 1 -depth -type d  -empty -exec rmdir {} \;
 
 if [ -d "OTHER" ]; then
 	echo "Syncing Directory OTHER..."
     # rt -> r XXX
-	rsync --ignore-existing -e "ssh -p $sshPort" -r "OTHER" "$ipServer:$remoteDir"
+rsync --ignore-existing -e "ssh -p $sshPort" -r --remove-source-files "OTHER" "$ipServer:$remoteDir" && \
+find DATA/ -mindepth 1 -depth -type d  -empty -exec rmdir {} \;
 	# rsync -e "ssh -p $sshPort" -rt "OTHER" "$ipServer:$remoteDir"
 fi
 
