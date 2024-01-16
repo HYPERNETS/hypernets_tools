@@ -33,7 +33,11 @@ PATH="$PATH:~/.local/bin"
 echo "Making Logs..."
 mkdir -p LOGS
 
-logNameBase=$(date +"%Y-%m-%d-%H%M")
+last_boot_timestamp=$(journalctl -b-1 -u hypernets-sequence --output-fields=__REALTIME_TIMESTAMP -o export | grep -m 1 __REALTIME_TIMESTAMP | sed -e 's/.*=//')
+## truncate microseconds
+last_boot_timestamp=${last_boot_timestamp::-6}
+
+logNameBase=$(date +"%Y-%m-%d-%H%M" -d @$last_boot_timestamp)
 
 suffixeName=""
 for i in {001..999}; do
@@ -73,7 +77,7 @@ make_log() {
 	set +e
 	systemctl is-enabled hypernets-$logName.service > /dev/null
 	if [[ $? -eq 0 ]] ; then
-		echo "[DEBUG]  Making log: $logName..."
+		echo "[DEBUG]  Making log: $logNameBase-$logName..."
 		journalctl -b-1 -u hypernets-$logName --no-pager > LOGS/$logNameBase-$logName.log
 	else
 		echo "[DEBUG]  Skipping log: $logName."
@@ -162,7 +166,24 @@ fi
 
 # Send data
 echo "Syncing Data..."
-rsync -e "ssh -p $sshPort" -rt --exclude "CUR*" "DATA" "$ipServer:$remoteDir"
+
+rsync -e "ssh -p $sshPort" -rt --exclude "CUR*" --exclude "metadata.txt" \
+	"DATA" "$ipServer:$remoteDir"
+
+if [ $? -eq 0 ]; then
+
+	rsync -e "ssh -p $sshPort" -aim --exclude "CUR*" --include "*/" \
+		--include "metadata.txt" --exclude "*" "DATA" "$ipServer:$remoteDir"
+
+	if [ $? -eq 0 ]; then
+		echo "[INFO] All data and metadata files have been successfully uploaded."
+	else
+		echo "[WARNING] Error during the uploading metadata process!"
+	fi
+
+else
+	echo "[WARNING] Error during the uploading data process!"
+fi
 
 echo "Syncing Logs..."
 rsync -e "ssh -p $sshPort" -rt "LOGS" "$ipServer:$remoteDir"
