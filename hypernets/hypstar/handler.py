@@ -21,7 +21,7 @@ from hypernets.hypstar.libhypstar.python.data_structs.varia import \
 from hypernets.hypstar.libhypstar.python.data_structs.spectrum_raw  \
         import RadiometerEntranceType
 
-from logging import debug, info, error
+from logging import debug, info, warning, error
 
 
 class HypstarHandler(Hypstar):
@@ -111,8 +111,8 @@ class HypstarHandler(Hypstar):
                 exit(27)
 
         if not islink(instrument_port):
-            raise ValueError(f"{instrument_port} is not a link!")
-            exit(27)
+             warning(f"{instrument_port} is not a link!")
+
 
     def take_request(self, request, path_to_file=None, gui=False):
 
@@ -134,6 +134,7 @@ class HypstarHandler(Hypstar):
 
         return path_to_file
 
+
     def take_picture(self, path_to_file, params=None, return_stream=False):
         # Note : 'params = None' for now, only 5MP is working
         try:
@@ -144,7 +145,7 @@ class HypstarHandler(Hypstar):
             with open(path_to_file, 'wb') as f:
                 f.write(stream)
 
-            debug(f"Saved to {path_to_file}.")
+            info(f"Saved to {path_to_file}.")
             if return_stream:
                 return stream
             return True
@@ -152,6 +153,7 @@ class HypstarHandler(Hypstar):
         except Exception as e:
             error(f"{e}")
             return e
+
 
     def take_spectra(self, request, path_to_file, overwrite_IT=True):
 
@@ -196,6 +198,7 @@ class HypstarHandler(Hypstar):
 
         return True
 
+
     def take_validation(self, request, path_to_file):
         try:
             self.VM_enable(True)
@@ -221,14 +224,34 @@ class HypstarHandler(Hypstar):
             instrument = self.hw_info.instrument_serial_number
             visible = self.hw_info.vis_serial_number
             swir = self.hw_info.swir_serial_number
-            return instrument, visible, swir
+            vm = self.hw_info.vm_serial_number
+            return instrument, visible, swir, vm
 
         except Exception as e:
             error(f"{e}")
             return e
 
 
+    def get_firmware_versions(self):
+        try:
+            debug("Getting FW versions")
+            instrument_FW_major = self.hw_info.firmware_version_major
+            instrument_FW_minor = self.hw_info.firmware_version_minor
+            instrument_FW_rev = self.hw_info.firmware_version_revision
+            vm_FW_major = self.hw_info.vm_firmware_version_major
+            vm_FW_minor = self.hw_info.vm_firmware_version_minor
+            vm_FW_rev = self.hw_info.vm_firmware_version_revision
+             
+            return (instrument_FW_major, instrument_FW_minor, 
+                    instrument_FW_rev, vm_FW_major, vm_FW_minor, vm_FW_rev)
+
+        except Exception as e:
+            error(f"{e}")
+            return e
+
 if __name__ == '__main__':
+
+    from logging import basicConfig, DEBUG
 
     parser = ArgumentParser()
 
@@ -266,14 +289,18 @@ if __name__ == '__main__':
                                  HypstarLogLevel.DEBUG.name,
                                  HypstarLogLevel.TRACE.name], default="ERROR")
 
+    parser.add_argument("-d", "--debuglevel", type=str,
+                        help="Verbosity of the hypernets_tools log",
+                        choices=["ERROR", "WARNING", "INFO", "DEBUG"],
+                                 default=DEBUG)
+
     parser.add_argument("-b", "--baudrate", type=int,
                     help="Serial port baud rate used for communications with instrument", # noqa
                     default=115200)
 
-    from logging import basicConfig, DEBUG
-    basicConfig(level=DEBUG)
-
     args = parser.parse_args()
+
+    basicConfig(level=args.debuglevel)
 
     if args.radiometer and not args.entrance:
         parser.error(f"Please select an entrance for the {args.radiometer}.")
@@ -288,9 +315,9 @@ if __name__ == '__main__':
 
     if args.picture:
         request = Request.from_params(args.count, "picture")
-        instrument_instance.take_request(request)
+        output_file = instrument_instance.take_request(request, path_to_file=args.output)
         exit(0)
 
     measurement = args.radiometer, args.entrance, args.it_vnir, args.it_swir
     request = Request.from_params(args.count, *measurement)
-    instrument_instance.take_request(request)
+    instrument_instance.take_request(request, path_to_file=args.output)

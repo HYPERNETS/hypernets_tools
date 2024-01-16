@@ -47,7 +47,13 @@ keepPc=$(parse_config "keep_pc" config_dynamic.ini)
 debugYocto=$(parse_config "debug_yocto" config_static.ini)
 
 shutdown_sequence() {
-    if [[ "$bypassYocto" == "no" ]] && [[ "$startSequence" == "yes" ]] ; then
+	return_value="$1"
+
+    if [[ "$bypassYocto" != "yes" ]] && [[ "$startSequence" == "yes" ]] ; then
+		# log supply voltage before switching off the relays
+		voltage=$(python -m hypernets.yocto.voltage)
+		echo "[INFO]  Supply voltage: $voltage V"
+
 	    echo "[INFO]  Set relays #2 and #3 to OFF."
 	    python -m hypernets.yocto.relay -soff -n2 -n3
 
@@ -55,6 +61,11 @@ shutdown_sequence() {
 	    	echo "[INFO]  Set relay #4 to OFF."
 		    python -m hypernets.yocto.relay -soff -n4
 		fi
+		
+		## Log network traffic
+		## interface1 Rx Tx,interface2 Rx Tx,....
+		traffic=$(grep : /proc/net/dev | sed -e 's/^[[:space:]]\+//;s/[[:space:]]\+/ /g;s/://g'| cut -d " " -f 1,2,10 | paste -sd ",")
+		echo "[INFO]  Network traffic:$traffic"
     fi
 
     if [[ "$keepPc" == "off" ]]; then
@@ -156,7 +167,26 @@ fi
 echo "[INFO]  Running on ${PRETTY_NAME-}"
 
 
-if [[ ! "$bypassYocto" == "yes" ]] ; then
+## log hypernets_tools repo and branch
+set +e
+hn_tools_repo=$(git config --get remote.origin.url)
+if [[ $? -ne 0 ]] ; then
+	set -e
+	echo "[WARNING]  hypernets_tools is not inside a git working tree"
+else
+	git update-index -q --refresh > /dev/null 2>&1
+	hn_tools_branch=$(git branch --show-current)
+	hn_tools_commit=$(git rev-parse --short HEAD)
+	if [[ $(git status --porcelain) != "" ]]; then
+		hn_tools_commit="${hn_tools_commit}-mod"
+	fi
+
+	echo "[INFO]  Running hypernets_tools from $hn_tools_repo branch $hn_tools_branch commit $hn_tools_commit"
+fi
+set -e
+
+
+if [[ "$bypassYocto" != "yes" ]] ; then
 
     if [[ "$debugYocto" == "yes" ]] ; then
         debug_yocto
@@ -165,7 +195,7 @@ if [[ ! "$bypassYocto" == "yes" ]] ; then
 	# Ensure Yocto is online
 	yoctopuceIP=$(parse_config "yoctopuce_ip" config_static.ini)
 
-	if [[ ! "$yoctopuceIP" == "usb" ]] ; then
+	if [[ "$yoctopuceIP" != "usb" ]] ; then
 		# We ping it if there is an IP address
 		echo "[INFO]  Waiting for yoctopuce..."
 		while ! timeout 2 ping -c 1 -n $yoctopuceIP &>/dev/null
@@ -196,24 +226,25 @@ if [[ ! "$bypassYocto" == "yes" ]] ; then
 		fi
 	fi
 
+	# log supply voltage
+	voltage=$(python -m hypernets.yocto.voltage)
+	echo "[INFO]  Supply voltage: $voltage V"
+
+	# log wake up reason
+	set +e
+	wakeupreason=$(python -m hypernets.yocto.wakeupreason)
+	set -e
+	echo "[INFO]  Wake up reason is : $wakeupreason."
+
 	if [[ "$checkWakeUpReason" == "yes" ]] ; then
-		echo "[INFO]  Check Wake up reason..."
-		set +e
-		wakeupreason=$(python -m hypernets.yocto.wakeupreason)
-		set -e
-
-		echo "[DEBUG]  Wake up reason is : $wakeupreason."
-        
-
-
-		if [[ ! "$wakeupreason" == "SCHEDULE"* ]]; then
+		if [[ "$wakeupreason" != "SCHEDULE"* ]]; then
 			echo "[WARNING]  $wakeupreason is not a reason to start the sequence."
 			startSequence="no"
-			if [[ ! "$keepPc" == "on" ]]; then
+			if [[ "$keepPc" != "on" ]]; then
 				echo "[DEBUG]  Security sleep 2 minutes..."
 				sleep 120
 			fi
-			shutdown_sequence;
+			shutdown_sequence 0
 		fi
 
 		if [[ "$wakeupreason" == "SCHEDULE2" ]]; then
@@ -237,11 +268,11 @@ fi # bypassYocto != yes
 
 if [[ "$startSequence" == "no" ]] ; then
 	echo "[INFO]  Start sequence = no"
-	if [[ ! "$keepPc" == "on" ]]; then
+	if [[ "$keepPc" != "on" ]]; then
 		echo "[INFO]  5 minutes sleep..."
 		sleep 300
 	fi
-	shutdown_sequence;
+	shutdown_sequence 0
 fi
 
 
@@ -279,7 +310,7 @@ if [[ -n $verbosity ]] ; then
 	extra_args="$extra_args -v $verbosity"
 fi
 
-if [[ ! "$bypassYocto" == "yes" ]] ; then
+if [[ "$bypassYocto" != "yes" ]] ; then
 	echo "[INFO]  Set relays #2 and #3 to ON."
 	python -m hypernets.yocto.relay -son -n2 -n3
 
@@ -295,31 +326,21 @@ exit_actions() {
     if [ $return_value -eq 0 ] ; then
         echo "[INFO]  Success"
     else
-    	echo "[INFO]  Hysptar scheduled job exited with code $return_value";
+		echo "[WARNING]  Hysptar scheduled job exited with code $return_value";
 
-		# It is raining
-		if [ $return_value -eq 88 ]; then
-			echo "[WARNING] Stopping due to rain"
-			shutdown_sequence
+		# There is no point in trying again in case of some errors:
+		# 30 - sequence file not found
+		# 88 - rainig
+		if [ $return_value -ne 30 ] && [ $return_value -ne 88 ]; then
+			sleep 1
+
+			echo "[WARNING]  Second try : "
+			set +e
+			python3 -m hypernets.open_sequence -f $sequence_file $extra_args
+			set -e
 		fi
-
-		# FIXME : sudo issue
-		# if [ $return_value -eq 27 ]; then
-		# 	echo "[INFO] Trying to reload and trigger USB rules..."
-		# 	sudo udevadm control --reload
-		# 	echo $?
-		# 	sudo udevadm trigger
-		# 	echo $?
-		# fi
-
-		sleep 1
-
-		echo "[INFO]  Second try : "
-		set +e
-		python3 -m hypernets.open_sequence -f $sequence_file $extra_args
-		set -e
     fi
-	shutdown_sequence;
+	shutdown_sequence $return_value
 }
 
 trap "exit_actions" EXIT
