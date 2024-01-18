@@ -81,6 +81,18 @@ make_log() {
 	set -e
 }
 
+remove_old_backups_from_archive() {
+  sequence_count=$(find ARCHIVE/$1 -mindepth 3 -maxdepth 3  -depth -type d | wc -l)
+  if [[ $sequence_count -gt 30 ]]; then
+    nb_sequences_to_delete=$(("$sequence_count"-30))
+    echo "Removing files from $1 older than 30 days..."
+    find ARCHIVE/$1 -mindepth 3 -maxdepth 3  -depth -type d | sort -n | head -n $nb_sequences_to_delete | while read day_folder; do
+      rm -r "$day_folder"
+    done
+    echo "Files from $1 older than 30 days have been removed correctly."
+  fi
+}
+
 make_log $logNameBase sequence
 make_log $logNameBase hello
 make_log $logNameBase access
@@ -164,6 +176,9 @@ if [ -d LOGS ]; then
      fi
   done
 fi
+
+remove_old_backups_from_archive "DATA"
+remove_old_backups_from_archive "LOGS"
 
 # Send data
 echo "Syncing Data..."
