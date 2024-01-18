@@ -140,16 +140,29 @@ fi
 
 # Copying files to archive directory
 echo "Copying data to archive directory..."
-cp -RT DATA ARCHIVE
+for folderPath in DATA/*/; do
+   if [[ "$folderPath" =~ ^DATA\/SEQ[0-9]{8}T[0-9]{6}/$ ]]; then
+        year="${folderPath:8:4}"
+        month="${folderPath:12:2}"
+        day="${folderPath:14:2}"
+        yearMonthDayArchive="ARCHIVE/DATA/$year/$month/$day"
+        mkdir -p "$yearMonthDayArchive"
+        cp -R "$folderPath" "$yearMonthDayArchive"
+   fi
+done
 
 if [ -d LOGS ]; then
   echo "Copying logs to archive directory..."
-  cp -RT LOGS ARCHIVE
-fi
-
-if [ -d OTHER ]; then
-  echo "Copying other to archive directory..."
-  cp -RT OTHER ARCHIVE
+  for fileLog in LOGS/*; do
+     if [[ "$fileLog" =~ ^LOGS\/[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}-[a-z]+.log ]]; then
+          year="${fileLog:5:4}"
+          month="${fileLog:10:2}"
+          day="${fileLog:13:2}"
+          yearMonthDayArchive="ARCHIVE/LOGS/$year/$month/$day"
+          mkdir -p "$yearMonthDayArchive"
+          cp "$fileLog" "$yearMonthDayArchive"
+     fi
+  done
 fi
 
 # Send data
