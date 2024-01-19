@@ -204,13 +204,13 @@ fi
 
 echo "Syncing Logs..."
 rsync -e "ssh -p $sshPort" -rt --remove-source-files "LOGS" "$ipServer:$remoteDir" && \
-find DATA/ -mindepth 1 -depth -type d  -empty -exec rmdir {} \;
+find LOGS/ -mindepth 1 -depth -type d  -empty -exec rmdir {} \;
 
 if [ -d "OTHER" ]; then
 	echo "Syncing Directory OTHER..."
     # rt -> r XXX
-rsync --ignore-existing -e "ssh -p $sshPort" -r --remove-source-files "OTHER" "$ipServer:$remoteDir" && \
-find DATA/ -mindepth 1 -depth -type d  -empty -exec rmdir {} \;
+   rsync --ignore-existing -e "ssh -p $sshPort" -r --remove-source-files "OTHER" "$ipServer:$remoteDir" && \
+   find OTHER/ -mindepth 1 -depth -type d  -empty -exec rmdir {} \;
 	# rsync -e "ssh -p $sshPort" -rt "OTHER" "$ipServer:$remoteDir"
 fi
 
