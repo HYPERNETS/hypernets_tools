@@ -88,6 +88,8 @@ remove_old_backups_from_archive() {
     echo "Removing files from $1 older than 30 days..."
     find ARCHIVE/$1 -mindepth 3 -maxdepth 3  -depth -type d | sort -n | head -n $nb_sequences_to_delete | while read day_folder; do
       rm -r "$day_folder"
+    # removing empty folders
+    find ARCHIVE/$1 -mindepth 1 -maxdepth 2 -depth -type d  -empty -exec rmdir {} \;
     done
     echo "Files from $1 older than 30 days have been removed correctly."
   fi
