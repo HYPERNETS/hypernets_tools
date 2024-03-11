@@ -70,6 +70,5 @@ def parse_config_metadata(sequence_file, config_file="config_dynamic.ini",
 def create_metadata():
     pass
 
-
 if __name__ == '__main__':
     print(parse_config_metadata())

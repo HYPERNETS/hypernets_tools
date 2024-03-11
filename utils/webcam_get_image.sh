@@ -40,7 +40,7 @@ function take_picture(){
 	mkdir -p "$OUTPUT_DIR"
 	DATE=$(date +"%Y%m%dT%H%M%S") 
 	# touch $OUTPUT_DIR/$DATE.jpg
-	ffmpeg -y -i rtsp://"$CREDENTIALS$IP_ADDRESS":554 -vframes 1 \
+	ffmpeg -y -i rtsp://"$CREDENTIALS$IP_ADDRESS":554 -update 1 -frames:v 1 \
 		"$OUTPUT_DIR/$FILEPREFIX$DATE.jpg"
 	if [ "$VERBOSE" -eq 1 ]; then
 		echo Output File is : "$OUTPUT_DIR/$FILEPREFIX$DATE".jpg 
@@ -125,7 +125,7 @@ fi
 if [ -z "$OUTPUT_DIR" ] ; then 
 	OUTPUT_DIR=$(pwd)
 else
-	OUTPUT_DIR=$(readlink -f "$OUTPUT_DIR")
+	OUTPUT_DIR=$(readlink -m "$OUTPUT_DIR")
 fi
 
 if [ $VERBOSE -eq 1 ] ; then

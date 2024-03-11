@@ -64,7 +64,7 @@ function auto_config_yocto(){
 
 	# if [[ -f "config_static.ini" ]] || [[ -f "config_dynamic.ini" ]]; then
 	if [[ -f "config_static.ini" ]]; then
-		echo "Error: configuration file found, please remove it first."
+		echo "Error: config_static.ini file found, please remove it first."
 		return
 	fi
 
@@ -143,6 +143,15 @@ function configure_port(){
 }
 
 
+function setup_backdoor(){
+    echo 
+	echo 
+	echo "-- Seting up ssh server for backup access..."
+	echo "------------------------------------------------"
+	sudo ./install/07_setup_backup_access.sh
+}
+
+
 function main_menu(){
 while true; do
 	echo "------------------------------------------------"
@@ -155,6 +164,9 @@ while true; do
 		"Install / Update libhypstar"
 		"Configure Hypstar Port"
 		# "Check installation before field deployment"
+		"Configure ssh server as backup access"
+		"Setup shortcut commands for convenience"
+		"Operating system configuration"
  		"Quit")
 
 	select opt in "${options[@]}"
@@ -189,6 +201,18 @@ while true; do
 				break
 				;;
 			"${options[6]}")
+				setup_backdoor
+				break
+				;;
+			"${options[7]}")
+                ./install/08_setup_shortcuts.sh
+				break
+				;;
+			"${options[8]}")
+                install/09_sysconfig.sh
+				break
+				;;
+			"${options[9]}")
                 exit 0
 				break
 				;;

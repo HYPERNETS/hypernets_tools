@@ -23,6 +23,19 @@ if [[ ${PWD##*/} != "hypernets_tools"* ]]; then
 	exit 1
 fi
 
+if [[ "${1-}" == "-h" ]] || [[ "${1-}" == "--help" ]]; then
+	echo "$0 [-h|--help] [--test-run]"
+	echo
+	echo "Without options run the fully automated sequence"
+	echo
+	echo "  --test-run   override config_dynamic.ini by keep_pc = on"
+	echo "  -h, --help   print this help"
+	echo 
+	exit 
+fi
+
+# add ~/.local/bin to path, Yocto command line API is installed there in Manjaro
+PATH="$PATH:~/.local/bin"
 
 source utils/configparser.sh
 
@@ -43,8 +56,16 @@ sequence_file_alt=$(parse_config "sequence_file_alt" config_dynamic.ini)
 checkWakeUpReason=$(parse_config "check_wakeup_reason" config_dynamic.ini)
 checkRain=$(parse_config "check_rain" config_dynamic.ini)
 startSequence=$(parse_config "start_sequence" config_dynamic.ini)
-keepPc=$(parse_config "keep_pc" config_dynamic.ini)
 debugYocto=$(parse_config "debug_yocto" config_static.ini)
+
+# Test run, don't send yocto to sleep and don't ignore the sequence
+if [[ "${1-}" == "--test-run" ]]; then
+	keepPc="on"
+	keepPcInConf=$(parse_config "keep_pc" config_dynamic.ini)
+else	
+	keepPc=$(parse_config "keep_pc" config_dynamic.ini)
+fi
+
 
 shutdown_sequence() {
 	return_value="$1"
@@ -61,12 +82,68 @@ shutdown_sequence() {
 	    	echo "[INFO]  Set relay #4 to OFF."
 		    python -m hypernets.yocto.relay -soff -n4
 		fi
-		
-		## Log network traffic
-		## interface1 Rx Tx,interface2 Rx Tx,....
-		traffic=$(grep : /proc/net/dev | sed -e 's/^[[:space:]]\+//;s/[[:space:]]\+/ /g;s/://g'| cut -d " " -f 1,2,10 | paste -sd ",")
-		echo "[INFO]  Network traffic:$traffic"
-    fi
+
+		# Sync PC clock to yocto gps if more than 5 sec out of sync
+		# and yocto gps has fix
+		set +e
+		utils/sync_clock_to_gps.sh -m 5
+		set -e
+
+		# log next scheduled yocto wakeup if yocto command line API is installed
+		if [[ $(command -v YWakeUpMonitor) ]]; then
+			yocto=$(parse_config "yocto_prefix2" config_static.ini)
+			yocto_time=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yocto get_dateTime)
+			next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_nextWakeUp|sed -e 's/[[:space:]].*//')
+			yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yocto get_utcOffset)
+
+			if [ "$yocto_offset" = 0 ]; then
+				utc_offset=""
+			else
+				utc_offset=$(printf "%+d" $(("$yocto_offset" / 3600)))
+			fi
+
+			if [ "$next_wakeup_timestamp" = 0 ]; then
+				echo "[WARNING]  Yocto scheduled wakeup is disabled !!"
+			else
+				yocto_timestamp=$(date -d "$yocto_time UTC" -u +%s)
+				delta=$(( "$next_wakeup_timestamp" - "$yocto_timestamp" ))
+				echo "[INFO]  Next Yocto wakeup is scheduled on $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset (in $delta s)"
+			fi
+		fi # log next scheduled yocto wakeup if yocto command line API is installed
+    fi # [[ "$bypassYocto" != "yes" ]] && [[ "$startSequence" == "yes" ]]
+
+	## Log network traffic
+	## interface1 Rx Tx,interface2 Rx Tx,....
+	traffic=$(grep : /proc/net/dev | sed -e 's/^[[:space:]]\+//;s/[[:space:]]\+/ /g;s/://g'| cut -d " " -f 1,2,10 | paste -sd ",")
+	echo "[INFO]  Network traffic:$traffic"
+
+	# check minimum uptime
+    if [[ "$keepPc" == "off" ]]; then
+		uptime=$(sed -e 's/\..*//' /proc/uptime)
+
+		## minimum allowed uptime is 2 minutes for successful sequence (exit code 0)
+		## and rain (exit code 88), and 5 minutes for all other failed sequences
+		if [[ "$return_value" == "0" ]] || [[ "$return_value" == "88" ]] ; then
+			min_uptime=120
+		else
+			min_uptime=300
+		fi
+
+		## take a nap if necessary
+		if (( $uptime < $min_uptime )); then
+			let sleep_duration=$min_uptime-$uptime
+			echo "[INFO]  Sequence duration was $uptime seconds (min. allowed $min_uptime s)"
+			echo "[INFO]  Sleeping for $sleep_duration s..."
+
+			sleep $sleep_duration
+		fi
+	fi # "$keepPc" == "off"
+
+	# Sleep inhibited by sleep.lock
+	if [ -f sleep.lock ]; then
+		keepPc="on"
+		sleepLocked=1
+	fi
 
     if [[ "$keepPc" == "off" ]]; then
 	    echo "[INFO]  Option : Keep PC OFF"
@@ -78,13 +155,43 @@ shutdown_sequence() {
 		set -e
 
 		echo "[DEBUG] Yoctosleep status : $yocto_sleep"
-		if [[ ! $yocto_sleep -eq 0 ]]; then
-			 echo "[CRITICAL] Yocto unreachable !!"
+
+		if [[ $yocto_sleep -eq 0 ]]; then
+			# All OK, shuttig down
+			echo "[DEBUG] Shutting down"
+			exit 0
 		fi
-	    exit 0
+
+		# Something went wrong
+	    # Cause service exit 1 and doesn't execute SuccessAction=poweroff
+		if [[ $yocto_sleep -eq 1 ]]; then
+			echo "[CRITICAL] Yocto unreachable !!"
+		elif [[ $yocto_sleep -eq 255 ]]; then
+			echo "[CRITICAL] Yocto scheduled wakeup is disabled !!"
+			echo "[CRITICAL] Waking up is possible ONLY by manually pressing 'WAKE' button !!"
+		fi
+
+		echo "[CRITICAL] NOT shutting down !!"
+	    exit 1
     else
-	    # Cause service exit 1 and doesnt execute SuccessAction=poweroff
 	    echo "[INFO]  Option : Keep PC ON"
+
+		# Test run
+		if [[ "${keepPcInConf-}" == "off" ]]; then
+			echo "-----------------------------------"
+			echo "keep_pc = off in config_dynamic.ini"
+			echo "Automated sequence would have shut down the PC"
+			echo
+		fi
+
+		# sleep inhibited by sleep.lock file
+		if [[ "${sleepLocked-}" == 1 ]]; then
+			echo "[ERROR] Power off has been inhibited by sleep.lock file in the hypernets_tools folder"
+			echo "[ERROR] Remove the sleep.lock file to enable sending yocto to sleep and powering off the PC"
+			echo
+		fi
+
+	    # Cause service exit 1 and doesnt execute SuccessAction=poweroff
 	    exit 1
     fi
 }
@@ -224,6 +331,33 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 			sleep 2
 			echo "[INFO]  ok"
 		fi
+
+		# Check if yocto is accessible
+		yocto=$(parse_config "yocto_prefix2" config_static.ini)
+		set +e
+		wget -O- "http://127.0.0.1:4444/bySerial/$yocto/api.txt" > /dev/null 2>&1
+		retcode=$?
+		if [[ $retcode == 0 ]]; then
+			echo "[INFO]  Found Yocto"
+		elif [[ $retcode == 8 ]]; then 
+			# Server issued an error response. Probably 404 not found.
+			echo "[CRITICAL] Yocto '$yocto' is not accessible !!"
+
+			# list modules if command line API is installed
+			if [[ $(command -v YModule) ]]; then
+				inventory=$(YModule -r 127.0.0.1 inventory)
+				echo "[CRITICAL] The list of modules found:"
+				echo "$inventory"
+			fi
+
+			echo "[CRITICAL] Can't do anything without Yocto !!"
+			echo "[CRITICAL] Exiting the sequence !!"
+			exit -1
+		else
+			# Some other wget error
+			echo "[ERROR] Yocto request finished with error code $retcode"
+		fi
+		set -e
 	fi
 
 	# log supply voltage
@@ -264,6 +398,12 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 		python -m hypernets.yocto.relay -son -n4
 		sleep 5
 	fi # checkRain
+
+	# Sync PC clock to yocto gps if more than 5 sec out of sync
+	# and yocto gps has fix
+	set +e
+	utils/sync_clock_to_gps.sh -m 5
+	set -e
 fi # bypassYocto != yes
 
 if [[ "$startSequence" == "no" ]] ; then
@@ -333,7 +473,14 @@ exit_actions() {
 		# 88 - rainig
 		if [ $return_value -ne 30 ] && [ $return_value -ne 88 ]; then
 			sleep 1
-
+			## VM stabilisation failed
+			## power cycle, otherwise the second attempt fails as well
+			if [ $return_value -eq 78 ]; then
+				echo "[INFO]  Power cycling the radiometer"
+				python -m hypernets.yocto.relay -soff -n3
+				sleep 10
+				python -m hypernets.yocto.relay -son -n3
+			fi
 			echo "[WARNING]  Second try : "
 			set +e
 			python3 -m hypernets.open_sequence -f $sequence_file $extra_args

@@ -8,14 +8,15 @@ from shutil import copy
 
 from hypernets.abstract.protocol import Protocol
 from hypernets.abstract.create_metadata import parse_config_metadata
+from hypernets.abstract.request import InstrumentAction
 
 from hypernets.hypstar.handler import HypstarHandler
 from hypernets.hypstar.libhypstar.python.hypstar_wrapper import HypstarLogLevel
-from hypernets.hypstar.libhypstar.python.data_structs.environment_log import EnvironmentLogEntry, get_csv_header
+from hypernets.hypstar.libhypstar.python.data_structs.environment_log import get_csv_header
 
 from logging import debug, info, warning, error # noqa
 
-from hypernets.rain_sensor.rain_sensor_python import RainSensor
+from hypernets.rain_sensor import RainSensor
 
 from hypernets.abstract.geometry import Geometry
 from hypernets.geometry.pan_tilt import move_to_geometry, move_to
@@ -32,26 +33,14 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                       check_rain=False):
 
     # Check if it is raining
-    if check_rain:
+    if not instrument_standalone and check_rain:
         try:
-            debug("Checking rain sensor")
             rain_sensor = RainSensor()
-            if rain_sensor.read_value() == 1:
+            if is_raining(rain_sensor):
                 warning("Skipping sequence due to rain")
-
-                # get the absolute position of nadir
-                reference = Geometry.reference_to_int("hyper", "hyper")
-                park = Geometry(reference, tilt=0)
-                park.get_absolute_pan_tilt()
-
-                # park radiometer to nadir 
-                # just in case it wasn't parked at the end of the last sequence
-                info("Parking radiometer to nadir")
-                move_to(ser=None, tilt=park.tilt_abs, wait=True)
-
+                park_to_nadir()
                 exit(88) # exit code 88 
         except Exception as e:
-            print(e)
             error("Disabling further rain sensor checks")
             check_rain = False
 
@@ -69,6 +58,9 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
     # we should check if any of the lines want to use SWIR and enable TEC :
     swir_is_requested = protocol.check_if_swir_requested()
+
+    # just print out info about presence or not of VM request
+    protocol.check_if_vm_requested()
 
     if not path.exists(DATA_DIR):  # TODO move management of output folder
         mkdir(DATA_DIR)
@@ -188,23 +180,12 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         # Check if it is raining
         if check_rain:
             try:
-                debug("Checking rain sensor")
-                if rain_sensor.read_value() == 1:
+                if is_raining(rain_sensor):
                     warning("Aborting sequence due to rain")
-
-                    # get the absolute position of nadir
-                    reference = Geometry.reference_to_int("hyper", "hyper")
-                    park = Geometry(reference, tilt=0)
-                    park.get_absolute_pan_tilt()
-
-                    # park radiometer to nadir
-                    info("Parking radiometer to nadir")
-                    move_to(ser=None, tilt=park.tilt_abs, wait=True)
-
+                    park_to_nadir()
                     exit(88) # exit code 88 
-
             except Exception as e:
-                print(e)
+                error(f"{e}")
                 error("Disabling further rain sensor checks")
                 check_rain = False
 
@@ -289,8 +270,14 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                 instrument_instance.take_request(request, path_to_file=output)
 
             except Exception as e:
+                if request.action == InstrumentAction.VALIDATION:
+                    error("LED source measurement failed, aborting sequence")
+                    park_to_nadir()
+                    exit(78) # exit code 78
+
                 error(f"Error : {e}")
                 nb_error += 1
+
 
             flags_dict[f"$spectra_file{iter_line}.it_vnir"] = request.it_vnir
             flags_dict[f"$spectra_file{iter_line}.it_swir"] = request.it_swir
@@ -310,7 +297,45 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
     mdfile.close()
 
-    terminate_lightsensor_thread(monitor_pd_thread, monitor_pd_event)
+    if not instrument_standalone:
+        terminate_lightsensor_thread(monitor_pd_thread, monitor_pd_event)
+
+        # By the end of the sequence GPS has hopefully got a fix.
+        # Log GPS fix distance and bearing from location in config file. 
+        # Warning log record if distance is over 100 m, otherwise info.
+        try:
+            from configparser import ConfigParser
+            config = ConfigParser()
+            config.read("config_dynamic.ini")
+            config_latitude = config["GPS"]["latitude"]
+            config_longitude = config["GPS"]["longitude"]
+        except KeyError as key:
+            warning(f" {key} missing from config_dynamic.ini.")
+
+        except Exception as e:
+            error(f"Config Error: {e}.")
+
+        try:
+            from hypernets.yocto.gps import get_gps
+            gps_latitude, gps_longitude, gps_datetime = get_gps(return_float=True)
+
+            if gps_datetime is not None and gps_datetime != "" and gps_datetime != b'N/A':
+                from geopy.distance import geodesic
+                from geographiclib.geodesic import Geodesic
+                distance_m = geodesic((gps_latitude, gps_longitude), 
+                                      (config_latitude, config_longitude)).m
+                bearing = Geodesic.WGS84.Inverse(float(config_latitude), float(config_longitude), 
+                                                 gps_latitude, gps_longitude)['azi1'] % 360
+                msg = (f"GPS fix ({gps_latitude:.6f}, {gps_longitude:.6f}) is {distance_m:.1f} m "
+                      f"from location in config_dynamic.ini ({config_latitude}, {config_longitude}) "
+                      f"at bearing {bearing:.0f}")
+                if (distance_m > 100):
+                    warning(msg)
+                else:
+                    info(msg)
+
+        except Exception as e:
+            error(f"Error: {e}")
 
     replace(seq_path, final_seq_path)
     info(f"Created sequence : {final_seq_path}")
@@ -321,13 +346,28 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     if instrument_is_requested:
         del instrument_instance
 
-#        if not instrument_standalone:
-#            if azimuth_sun <= 180:
-#                print(" -- Morning : +90 (=clockwise)")
-#                pan = azimuth_sun + pan  # clockwise
-#            else:
-#                print(" -- Afternoon : -90 (=counter-clockwise)")
-#                pan = azimuth_sun - pan  # clockwise
+
+def is_raining(rain_sensor=None):
+    debug("Checking rain sensor")
+
+    if rain_sensor is None:
+        rain_sensor = RainSensor()
+
+    if rain_sensor.read_value() == 1:
+        return True
+    else:
+        return False
+
+
+def park_to_nadir():
+    # get the absolute position of nadir
+    reference = Geometry.reference_to_int("hyper", "hyper")
+    park = Geometry(reference, tilt=0)
+    park.get_absolute_pan_tilt()
+
+    # park radiometer to nadir 
+    info("Parking radiometer to nadir")
+    move_to(ser=None, tilt=park.tilt_abs, wait=True)
 
 
 if __name__ == '__main__':

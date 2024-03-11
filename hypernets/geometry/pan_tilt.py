@@ -80,7 +80,7 @@ def check_trame(data):
         if len(data) == 0:
             warning("Timeout !")
         else:
-            warning("Bad lenght !")
+            warning("Bad length !")
         return False
 
     debug(f"Pan-Tilt answer: {stringifyBinaryToHex(data)}")
@@ -103,9 +103,14 @@ def query_position(ser):
 
     _, _, _, _, pan, _ = unpack('>BBBBHB', data)
 
+    # convert unsigned to signed if over 400 deg
+    # otherwise slightly negative would be around 655 deg
+    if pan > 40000:
+        pan = -(pan & 0x8000) | (pan & 0x7fff)
+
     data = bytearray([0xFF, 0x01, 0x00, 0x53, 0x00, 0x00])
-    debug(f"Query tilt : {stringifyBinaryToHex(data)}")
     send_trame(data, ser)
+    debug(f"Query tilt : {stringifyBinaryToHex(data)}")
 
     data = ser.read(7)
 
@@ -114,7 +119,25 @@ def query_position(ser):
 
     _, _, _, _, tilt, _ = unpack('>BBBBHB', data)
 
+    # convert unsigned to signed if over 400 deg
+    # otherwise slightly negative would be around 655 deg
+    if tilt > 40000:
+        tilt = -(tilt & 0x8000) | (tilt & 0x7fff)
+
     return pan, tilt
+
+
+def print_position(ser):
+
+    if ser is None:
+        ser = open_serial()
+
+    position = query_position(ser)
+    if position is not None:
+        print(f"Absolute positions: pan {position[0]/100}, "
+            f"tilt {position[1]/100}")
+    else:
+        print("Failed to read current position from pan-tilt!")
 
 
 def move_to(ser, pan=None, tilt=None, wait=False):
@@ -290,13 +313,14 @@ if __name__ == '__main__':
 
     parser.add_argument("-p", "--pan", type=restricted_float,
                         help="set pan (azimuth angle in degrees)",
-                        required=True,
                         metavar="{0..360}")
 
     parser.add_argument("-t", "--tilt", type=restricted_float,
                         help="set tilt (zenith angle in degrees)",
-                        required=True,
                         metavar="{0..360}")
+
+    parser.add_argument("-g", "--get", action="store_true",
+                        help="read and print pan/tilt real position")
 
     parser.add_argument("-w", "--wait", action="store_true",
                         help="wait for pan/tilt end of move and return"
@@ -312,5 +336,10 @@ if __name__ == '__main__':
 
     # FIXME
     ser = open_serial()
-    print(move_to(ser, args.pan, args.tilt, wait=args.wait))
+
+    if args.get:
+        print_position(ser)
+    else:
+        print(move_to(ser, args.pan, args.tilt, wait=args.wait))
+  
     ser.close()

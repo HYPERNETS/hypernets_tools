@@ -3,6 +3,9 @@
 set -o nounset
 set -euo pipefail
 
+XHL=$(tput setaf 9) ## red
+RESET_HL=$(tput sgr0) ## reset all text formatting
+
 function usage(){
 	printf "Usage sudo %s [-nv][-h] :\n" "$0"
 	printf "  -v  Verbose Mode.\n"
@@ -45,14 +48,24 @@ if [ -f /etc/os-release ]; then
 	source /etc/os-release
 else
 	echo "Error: impossible to detect OS system version."
-	echo "Not a systemd freedestkop.org distribution?"
+	echo "Not a systemd freedesktop.org distribution?"
+	exit 1
+fi
+
+if [ "$ID" != "debian" ] && [ "$ID" != "manjaro" ]; then
+	echo "${XHL}Error: only Debian and Manjaro are supported distributions${RESET_HL}"
 	exit 1
 fi
 
 if [ ! "$ID"  == "debian" ]; then
 	echo "Linux distribution not supported."
-	echo "Please manually install the Yoctopuce virtualhub."
-	echo "www.yoctopuce.com/EN/virtualhub.php"
+	echo "Please manually install the Yoctopuce virtualhub"
+	echo "https://www.yoctopuce.com/EN/virtualhub.php"
+	echo
+	echo "and Yoctopuce command line API"
+	echo "https://www.yoctopuce.com/EN/libraries.php"
+	echo "Download linux intel and copy the contents of Binaries/linux/64bits/"
+	echo "into ~/.local/bin/"
 	exit 1
 fi
 
@@ -61,6 +74,7 @@ echo "deb https://www.yoctopuce.com/ apt/stable/" | sudo tee /etc/apt/sources.li
 
 sudo apt update
 sudo apt install virtualhub
+sudo apt install yoctolib-cmdlines
 
 set +e
 # FIXME

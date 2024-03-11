@@ -20,6 +20,15 @@
 set -o nounset                              # Treat unset variables as an error
 set -euo pipefail                           # Bash Strict Mode	
 
+if [[ ${PWD##*/} != "hypernets_tools"* ]]; then
+	echo "This script must be run from hypernets_tools folder" 1>&2
+	echo "Use : ./utils/${0##*/} instead"
+	exit 1
+fi
+
+# add ~/.local/bin to path, Yocto command line API is installed there in Manjaro
+PATH="$PATH:~/.local/bin"
+
 # Make Logs
 echo "Making Logs..."
 mkdir -p LOGS
@@ -109,7 +118,29 @@ for i in {1..30}
 do
 	# Update the datetime flag on the server
 	echo "(attempt #$i) Touching $ipServer:$remoteDir/system_is_up"
-	ssh -p $sshPort -t $ipServer "touch $remoteDir/system_is_up" > /dev/null 2>&1
+
+	# If yocto API is installed, write next scheduled wakeup time into 'system_is_up' file on server
+	if [[ $(command -v YWakeUpMonitor) ]]; then
+		source utils/configparser.sh
+		yocto=$(parse_config "yocto_prefix2" config_static.ini)
+		next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_nextWakeUp|sed -e 's/[[:space:]].*//')
+		yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yocto get_utcOffset)
+
+		if [ "$next_wakeup_timestamp" = 0 ]; then
+			msg_txt="Yocto scheduled wakeup is disabled!"
+		else
+			if [ "$yocto_offset" = 0 ]; then
+				utc_offset=""
+			else
+				utc_offset=$(printf "%+d" $(("$yocto_offset" / 3600)))
+			fi
+			msg_txt="Next Yocto wakeup is scheduled on $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset"
+		fi
+	else
+		msg_txt="Yocto API is not installed, can't read next scheduled wakeup"
+	fi
+
+	ssh -p $sshPort -t $ipServer "echo \"$msg_txt\" > $remoteDir/system_is_up" > /dev/null 2>&1
 	if [[ $? -eq 0 ]] ; then
 		echo "Server is up!"
 		break

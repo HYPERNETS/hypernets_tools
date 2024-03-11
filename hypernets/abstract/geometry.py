@@ -49,7 +49,7 @@ class Geometry(object):
     def __str__(self):
         ref_pan, ref_tilt = Geometry.int_to_reference(self.reference)
         str_output = f"{self.pan:.2f} ({ref_pan}) ; {self.tilt:.2f} ({ref_tilt})" # noqa
-        str_output += f" --> [{self.pan_abs:.2f} ; {self.tilt_abs:.2f}]"
+        str_output += f" --> [{self.pan_abs:.2f} ; {self.tilt_abs:.2f}] (abs)"
         str_output += f" -- {self.flags}"
         return str_output
 
@@ -130,7 +130,7 @@ class Geometry(object):
 
         # Get sun position
         if 'sun' in [pan_ref, tilt_ref]:  # pickle me :
-            from hypernets.geometry.spa.spa_hypernets import spa_from_datetime
+            from hypernets.geometry.spa_hypernets import spa_from_datetime
             azimuth_sun, zenith_sun = spa_from_datetime(now=now)
             zenith_sun = 180 - zenith_sun
 
