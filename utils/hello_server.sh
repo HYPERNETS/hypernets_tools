@@ -39,6 +39,11 @@ last_boot_timestamp=${last_boot_timestamp::-6}
 
 logNameBase=$(date +"%Y-%m-%d-%H%M" -d @$last_boot_timestamp)
 
+if [ ! -d "ARCHIVE" ]; then
+  echo "Creating archive directory..."
+  mkdir ARCHIVE
+fi
+
 suffixeName=""
 for i in {001..999}; do
 	if [ -f "LOGS/$logNameBase$suffixeName-sequence.log" ]; then 
@@ -83,6 +88,20 @@ make_log() {
 		echo "[DEBUG]  Skipping log: $logName."
 	fi
 	set -e
+}
+
+remove_old_backups_from_archive() {
+  sequence_count=$(find ARCHIVE/$1 -mindepth 3 -maxdepth 3  -depth -type d | wc -l)
+  if [[ $sequence_count -gt 30 ]]; then
+    nb_sequences_to_delete=$(("$sequence_count"-30))
+    echo "Removing files from $1 older than 30 days..."
+    find ARCHIVE/$1 -mindepth 3 -maxdepth 3  -depth -type d | sort -n | head -n $nb_sequences_to_delete | while read day_folder; do
+      rm -r "$day_folder"
+    # removing empty folders
+    find ARCHIVE/$1 -mindepth 1 -maxdepth 2 -depth -type d  -empty -exec rmdir {} \;
+    done
+    echo "Files from $1 older than 30 days have been removed correctly."
+  fi
 }
 
 make_log $logNameBase sequence
@@ -164,16 +183,47 @@ if [[ ! "$autoUpdate" == "no" ]] ; then
 	set -e
 fi
 
+# Copying files to archive directory
+echo "Copying data to archive directory..."
+for folderPath in DATA/*/; do
+   if [[ "$folderPath" =~ ^DATA\/SEQ[0-9]{8}T[0-9]{6}/$ ]]; then
+        year="${folderPath:8:4}"
+        month="${folderPath:12:2}"
+        day="${folderPath:14:2}"
+        yearMonthDayArchive="ARCHIVE/DATA/$year/$month/$day"
+        mkdir -p "$yearMonthDayArchive"
+        cp -R "$folderPath" "$yearMonthDayArchive"
+   fi
+done
+
+if [ -d LOGS ]; then
+  echo "Copying logs to archive directory..."
+  for fileLog in LOGS/*; do
+     if [[ "$fileLog" =~ ^LOGS\/[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}-[a-z]+.log ]]; then
+          year="${fileLog:5:4}"
+          month="${fileLog:10:2}"
+          day="${fileLog:13:2}"
+          yearMonthDayArchive="ARCHIVE/LOGS/$year/$month/$day"
+          mkdir -p "$yearMonthDayArchive"
+          cp "$fileLog" "$yearMonthDayArchive"
+     fi
+  done
+fi
+
+remove_old_backups_from_archive "DATA"
+remove_old_backups_from_archive "LOGS"
+
 # Send data
 echo "Syncing Data..."
 
 rsync -e "ssh -p $sshPort" -rt --exclude "CUR*" --exclude "metadata.txt" \
-	"DATA" "$ipServer:$remoteDir"
+	--remove-source-files "DATA" "$ipServer:$remoteDir"
 
 if [ $? -eq 0 ]; then
 
 	rsync -e "ssh -p $sshPort" -aim --exclude "CUR*" --include "*/" \
-		--include "metadata.txt" --exclude "*" "DATA" "$ipServer:$remoteDir"
+		--include "metadata.txt" --exclude "*" --remove-source-files "DATA" "$ipServer:$remoteDir" && \
+  find DATA/ -mindepth 1 -depth -type d  -empty -exec rmdir {} \;
 
 	if [ $? -eq 0 ]; then
 		echo "[INFO] All data and metadata files have been successfully uploaded."
@@ -186,12 +236,14 @@ else
 fi
 
 echo "Syncing Logs..."
-rsync -e "ssh -p $sshPort" -rt "LOGS" "$ipServer:$remoteDir"
+rsync -e "ssh -p $sshPort" -rt --remove-source-files "LOGS" "$ipServer:$remoteDir" && \
+find LOGS/ -mindepth 1 -depth -type d  -empty -exec rmdir {} \;
 
 if [ -d "OTHER" ]; then
 	echo "Syncing Directory OTHER..."
     # rt -> r XXX
-	rsync --ignore-existing -e "ssh -p $sshPort" -r "OTHER" "$ipServer:$remoteDir"
+   rsync --ignore-existing -e "ssh -p $sshPort" -r --remove-source-files "OTHER" "$ipServer:$remoteDir" && \
+   find OTHER/ -mindepth 1 -depth -type d  -empty -exec rmdir {} \;
 	# rsync -e "ssh -p $sshPort" -rt "OTHER" "$ipServer:$remoteDir"
 fi
 
