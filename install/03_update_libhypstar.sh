@@ -23,7 +23,7 @@ sudo -u $user git submodule update
 
 # Update and Install
 cd hypernets/hypstar/libhypstar/
-sudo -u $user git checkout main
+sudo -u $user git checkout vm_dev
 sudo -u $user git pull
 sudo -u $user make lib
 sudo make install

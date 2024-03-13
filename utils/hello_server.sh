@@ -20,11 +20,29 @@
 set -o nounset                              # Treat unset variables as an error
 set -euo pipefail                           # Bash Strict Mode	
 
+if [[ ${PWD##*/} != "hypernets_tools"* ]]; then
+	echo "This script must be run from hypernets_tools folder" 1>&2
+	echo "Use : ./utils/${0##*/} instead"
+	exit 1
+fi
+
+# add ~/.local/bin to path, Yocto command line API is installed there in Manjaro
+PATH="$PATH:~/.local/bin"
+
 # Make Logs
 echo "Making Logs..."
 mkdir -p LOGS
 
-logNameBase=$(date +"%Y-%m-%d-%H%M")
+last_boot_timestamp=$(journalctl -b-1 -u hypernets-sequence --output-fields=__REALTIME_TIMESTAMP -o export | grep -m 1 __REALTIME_TIMESTAMP | sed -e 's/.*=//')
+## truncate microseconds
+last_boot_timestamp=${last_boot_timestamp::-6}
+
+logNameBase=$(date +"%Y-%m-%d-%H%M" -d @$last_boot_timestamp)
+
+if [ ! -d "ARCHIVE" ]; then
+  echo "Creating archive directory..."
+  mkdir ARCHIVE
+fi
 
 suffixeName=""
 for i in {001..999}; do
@@ -43,6 +61,7 @@ disk_usage() {
 
     echo "Disk usage informations:" 
     df -h -text4
+	journalctl --disk-usage
 
     diskUsageOuput="LOGS/disk-usage.log"
     dfOutput=$(df -text4 --output=used,avail,pcent)
@@ -63,7 +82,7 @@ make_log() {
 	set +e
 	systemctl is-enabled hypernets-$logName.service > /dev/null
 	if [[ $? -eq 0 ]] ; then
-		echo "[DEBUG]  Making log: $logName..."
+		echo "[DEBUG]  Making log: $logNameBase-$logName..."
 		journalctl -b-1 -u hypernets-$logName --no-pager > LOGS/$logNameBase-$logName.log
 	else
 		echo "[DEBUG]  Skipping log: $logName."
@@ -71,10 +90,23 @@ make_log() {
 	set -e
 }
 
+remove_old_backups_from_archive() {
+  sequence_count=$(find ARCHIVE/$1 -mindepth 3 -maxdepth 3  -depth -type d | wc -l)
+  if [[ $sequence_count -gt 30 ]]; then
+    nb_sequences_to_delete=$(("$sequence_count"-30))
+    echo "Removing files from $1 older than 30 days..."
+    find ARCHIVE/$1 -mindepth 3 -maxdepth 3  -depth -type d | sort -n | head -n $nb_sequences_to_delete | while read day_folder; do
+      rm -r "$day_folder"
+    # removing empty folders
+    find ARCHIVE/$1 -mindepth 1 -maxdepth 2 -depth -type d  -empty -exec rmdir {} \;
+    done
+    echo "Files from $1 older than 30 days have been removed correctly."
+  fi
+}
+
 make_log $logNameBase sequence
 make_log $logNameBase hello
 make_log $logNameBase access
-make_log $logNameBase time
 make_log $logNameBase webcam
 disk_usage $logNameBase
 
@@ -105,7 +137,29 @@ for i in {1..30}
 do
 	# Update the datetime flag on the server
 	echo "(attempt #$i) Touching $ipServer:$remoteDir/system_is_up"
-	ssh -p $sshPort -t $ipServer "touch $remoteDir/system_is_up" > /dev/null 2>&1
+
+	# If yocto API is installed, write next scheduled wakeup time into 'system_is_up' file on server
+	if [[ $(command -v YWakeUpMonitor) ]]; then
+		source utils/configparser.sh
+		yocto=$(parse_config "yocto_prefix2" config_static.ini)
+		next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_nextWakeUp|sed -e 's/[[:space:]].*//')
+		yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yocto get_utcOffset)
+
+		if [ "$next_wakeup_timestamp" = 0 ]; then
+			msg_txt="Yocto scheduled wakeup is disabled!"
+		else
+			if [ "$yocto_offset" = 0 ]; then
+				utc_offset=""
+			else
+				utc_offset=$(printf "%+d" $(("$yocto_offset" / 3600)))
+			fi
+			msg_txt="Next Yocto wakeup is scheduled on $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset"
+		fi
+	else
+		msg_txt="Yocto API is not installed, can't read next scheduled wakeup"
+	fi
+
+	ssh -p $sshPort -t $ipServer "echo \"$msg_txt\" > $remoteDir/system_is_up" > /dev/null 2>&1
 	if [[ $? -eq 0 ]] ; then
 		echo "Server is up!"
 		break
@@ -129,17 +183,67 @@ if [[ ! "$autoUpdate" == "no" ]] ; then
 	set -e
 fi
 
+# Copying files to archive directory
+echo "Copying data to archive directory..."
+for folderPath in DATA/*/; do
+   if [[ "$folderPath" =~ ^DATA\/SEQ[0-9]{8}T[0-9]{6}/$ ]]; then
+        year="${folderPath:8:4}"
+        month="${folderPath:12:2}"
+        day="${folderPath:14:2}"
+        yearMonthDayArchive="ARCHIVE/DATA/$year/$month/$day"
+        mkdir -p "$yearMonthDayArchive"
+        cp -R "$folderPath" "$yearMonthDayArchive"
+   fi
+done
+
+if [ -d LOGS ]; then
+  echo "Copying logs to archive directory..."
+  for fileLog in LOGS/*; do
+     if [[ "$fileLog" =~ ^LOGS\/[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}-[a-z]+.log ]]; then
+          year="${fileLog:5:4}"
+          month="${fileLog:10:2}"
+          day="${fileLog:13:2}"
+          yearMonthDayArchive="ARCHIVE/LOGS/$year/$month/$day"
+          mkdir -p "$yearMonthDayArchive"
+          cp "$fileLog" "$yearMonthDayArchive"
+     fi
+  done
+fi
+
+remove_old_backups_from_archive "DATA"
+remove_old_backups_from_archive "LOGS"
+
 # Send data
 echo "Syncing Data..."
-rsync -e "ssh -p $sshPort" -rt --exclude "CUR*" "DATA" "$ipServer:$remoteDir"
+
+rsync -e "ssh -p $sshPort" -rt --exclude "CUR*" --exclude "metadata.txt" \
+	--remove-source-files "DATA" "$ipServer:$remoteDir"
+
+if [ $? -eq 0 ]; then
+
+	rsync -e "ssh -p $sshPort" -aim --exclude "CUR*" --include "*/" \
+		--include "metadata.txt" --exclude "*" --remove-source-files "DATA" "$ipServer:$remoteDir" && \
+  find DATA/ -mindepth 1 -depth -type d  -empty -exec rmdir {} \;
+
+	if [ $? -eq 0 ]; then
+		echo "[INFO] All data and metadata files have been successfully uploaded."
+	else
+		echo "[WARNING] Error during the uploading metadata process!"
+	fi
+
+else
+	echo "[WARNING] Error during the uploading data process!"
+fi
 
 echo "Syncing Logs..."
-rsync -e "ssh -p $sshPort" -rt "LOGS" "$ipServer:$remoteDir"
+rsync -e "ssh -p $sshPort" -rt --remove-source-files "LOGS" "$ipServer:$remoteDir" && \
+find LOGS/ -mindepth 1 -depth -type d  -empty -exec rmdir {} \;
 
 if [ -d "OTHER" ]; then
 	echo "Syncing Directory OTHER..."
     # rt -> r XXX
-	rsync --ignore-existing -e "ssh -p $sshPort" -r "OTHER" "$ipServer:$remoteDir"
+   rsync --ignore-existing -e "ssh -p $sshPort" -r --remove-source-files "OTHER" "$ipServer:$remoteDir" && \
+   find OTHER/ -mindepth 1 -depth -type d  -empty -exec rmdir {} \;
 	# rsync -e "ssh -p $sshPort" -rt "OTHER" "$ipServer:$remoteDir"
 fi
 

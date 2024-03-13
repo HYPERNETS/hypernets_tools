@@ -4,9 +4,9 @@
 from tkinter import E, W, N, S, NE, NW, SE, SW, SE, BOTH, DISABLED, END  # noqa
 from tkinter import LabelFrame
 from tkinter import Tk, Button
-from tkinter.messagebox import showinfo
+from tkinter.messagebox import showinfo, showerror
 
-from hypernets.rain_sensor.rain_sensor_python import RainSensor
+from hypernets.rain_sensor import RainSensor
 
 
 class FrameRainSensor(LabelFrame):
@@ -24,10 +24,14 @@ class FrameRainSensor(LabelFrame):
         readValue.grid(pady=5)
 
     def callback(self):
-        rain_sensor = RainSensor()
-        v = rain_sensor.read_value()
-        str_val = {0: "no rain", 1: "rain"}[v]
-        showinfo("Value", f"Readed value is : {str_val}.")
+        try:
+            rain_sensor = RainSensor()
+            v = rain_sensor.read_value()
+            str_val = {0: "no rain", 1: "rain"}[v]
+            showinfo("Value", f"Read value : {str_val}.")
+
+        except Exception as e:
+            showerror("Error", str(e))
 
 
 if __name__ == '__main__':

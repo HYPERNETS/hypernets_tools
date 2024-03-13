@@ -33,6 +33,7 @@ def make_pan_tilt_list(geometries, dates):
         pan, tilt = list(), list()
         for now in dates:
             info(f"--> {str(now)}")
+            now.replace(tzinfo=timezone.utc)
             geometry.get_absolute_pan_tilt(now)
             pan.append(geometry.pan_abs)
             tilt.append(geometry.tilt_abs)

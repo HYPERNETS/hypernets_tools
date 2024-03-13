@@ -1,4 +1,24 @@
-HypernetsProtocol v2.0
+HypernetsProtocol v2.1
 
-# Measurement of the Light source
-@[ 0.0, abs, 198.0, abs ] + 1.validation
+## LED source measurement parameters:
+## count.validation.radiometer.entrance.exposure_time_vnir_ms.exposure_time_swir_ms[.vm_current_in_mA]
+
+# VNIR LED source with irradiance entrance
+## Pan can be anything. Minimise pan movement and use the last position of the previous sequence 
+## or try to minimise ambient illumination from external light sources.
+## Tilt is unit-specific and must align the bodies of the radiometer and the LED source.
+@[ 270.0, abs, 247.0, abs ] 
+	+ 10.validation.vnir.irr.0.0.1000 
+	+ 10.vnir.dark.0.0
+
+# VNIR LED source with radiance entrance
+## Use the same pan as for irradiance.
+## For aligning radiance entrance to the LED source, add to the irradiance measurement tilt value:
+##   HYPSTAR-SR: 12.6 deg
+##   HYPSTAR-XR: 9.0 deg
+@[ 270.0, abs, 256.0, abs ] 
+	+ 10.validation.vnir.rad.0.0.500
+	+ 10.vnir.dark.0.0
+
+# Park 
+@[ 270.0, abs, 0.0, hyper ]

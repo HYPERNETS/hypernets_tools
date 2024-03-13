@@ -352,7 +352,7 @@ class FrameRadiometer(LabelFrame):
         self.str_number.set(f"{self.spectra.index + 1}/{len(self.spectra)}")
 
         self.str_lenght.set(f"{current_spectrum.total} bytes"
-                            f" ; {current_spectrum.pixel_count} pixels")
+                            f"; {current_spectrum.pixel_count} pixels")
 
         # To m.s^-2
         def to_mss(x):
@@ -361,9 +361,9 @@ class FrameRadiometer(LabelFrame):
         spec_type = Spectrum.read_spectrum_info(current_spectrum.spec_type)
         self.str_type.set(f"{spec_type[0]} -> {spec_type[1]}")
         self.str_expo.set(f"{current_spectrum.exposure_time} ms")
-        self.str_temperature.set(f"{current_spectrum.temperature}\u00b0C")
+        self.str_temperature.set(f"{current_spectrum.temperature:.2f}\u00b0C")
         self.str_accel.set(
-            f"X: {to_mss(current_spectrum.mean_X):.2f} \u00b1 {to_mss(current_spectrum.std_Z):.2f}\n" # noqa
+            f"X: {to_mss(current_spectrum.mean_X):.2f} \u00b1 {to_mss(current_spectrum.std_X):.2f}\n" # noqa
             f"Y: {to_mss(current_spectrum.mean_Y):.2f} \u00b1 {to_mss(current_spectrum.std_Y):.2f}\n" # noqa
             f"Z: {to_mss(current_spectrum.mean_Z):.2f} \u00b1 {to_mss(current_spectrum.std_Z):.2f}") # noqa
 
@@ -448,10 +448,10 @@ class FrameRadiometer(LabelFrame):
 
         it = int(self.radiometer_var[2].get() if self.vm_light_source.value < 2 else self.radiometer_var[3].get())
 
-        spec = self.hypstar.VM_measure(RadiometerEntranceType[self.radiometer_var[1].get().upper()].value, 
-                self.vm_light_source.value, it, self.vm_current.get())
+        spectra = self.hypstar.VM_measure(RadiometerEntranceType[self.radiometer_var[1].get().upper()].value,
+                self.vm_light_source.value, it, self.vm_current.get(), int(self.radiometer_var[4].get()))
 
-        spec = spec.getBytes()
+        spec = spectra[0].getBytes()
 
         # turn off VM after measuring
         self.enable_vm_button_text.set("Turn VM electronics on")

@@ -13,7 +13,7 @@ from hypernets.gui.frame_console import FrameConsole
 from hypernets.gui.frame_rainsensor import FrameRainSensor
 
 from importlib import resources
-from logging import ERROR, WARNING, INFO, DEBUG, basicConfig
+from logging import basicConfig
 from hypernets.resources import img
 
 
@@ -42,9 +42,6 @@ class Guied(Tk):
         log_fmt = '[%(levelname)-7s %(asctime)s] (%(module)s) %(message)s'
         dt_fmt = '%Y-%m-%dT%H:%M:%S'
 
-        log_levels = {"ERROR": ERROR, "WARNING": WARNING, "INFO": INFO,
-                      "DEBUG": DEBUG}
-    
         basicConfig(level=self.verbosity, format=log_fmt, datefmt=dt_fmt)
 
         self.mainloop()
