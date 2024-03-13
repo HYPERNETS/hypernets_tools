@@ -216,7 +216,7 @@ remove_old_backups_from_archive "LOGS"
 # Send data
 echo "Syncing Data..."
 
-rsync -e "ssh -p $sshPort" -rt --exclude "CUR*" --exclude "metadata.txt" \
+rsync -e "ssh -p $sshPort" -rt --exclude "metadata.txt" \
 	--remove-source-files "DATA" "$ipServer:$remoteDir"
 
 if [ $? -eq 0 ]; then
