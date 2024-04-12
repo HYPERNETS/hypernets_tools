@@ -63,6 +63,7 @@ if [[ "${1-}" == "--test-run" ]]; then
 	keepPcInConf=$(parse_config "keep_pc" config_dynamic.ini)
 	startSequence="yes"
 	startSequenceInConf=$(parse_config "start_sequence" config_dynamic.ini)
+	testRun="yes"
 else	
 	keepPc=$(parse_config "keep_pc" config_dynamic.ini)
 	startSequence=$(parse_config "start_sequence" config_dynamic.ini)
@@ -378,7 +379,9 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 	set -e
 	echo "[INFO]  Wake up reason is : $wakeupreason."
 
-	if [[ "$checkWakeUpReason" == "yes" ]] ; then
+	if [[ "$testRun" == "yes" ]] && [[ "$checkWakeUpReason" == "yes" ]] ; then
+		echo "[WARNING]  Wake up reason check is disabled for test run. Using standard sequence file $sequence_file"
+	elif [[ "$checkWakeUpReason" == "yes" ]] ; then
 		if [[ "$wakeupreason" != "SCHEDULE"* ]]; then
 			echo "[WARNING]  $wakeupreason is not a reason to start the sequence."
 			startSequence="no"
