@@ -403,7 +403,9 @@ if __name__ == '__main__':
 
     parser.add_argument("-l", "--loglevel", type=str,
                         help="Verbosity of the instrument driver log",
-                        choices=[HypstarLogLevel.ERROR.name,
+                        choices=[HypstarLogLevel.SILENT.name,
+                                 HypstarLogLevel.ERROR.name,
+                                 HypstarLogLevel.WARNING.name,
                                  HypstarLogLevel.INFO.name,
                                  HypstarLogLevel.DEBUG.name,
                                  HypstarLogLevel.TRACE.name], default="ERROR")
