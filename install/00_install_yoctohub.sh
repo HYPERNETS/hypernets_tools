@@ -69,8 +69,8 @@ if [ ! "$ID"  == "debian" ]; then
 	exit 1
 fi
 
-wget -qO - https://www.yoctopuce.com/apt/KEY.gpg |  sudo apt-key add -
-echo "deb https://www.yoctopuce.com/ apt/stable/" | sudo tee /etc/apt/sources.list.d/yoctopuce.list 
+wget -q -O - https://www.yoctopuce.com/apt/KEY.gpg | gpg --dearmor | sudo tee -a /usr/share/keyrings/yoctopuce.gpg > /dev/null
+echo "deb [signed-by=/usr/share/keyrings/yoctopuce.gpg] https://www.yoctopuce.com/ apt/stable/" | sudo tee /etc/apt/sources.list.d/yoctopuce.list
 
 sudo apt update
 sudo apt install virtualhub
