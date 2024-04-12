@@ -191,7 +191,7 @@ class HypstarHandler(Hypstar):
                             spectrum.spectrum_header.integration_time_ms
 
             # Log integration times
-            info(f"Integration time: {spec_it}"
+            info(f"Integration time: {spec_it}")
 
             # Save
             with open(path_to_file, "wb") as f:
