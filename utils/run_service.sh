@@ -55,15 +55,17 @@ sequence_file_alt=$(parse_config "sequence_file_alt" config_dynamic.ini)
 
 checkWakeUpReason=$(parse_config "check_wakeup_reason" config_dynamic.ini)
 checkRain=$(parse_config "check_rain" config_dynamic.ini)
-startSequence=$(parse_config "start_sequence" config_dynamic.ini)
 debugYocto=$(parse_config "debug_yocto" config_static.ini)
 
 # Test run, don't send yocto to sleep and don't ignore the sequence
 if [[ "${1-}" == "--test-run" ]]; then
 	keepPc="on"
 	keepPcInConf=$(parse_config "keep_pc" config_dynamic.ini)
+	startSequence="yes"
+	startSequenceInConf=$(parse_config "start_sequence" config_dynamic.ini)
 else	
 	keepPc=$(parse_config "keep_pc" config_dynamic.ini)
+	startSequence=$(parse_config "start_sequence" config_dynamic.ini)
 fi
 
 
@@ -181,6 +183,12 @@ shutdown_sequence() {
 			echo "-----------------------------------"
 			echo "keep_pc = off in config_dynamic.ini"
 			echo "Automated sequence would have shut down the PC"
+			echo
+		fi
+		if [[ "${startSequenceInConf-}" == "no" ]]; then
+			echo "-----------------------------------"
+			echo "start_sequence = no in config_dynamic.ini"
+			echo "Automated sequence would not have started"
 			echo
 		fi
 
