@@ -379,7 +379,7 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 	set -e
 	echo "[INFO]  Wake up reason is : $wakeupreason."
 
-	if [[ "$testRun" == "yes" ]] && [[ "$checkWakeUpReason" == "yes" ]] ; then
+	if [[ "${testRun-}" == "yes" ]] && [[ "$checkWakeUpReason" == "yes" ]] ; then
 		echo "[WARNING]  Wake up reason check is disabled for test run. Using standard sequence file $sequence_file"
 	elif [[ "$checkWakeUpReason" == "yes" ]] ; then
 		if [[ "$wakeupreason" != "SCHEDULE"* ]]; then
