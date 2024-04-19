@@ -41,7 +41,7 @@ source utils/configparser.sh
 
 # Hypstar Configuration:
 baudrate=$(parse_config "baudrate" config_dynamic.ini)
-hypstarPort=$(parse_config "'hypstar_port" config_dynamic.ini)
+hypstarPort=$(parse_config "hypstar_port" config_dynamic.ini)
 bypassYocto=$(parse_config "bypass_yocto" config_static.ini)
 loglevel=$(parse_config "loglevel" config_dynamic.ini)
 bootTimeout=$(parse_config "boot_timeout" config_dynamic.ini)
