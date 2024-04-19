@@ -123,6 +123,17 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         except_boot = False
 
     if instrument_is_requested:
+		# log usb-serial converter serial number
+		from pyudev import Context, Devices
+		try:
+			context = Context()
+			device = Devices.from_device_file(context, instrument_port)
+			info(f"USB-RS85 board: {device.get('ID_SERIAL')}")
+
+		except Exception as e:
+            error(f"{e}")
+            error(f"Failed to read USB-RS485 converter serial number for radiometer port {instrument_port}")
+
         instrument_instance = HypstarHandler(instrument_loglevel=instrument_loglvl,  # noqa
                                              instrument_baudrate=instrument_br,
                                              instrument_port=instrument_port,

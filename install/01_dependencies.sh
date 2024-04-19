@@ -40,7 +40,7 @@ if [ "$ID" != "debian" ] && [ "$ID" != "manjaro" ]; then
 fi
 
 if [ "$ID"  == "debian" ]; then
-	sudo apt install python3-pip tk make gcc python3-tk rsync python3-pysolar python3-crcmod python3-serial python3-matplotlib python3-geopy python3-libgpiod net-tools ffmpeg sshfs
+	sudo apt install python3-pip tk make gcc python3-tk rsync python3-pysolar python3-crcmod python3-serial python3-matplotlib python3-geopy python3-libgpiod net-tools ffmpeg sshfs python3-pyudev
 
 	# pipx is not available on older Debian releases
 	if [[ $(apt-cache search -n -q -q pipx | wc -l) -eq 0 ]]; then
@@ -74,7 +74,7 @@ if [ "$ID"  == "debian" ]; then
 	fi
 
 elif [ "$ID"  == "manjaro" ]; then
-	sudo pacman -Sy python-pip tk make gcc python-pipx python-crcmod python-pyserial python-matplotlib python-geopy libgpiod net-tools
+	sudo pacman -Sy python-pip tk make gcc python-pipx python-crcmod python-pyserial python-matplotlib python-geopy libgpiod net-tools python-pyudev 
 
 	sudo -u $user python -m pip install pysolar
 	sudo -u $user python -m pipx install pyftdi
