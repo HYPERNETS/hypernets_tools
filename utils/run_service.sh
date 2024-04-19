@@ -348,6 +348,8 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 		retcode=$?
 		if [[ $retcode == 0 ]]; then
 			echo "[INFO]  Found Yocto"
+			yoctoSN=$(python -m hypernets.yocto.get_FW_ver)
+			echo "[INFO]  $yoctoSN"
 		elif [[ $retcode == 8 ]]; then 
 			# Server issued an error response. Probably 404 not found.
 			echo "[CRITICAL] Yocto '$yocto' is not accessible !!"
