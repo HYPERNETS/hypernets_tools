@@ -369,6 +369,14 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 			echo "[ERROR] Yocto request finished with error code $retcode"
 		fi
 		set -e
+
+		# log uptimes
+		if [[ $(command -v YModule) ]]; then
+            yocto=$(parse_config "yocto_prefix2" config_static.ini)
+			yocto_uptime_millisec=$(YModule -f '[result]' -r 127.0.0.1 $yocto get_upTime | awk '{print $1}')
+			sys_uptime_sec=$(awk '{print $1}' /proc/uptime)
+			printf "[INFO]  yocto uptime is %.1f min, system uptime is %.1f min\n" $(bc -l <<< "$yocto_uptime_millisec / 60000") $(bc -l <<< "$sys_uptime_sec / 60")
+		fi
 	fi
 
 	# log supply voltage
