@@ -41,6 +41,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                 park_to_nadir()
                 exit(88) # exit code 88 
         except Exception as e:
+            error(f"{e}")
             error("Disabling further rain sensor checks")
             check_rain = False
 
