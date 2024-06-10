@@ -41,7 +41,7 @@ source utils/configparser.sh
 
 # Hypstar Configuration:
 baudrate=$(parse_config "baudrate" config_dynamic.ini)
-hypstarPort=$(parse_config "'hypstar_port" config_dynamic.ini)
+hypstarPort=$(parse_config "hypstar_port" config_dynamic.ini)
 bypassYocto=$(parse_config "bypass_yocto" config_static.ini)
 loglevel=$(parse_config "loglevel" config_dynamic.ini)
 bootTimeout=$(parse_config "boot_timeout" config_dynamic.ini)
@@ -55,15 +55,18 @@ sequence_file_alt=$(parse_config "sequence_file_alt" config_dynamic.ini)
 
 checkWakeUpReason=$(parse_config "check_wakeup_reason" config_dynamic.ini)
 checkRain=$(parse_config "check_rain" config_dynamic.ini)
-startSequence=$(parse_config "start_sequence" config_dynamic.ini)
 debugYocto=$(parse_config "debug_yocto" config_static.ini)
 
 # Test run, don't send yocto to sleep and don't ignore the sequence
 if [[ "${1-}" == "--test-run" ]]; then
 	keepPc="on"
 	keepPcInConf=$(parse_config "keep_pc" config_dynamic.ini)
+	startSequence="yes"
+	startSequenceInConf=$(parse_config "start_sequence" config_dynamic.ini)
+	testRun="yes"
 else	
 	keepPc=$(parse_config "keep_pc" config_dynamic.ini)
+	startSequence=$(parse_config "start_sequence" config_dynamic.ini)
 fi
 
 
@@ -181,6 +184,12 @@ shutdown_sequence() {
 			echo "-----------------------------------"
 			echo "keep_pc = off in config_dynamic.ini"
 			echo "Automated sequence would have shut down the PC"
+			echo
+		fi
+		if [[ "${startSequenceInConf-}" == "no" ]]; then
+			echo "-----------------------------------"
+			echo "start_sequence = no in config_dynamic.ini"
+			echo "Automated sequence would not have started"
 			echo
 		fi
 
@@ -339,6 +348,8 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 		retcode=$?
 		if [[ $retcode == 0 ]]; then
 			echo "[INFO]  Found Yocto"
+			yoctoSN=$(python -m hypernets.yocto.get_FW_ver)
+			echo "[INFO]  $yoctoSN"
 		elif [[ $retcode == 8 ]]; then 
 			# Server issued an error response. Probably 404 not found.
 			echo "[CRITICAL] Yocto '$yocto' is not accessible !!"
@@ -358,6 +369,14 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 			echo "[ERROR] Yocto request finished with error code $retcode"
 		fi
 		set -e
+
+		# log uptimes
+		if [[ $(command -v YModule) ]]; then
+            yocto=$(parse_config "yocto_prefix2" config_static.ini)
+			yocto_uptime_millisec=$(YModule -f '[result]' -r 127.0.0.1 $yocto get_upTime | awk '{print $1}')
+			sys_uptime_sec=$(awk '{print $1}' /proc/uptime)
+			printf "[INFO]  yocto uptime is %.1f min, system uptime is %.1f min\n" $(bc -l <<< "$yocto_uptime_millisec / 60000") $(bc -l <<< "$sys_uptime_sec / 60")
+		fi
 	fi
 
 	# log supply voltage
@@ -370,7 +389,9 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 	set -e
 	echo "[INFO]  Wake up reason is : $wakeupreason."
 
-	if [[ "$checkWakeUpReason" == "yes" ]] ; then
+	if [[ "${testRun-}" == "yes" ]] && [[ "$checkWakeUpReason" == "yes" ]] ; then
+		echo "[WARNING]  Wake up reason check is disabled for test run. Using standard sequence file $sequence_file"
+	elif [[ "$checkWakeUpReason" == "yes" ]] ; then
 		if [[ "$wakeupreason" != "SCHEDULE"* ]]; then
 			echo "[WARNING]  $wakeupreason is not a reason to start the sequence."
 			startSequence="no"

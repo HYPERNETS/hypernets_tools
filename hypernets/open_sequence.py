@@ -41,6 +41,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                 park_to_nadir()
                 exit(88) # exit code 88 
         except Exception as e:
+            error(f"{e}")
             error("Disabling further rain sensor checks")
             check_rain = False
 
@@ -123,6 +124,17 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         except_boot = False
 
     if instrument_is_requested:
+        # log usb-serial converter serial number
+        from pyudev import Context, Devices
+        try:
+            context = Context()
+            device = Devices.from_device_file(context, instrument_port)
+            info(f"USB-RS85 board: {device.get('ID_SERIAL')}")
+
+        except Exception as e:
+            error(f"{e}")
+            error(f"Failed to read USB-RS485 converter serial number for radiometer port {instrument_port}")
+
         instrument_instance = HypstarHandler(instrument_loglevel=instrument_loglvl,  # noqa
                                              instrument_baudrate=instrument_br,
                                              instrument_port=instrument_port,
@@ -403,7 +415,9 @@ if __name__ == '__main__':
 
     parser.add_argument("-l", "--loglevel", type=str,
                         help="Verbosity of the instrument driver log",
-                        choices=[HypstarLogLevel.ERROR.name,
+                        choices=[HypstarLogLevel.SILENT.name,
+                                 HypstarLogLevel.ERROR.name,
+                                 HypstarLogLevel.WARNING.name,
                                  HypstarLogLevel.INFO.name,
                                  HypstarLogLevel.DEBUG.name,
                                  HypstarLogLevel.TRACE.name], default="ERROR")

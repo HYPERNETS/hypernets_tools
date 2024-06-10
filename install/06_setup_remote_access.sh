@@ -50,6 +50,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 	sed -i '/ExecStart=$/s/$/'$path_to_service'/' $service_file
 	sed -i '/WorkingDirectory=$/s/$/'$path_to_h_tools'\//' $service_file
 
+	chmod 644 $service_file
+
 	systemctl enable hypernets-access
 	systemctl start hypernets-access
 	journalctl --follow -u hypernets-access

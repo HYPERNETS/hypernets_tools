@@ -173,18 +173,25 @@ class HypstarHandler(Hypstar):
 
             # Concatenation
             spectra = b''
+            spec_it = [None, None]
             for n, spectrum in enumerate(cap_list):
                 spectra += spectrum.getBytes()
 
                 debug(spectrum)
 
-                if overwrite_IT:
-                    if spectrum.spectrum_header.spectrum_config.vnir:
+                if spectrum.spectrum_header.spectrum_config.vnir:
+                    spec_it[0] = spectrum.spectrum_header.integration_time_ms
+                    if overwrite_IT:
                         request.it_vnir = \
                             spectrum.spectrum_header.integration_time_ms
-                    elif spectrum.spectrum_header.spectrum_config.swir:
+                elif spectrum.spectrum_header.spectrum_config.swir:
+                    spec_it[1] = spectrum.spectrum_header.integration_time_ms
+                    if overwrite_IT:
                         request.it_swir = \
                             spectrum.spectrum_header.integration_time_ms
+
+            # Log integration times
+            info(f"Integration time: {spec_it}")
 
             # Save
             with open(path_to_file, "wb") as f:
