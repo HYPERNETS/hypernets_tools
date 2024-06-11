@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 from datetime import datetime
 from time import time
 from os import mkdir, replace, path
+from pathlib import Path
 from shutil import copy
 
 from hypernets.abstract.protocol import Protocol
@@ -30,7 +31,8 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                       instrument_swir_tec=0,
                       dump_environment_logs=False,
                       DATA_DIR="DATA",
-                      check_rain=False):
+                      check_rain=False,
+                      data_dir_tree=False):
 
     # Check if it is raining
     if not instrument_standalone and check_rain:
@@ -72,12 +74,19 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     start = datetime.utcnow()  # start = datetime.now()
     seq_name = Protocol.create_seq_name(now=start, prefix="CUR")
 
+    if data_dir_tree is True:  # create a directory tree
+        info("Creating the directory tree...")
+        dir_branch = Path(start.strftime("%Y/%m/%d"))
+        DATA_DIR = Path(path.join(DATA_DIR, dir_branch))
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        info(f"The data directory is now: {DATA_DIR}.")
+
     seq_path = path.join(DATA_DIR, seq_name)
     final_seq_path = path.join(DATA_DIR, Protocol.create_seq_name(now=start))
 
     suffix = ""
 
-    n = 0
+    n = 0  # In case of RTC issue, the folder may already exists
     while path.isdir(seq_path + suffix) or path.isdir(final_seq_path + suffix):
         n += 1
         error(f"Directory [{seq_path+suffix} or "
@@ -438,6 +447,10 @@ if __name__ == '__main__':
                         help="Dumps instrument environmental logs to stdout",
                         default=False)
 
+    parser.add_argument("-d", "--data-dir-tree", action='store_true',
+                        help="Create a YYYY/MM/DD directory tree in the DATA folder",
+                        default=False)
+
     args = parser.parse_args()
 
     basicConfig(level=log_levels[args.verbosity], format=log_fmt, datefmt=dt_fmt) # noqa
@@ -451,4 +464,5 @@ if __name__ == '__main__':
                       instrument_standalone=args.noyocto,
                       instrument_swir_tec=args.swir_tec,
                       dump_environment_logs=args.log_environment,
-                      check_rain=args.check_rain)
+                      check_rain=args.check_rain,
+                      data_dir_tree=args.data_dir_tree)

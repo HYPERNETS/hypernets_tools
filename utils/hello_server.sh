@@ -32,8 +32,10 @@ PATH="$PATH:~/.local/bin"
 # Make Logs
 echo "Making Logs..."
 mkdir -p LOGS
+set +e
+last_boot_timestamp=$(journalctl -b-1 --output-fields=__REALTIME_TIMESTAMP -o export | grep -m 1 __REALTIME_TIMESTAMP | sed -e 's/.*=//')
+set -e
 
-last_boot_timestamp=$(journalctl -b-1 -u hypernets-sequence --output-fields=__REALTIME_TIMESTAMP -o export | grep -m 1 __REALTIME_TIMESTAMP | sed -e 's/.*=//')
 ## truncate microseconds
 last_boot_timestamp=${last_boot_timestamp::-6}
 
@@ -184,17 +186,17 @@ if [[ ! "$autoUpdate" == "no" ]] ; then
 fi
 
 # Copying files to archive directory
-echo "Copying data to archive directory..."
-for folderPath in DATA/*/; do
-   if [[ "$folderPath" =~ ^DATA\/SEQ[0-9]{8}T[0-9]{6}/$ ]]; then
-        year="${folderPath:8:4}"
-        month="${folderPath:12:2}"
-        day="${folderPath:14:2}"
-        yearMonthDayArchive="ARCHIVE/DATA/$year/$month/$day"
-        mkdir -p "$yearMonthDayArchive"
-        cp -R "$folderPath" "$yearMonthDayArchive"
-   fi
-done
+# echo "Copying data to archive directory..."
+# for folderPath in DATA/*/; do
+#    if [[ "$folderPath" =~ ^DATA\/SEQ[0-9]{8}T[0-9]{6}/$ ]]; then
+#         year="${folderPath:8:4}"
+#         month="${folderPath:12:2}"
+#         day="${folderPath:14:2}"
+#         yearMonthDayArchive="ARCHIVE/DATA/$year/$month/$day"
+#         mkdir -p "$yearMonthDayArchive"
+#         cp -R "$folderPath" "$yearMonthDayArchive"
+#    fi
+# done
 
 if [ -d LOGS ]; then
   echo "Copying logs to archive directory..."
@@ -210,20 +212,24 @@ if [ -d LOGS ]; then
   done
 fi
 
-remove_old_backups_from_archive "DATA"
+# remove_old_backups_from_archive "DATA"
 remove_old_backups_from_archive "LOGS"
 
 # Send data
 echo "Syncing Data..."
 
-rsync -e "ssh -p $sshPort" -rt --exclude "metadata.txt" \
-	--remove-source-files "DATA" "$ipServer:$remoteDir"
+rsync -e "ssh -p $sshPort" -rt --exclude "metadata.txt" --exclude "CUR*" \
+	 "DATA" "$ipServer:$remoteDir"
+
+# rsync -e "ssh -p $sshPort" -rt --exclude "metadata.txt" --exclude "CUR*" \
+# 	--remove-source-files "DATA" "$ipServer:$remoteDir"
 
 if [ $? -eq 0 ]; then
 
 	rsync -e "ssh -p $sshPort" -aim --exclude "CUR*" --include "*/" \
-		--include "metadata.txt" --exclude "*" --remove-source-files "DATA" "$ipServer:$remoteDir" && \
-  find DATA/ -mindepth 1 -depth -type d  -empty -exec rmdir {} \;
+		--include "metadata.txt" --exclude "*" "DATA" "$ipServer:$remoteDir"
+#		--include "metadata.txt" --exclude "*" --remove-source-files "DATA" "$ipServer:$remoteDir" && \
+#  find DATA/ -mindepth 1 -depth -type d  -empty -exec rmdir {} \;
 
 	if [ $? -eq 0 ]; then
 		echo "[INFO] All data and metadata files have been successfully uploaded."
@@ -237,14 +243,16 @@ fi
 
 echo "Syncing Logs..."
 rsync -e "ssh -p $sshPort" -rt --remove-source-files "LOGS" "$ipServer:$remoteDir" && \
-find LOGS/ -mindepth 1 -depth -type d  -empty -exec rmdir {} \;
+find LOGS/ -mindepth 1 -depth -type d -empty -exec rmdir {} \;
 
 if [ -d "OTHER" ]; then
 	echo "Syncing Directory OTHER..."
-    # rt -> r XXX
-   rsync --ignore-existing -e "ssh -p $sshPort" -r --remove-source-files "OTHER" "$ipServer:$remoteDir" && \
-   find OTHER/ -mindepth 1 -depth -type d  -empty -exec rmdir {} \;
-	# rsync -e "ssh -p $sshPort" -rt "OTHER" "$ipServer:$remoteDir"
-fi
+	# rsync --ignore-existing -e "ssh -p $sshPort" -r --remove-source-files "OTHER" "$ipServer:$remoteDir" && \
+	# find OTHER/ -mindepth 1 -depth -type d  -empty -exec rmdir {} \;
 
+	rsync -e "ssh -p $sshPort" -rt "OTHER" "$ipServer:$remoteDir"
+fi
+echo "Syncing uncompled (CUR) sequence from yesterday..."
+find DATA/ -type d -name "CUR$(date -d yesterday +'%Y%m%d')*" \
+	-exec rsync -e "ssh -p $sshPort" -rt {} "$ipServer:$remoteDir/CUR/" \;
 echo "End."

@@ -16,6 +16,9 @@ check_wakeup_reason = no
 # check the rain sensor and abort the sequence if rain is detected
 check_rain = yes
 
+# Make a directory tree: YYYY/MM/DD/SEQXXX inside the DATA folder
+data_dir_tree = no
+
 auto_update = no
 
 # Verbosity levels are : ERROR, WARNING, INFO, or DEBUG
