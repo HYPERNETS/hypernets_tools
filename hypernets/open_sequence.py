@@ -53,6 +53,11 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         error(f"{e}")
         error(f"Failed to open sequence file '{sequence_file}'")
         exit(30) # exit code 30
+    except Exception as e:
+        error(f"{e}")
+        error(f"Failed to read sequence file '{sequence_file}")
+        error("Wrong syntax in sequence file?")
+        exit(1)
 
     info(protocol)
 
