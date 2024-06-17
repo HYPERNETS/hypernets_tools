@@ -4,7 +4,7 @@ from datetime import datetime
 from configparser import ConfigParser, ExtendedInterpolation
 from configparser import MissingSectionHeaderError
 
-from logging import warning
+from logging import debug, info, warning  # noqa
 
 # TODO : Dump data from pickle for lat:lon
 
@@ -67,8 +67,16 @@ def parse_config_metadata(sequence_file, config_file="config_dynamic.ini",
     return str_metadata
 
 
-def create_metadata():
-    pass
 
 if __name__ == '__main__':
-    print(parse_config_metadata())
+    from argparse import ArgumentParser
+    parser = ArgumentParser()
+    parser.add_argument("-f", "--filename", type=str, required=True,
+                        help="Select a protocol file (txt, csv)")
+
+    from logging import basicConfig, DEBUG
+    log_fmt = '[%(levelname)-7s %(asctime)s] (%(module)s) %(message)s'
+    dt_fmt = '%H:%M:%S'
+    basicConfig(level=DEBUG, format=log_fmt, datefmt=dt_fmt)
+    args = parser.parse_args()
+    info("\n" + parse_config_metadata(args.filename))
