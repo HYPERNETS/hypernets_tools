@@ -55,13 +55,13 @@ case $ssh_loglevel in
 	verbosity="-vvv"
     ;;
 
-  INFO | *)
+  ERROR | *)
 	verbosity=""
     ;;
 esac
 
 # Increase verbosity for every 10th service restart
-if [[ "$(($(systemctl show hypernets-access.service -p NRestarts --value)%10))" -eq 0 ]]; then
+if [[ "$((($(systemctl show hypernets-access.service -p NRestarts --value)+1)%10))" -eq 0 ]]; then
 	verbosity="$verbosity -v"
 fi
 

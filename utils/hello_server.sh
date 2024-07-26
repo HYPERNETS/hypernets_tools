@@ -80,12 +80,20 @@ disk_usage() {
 make_log() {
 	logNameBase=$1
 	logName=$2
+	shift 2 
+
+	# get all remaining services to log
+	extra_services=""
+	while [[ ! -z "${1-}" ]]; do
+		extra_services="$extra_services -u $1 "
+		shift 1
+	done
 
 	set +e
 	systemctl is-enabled hypernets-$logName.service > /dev/null
 	if [[ $? -eq 0 ]] ; then
 		echo "[DEBUG]  Making log: $logNameBase-$logName..."
-		journalctl -b-1 -u hypernets-$logName --no-pager > LOGS/$logNameBase-$logName.log
+		journalctl -b-1 -u hypernets-$logName $extra_services --no-pager > LOGS/$logNameBase-$logName.log
 	else
 		echo "[DEBUG]  Skipping log: $logName."
 	fi
@@ -108,7 +116,7 @@ remove_old_backups_from_archive() {
 
 make_log $logNameBase sequence
 make_log $logNameBase hello
-make_log $logNameBase access
+make_log $logNameBase access ssh sshd
 make_log $logNameBase webcam
 disk_usage $logNameBase
 

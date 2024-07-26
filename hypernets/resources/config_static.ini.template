@@ -14,8 +14,8 @@ remote_dir = ~
 ssh_port = 22
 # remote ssh port must be unique for each site connected to the same server
 remote_ssh_port = 20213
-# Valid loglevels are INFO, DEBUG, DEBUG2, DEBUG3
-ssh_loglevel = INFO
+# Valid loglevels are ERROR, DEBUG, DEBUG2, DEBUG3
+ssh_loglevel = ERROR
 
 # Local ssh backup access 
 # enp1s0 is eth port 1, enp2s0 is eth port 2, wlp12s0 is wifi
