@@ -45,9 +45,11 @@ if [ "$ID"  == "debian" ]; then
 	# pipx is not available on older Debian releases
 	if [[ $(apt-cache search -n -q -q pipx | wc -l) -eq 0 ]]; then
 		sudo -u $user python -m pip install pyftdi
+		sudo -u $user python -m pip install yoctopuce
 	else
 		sudo apt install pipx
 		sudo -u $user python -m pipx install pyftdi
+		sudo -u $user python -m pip install yoctopuce --break-system-packages
 	fi
 
     [ ! -e /usr/bin/python ] && ln -s /usr/bin/python3 /usr/bin/python
@@ -78,6 +80,6 @@ elif [ "$ID"  == "manjaro" ]; then
 
 	sudo -u $user python -m pip install pysolar
 	sudo -u $user python -m pipx install pyftdi
+	sudo -u $user python -m pip install yoctopuce
 fi
 	
-sudo -u $user python -m pip install yoctopuce
