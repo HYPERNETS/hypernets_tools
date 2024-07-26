@@ -500,8 +500,9 @@ exit_actions() {
 
 		# There is no point in trying again in case of some errors:
 		# 30 - sequence file not found
+		# 40 - failed to get instrument instance (no hypstar_port device)
 		# 88 - rainig
-		if [ $return_value -ne 30 ] && [ $return_value -ne 88 ]; then
+		if [ $return_value -ne 30 ] && [ $return_value -ne 40 ] && [ $return_value -ne 88 ]; then
 			sleep 1
 			## VM stabilisation failed
 			## power cycle, otherwise the second attempt fails as well

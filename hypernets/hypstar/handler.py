@@ -29,7 +29,12 @@ class HypstarHandler(Hypstar):
                  instrument_baudrate=115200, instrument_loglevel=3,
                  expect_boot_packet=True, boot_timeout=30):
 
-        HypstarHandler.wait_for_instrument_port(instrument_port)
+        try:
+            HypstarHandler.wait_for_instrument_port(instrument_port)
+        except Exception as e:
+            error(f"{e}")
+            error("Failed to get instrument instance")
+            exit(40)
 
         if expect_boot_packet and not wait_for_instrument(instrument_port, boot_timeout): # noqa
             # just in case instrument sent BOOTED packet while we were
@@ -91,9 +96,10 @@ class HypstarHandler(Hypstar):
 
     def __del__(self):
         try:
-            env_log = self.get_env_log()
-            debug(env_log)
-            super().__del__()
+            if self.handle is not None:
+                env_log = self.get_env_log()
+                debug(env_log)
+                super().__del__()
 
         except Exception as e:
             error(f"{e}")
@@ -108,7 +114,6 @@ class HypstarHandler(Hypstar):
             debug(f"Timeout remaining value: {timeout}s")
             if timeout <= 0:
                 raise Exception(f"{instrument_port} timed out!")
-                exit(27)
 
         if not islink(instrument_port):
              warning(f"{instrument_port} is not a link!")

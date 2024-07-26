@@ -149,11 +149,15 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             error(f"{e}")
             error(f"Failed to read USB-RS485 converter serial number for radiometer port {instrument_port}")
 
-        instrument_instance = HypstarHandler(instrument_loglevel=instrument_loglvl,  # noqa
-                                             instrument_baudrate=instrument_br,
-                                             instrument_port=instrument_port,
-                                             expect_boot_packet=except_boot,
-                                             boot_timeout=instrument_boot_timeout)   # noqa
+        try:
+            instrument_instance = HypstarHandler(instrument_loglevel=instrument_loglvl,  # noqa
+                                                 instrument_baudrate=instrument_br,
+                                                 instrument_port=instrument_port,
+                                                 expect_boot_packet=except_boot,
+                                                 boot_timeout=instrument_boot_timeout)   # noqa
+
+        except Exception as e:
+            error(f"{e}")
 
         instrument_sn, visible_sn, swir_sn, vm_sn = instrument_instance.get_serials()
         debug(f"SN : * instrument -> {instrument_sn}")
