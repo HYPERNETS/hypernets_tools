@@ -5,20 +5,22 @@
 # 
 #         USAGE: ./hello_server.sh 
 # 
-#   DESCRIPTION: Establish connection with server
-#                Synchronize /config directory both ways
-#                Set-up reverse ssh to make server able to access to host system
+#   DESCRIPTION: Generate logs
+#                Establish connection with server
+#                Synchronize config with server
+#                Copy data, logs, webcam images to local archive
+#                Upload data, logs, webcam images to server
 # 
-#       OPTIONS: ---
-#         NOTES: ---
 #        AUTHOR: Alexandre CORIZZI, alexandre.corizzi@obs-vlfr.fr
-#  ORGANIZATION: 
 #       CREATED: 05/03/2020 15:53
-#      REVISION: 23/10/2020 17:19
 #s===============================================================================
 
 set -o nounset                              # Treat unset variables as an error
 set -euo pipefail                           # Bash Strict Mode	
+
+## set some global rsync parameters
+rsync_chmod="--no-p --chmod=D755,F644"
+rsync_loglevel="" # -i -v --dry-run"
 
 if [[ ${PWD##*/} != "hypernets_tools"* ]]; then
 	echo "This script must be run from hypernets_tools folder" 1>&2
@@ -30,8 +32,7 @@ fi
 PATH="$PATH:~/.local/bin"
 
 # Make Logs
-echo "Making Logs..."
-mkdir -p LOGS
+echo "[INFO]  Making Logs..."
 set +e
 last_boot_timestamp=$(journalctl -b-1 --output-fields=__REALTIME_TIMESTAMP -o export | grep -m 1 __REALTIME_TIMESTAMP | sed -e 's/.*=//')
 set -e
@@ -40,16 +41,21 @@ set -e
 last_boot_timestamp=${last_boot_timestamp::-6}
 
 logNameBase=$(date +"%Y-%m-%d-%H%M" -d @$last_boot_timestamp)
+YMFolder=$(date +"%Y/%m" -d @$last_boot_timestamp)
+
+## create LOG folder if it does not exist already
+mkdir -p LOGS/$YMFolder/
 
 if [ ! -d "ARCHIVE" ]; then
-  echo "Creating archive directory..."
+  echo "[INFO]  Creating archive directory..."
   mkdir ARCHIVE
 fi
 
 suffixeName=""
 for i in {001..999}; do
-	if [ -f "LOGS/$logNameBase$suffixeName-sequence.log" ]; then 
-		echo "[DEBUG]  Error the log already exists! ($i)"
+	if [ -f "LOGS/$YMFolder/$logNameBase$suffixeName-sequence.log" ] || \
+			[ -f "ARCHIVE/LOGS/$YMFolder/$logNameBase$suffixeName-sequence.log" ]; then 
+		echo "[WARNING]  The log already exists! ($i)"
 		suffixeName=$(echo "-$i")
 	else
 		logNameBase=$(echo $logNameBase$suffixeName)
@@ -61,7 +67,7 @@ done
 disk_usage() {
     logNameBase=$1
 
-    echo "Disk usage informations:" 
+    echo "[INFO]  Disk usage information:" 
     df -h -text4
 	journalctl --disk-usage
 
@@ -69,11 +75,11 @@ disk_usage() {
     dfOutput=$(df -text4 --output=used,avail,pcent)
 
     if [ ! -f  $diskUsageOuput ] ; then
-        echo "[INFO] Creation of $diskUsageOuput"
+        echo "[INFO]  Creation of $diskUsageOuput"
         echo -n "DateTime    " > $diskUsageOuput
         echo "$dfOutput" | sed 2d >> $diskUsageOuput
     fi
-    echo -n "$logNameBase " >> $diskUsageOuput
+	echo -n "$(date +"%Y-%m-%d-%H%M") " >> $diskUsageOuput
     echo "$dfOutput" | sed 1d >> $diskUsageOuput
 }
 
@@ -92,26 +98,38 @@ make_log() {
 	set +e
 	systemctl is-enabled hypernets-$logName.service > /dev/null
 	if [[ $? -eq 0 ]] ; then
-		echo "[DEBUG]  Making log: $logNameBase-$logName..."
-		journalctl -b-1 -u hypernets-$logName $extra_services --no-pager > LOGS/$logNameBase-$logName.log
+		echo "[INFO]  Making log: $logNameBase-$logName"
+		journalctl -b-1 -u hypernets-$logName $extra_services --no-pager > LOGS/$YMFolder/$logNameBase-$logName.log
 	else
-		echo "[DEBUG]  Skipping log: $logName."
+		echo "[INFO]  Skipping log: $logName"
 	fi
 	set -e
 }
 
 remove_old_backups_from_archive() {
-  sequence_count=$(find ARCHIVE/$1 -mindepth 3 -maxdepth 3  -depth -type d | wc -l)
-  if [[ $sequence_count -gt 30 ]]; then
-    nb_sequences_to_delete=$(("$sequence_count"-30))
-    echo "Removing files from $1 older than 30 days..."
-    find ARCHIVE/$1 -mindepth 3 -maxdepth 3  -depth -type d | sort -n | head -n $nb_sequences_to_delete | while read day_folder; do
-      rm -r "$day_folder"
-    # removing empty folders
-    find ARCHIVE/$1 -mindepth 1 -maxdepth 2 -depth -type d  -empty -exec rmdir {} \;
-    done
-    echo "Files from $1 older than 30 days have been removed correctly."
-  fi
+	folder="$1"
+	lvl=$2
+	keep=$3
+
+	if [ ! -d ARCHIVE/$folder ]; then 
+		return
+	fi
+
+	sequence_count=$(find ARCHIVE/"$folder" -mindepth $lvl -maxdepth $lvl -depth -type d -not -empty | wc -l)
+
+	if [[ $sequence_count -gt $keep ]]; then
+		nb_sequences_to_delete=$(("$sequence_count"-$keep))
+		echo "[INFO]  Removing files and folders from ARCHIVE/$folder, keeping $keep folders..."
+		find ARCHIVE/$folder -mindepth $lvl -maxdepth $lvl -depth -type d -not -empty | sort -n | head -n $nb_sequences_to_delete | \
+			while read day_folder; do
+				rm -r "$day_folder"
+				#echo "rm -r $day_folder"
+
+				# remove empty folders
+				find ARCHIVE/$folder -mindepth 1 -depth -type d -empty -delete
+			done
+		echo "[INFO]  Cleaned up ARCHIVE/$folder"
+	fi
 }
 
 make_log $logNameBase sequence
@@ -121,9 +139,9 @@ make_log $logNameBase webcam
 disk_usage $logNameBase
 
 # We check if network is on
-echo "Waiting for network..."
+echo "[INFO]  Waiting for network..."
 nm-online
-echo "Ok !"
+echo "[INFO]  Ok !"
 
 # Read config file :
 source utils/configparser.sh
@@ -146,11 +164,10 @@ set +e
 for i in {1..30}
 do
 	# Update the datetime flag on the server
-	echo "(attempt #$i) Touching $ipServer:$remoteDir/system_is_up"
+	echo "[INFO]  (attempt #$i) Touching $ipServer:$remoteDir/system_is_up"
 
 	# If yocto API is installed, write next scheduled wakeup time into 'system_is_up' file on server
 	if [[ $(command -v YWakeUpMonitor) ]]; then
-		source utils/configparser.sh
 		yocto=$(parse_config "yocto_prefix2" config_static.ini)
 		next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_nextWakeUp|sed -e 's/[[:space:]].*//')
 		yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yocto get_utcOffset)
@@ -171,96 +188,155 @@ do
 
 	ssh -p $sshPort -t $ipServer "echo \"$msg_txt\" > $remoteDir/system_is_up" > /dev/null 2>&1
 	if [[ $? -eq 0 ]] ; then
-		echo "Server is up!"
+		echo "[INFO]  Server is up!"
 		break
 	fi
-	echo "Unsuccessful, sleeping 10s..."
+	echo "[INFO]  Unsuccessful, sleeping 10s..."
 	sleep 10
 done
 set -e
 
-# Sync Config Files
+# Sync Config File
 source utils/bidirectional_sync.sh
 
 bidirectional_sync "config_dynamic.ini" \
 	"$ipServer" "$remoteDir/config_dynamic.ini.$USER" "$sshPort"
 
-if [[ ! "$autoUpdate" == "no" ]] ; then
-	echo "Auto Update ON"
+
+# Auto-update hypernets_tools
+if [[ "$autoUpdate" == "yes" ]] ; then
+	echo "[INFO]  Auto Update ON"
 	set +e
 	git pull
-	if [ $? -ne 0 ]; then echo "Can't pull : do you have local change ?" ; fi
+	if [ $? -ne 0 ]; then echo "[ERROR]  Can't pull : do you have local change ?" ; fi
 	set -e
 fi
 
-# Copying files to archive directory
-# echo "Copying data to archive directory..."
-# for folderPath in DATA/*/; do
-#    if [[ "$folderPath" =~ ^DATA\/SEQ[0-9]{8}T[0-9]{6}/$ ]]; then
-#         year="${folderPath:8:4}"
-#         month="${folderPath:12:2}"
-#         day="${folderPath:14:2}"
-#         yearMonthDayArchive="ARCHIVE/DATA/$year/$month/$day"
-#         mkdir -p "$yearMonthDayArchive"
-#         cp -R "$folderPath" "$yearMonthDayArchive"
-#    fi
-# done
+# Archive DATA
+echo "[INFO]  Copying data to archive directory..."
+for folderPath in $(find DATA -type d -regextype posix-extended -regex ".*/(CUR|SEQ)[0-9]{8}T[0-9]{6}"); do
+	seqname=$(basename $folderPath)
+	year="${seqname:3:4}"
+	month="${seqname:7:2}"
+	day="${seqname:9:2}"
+	yearMonthDayArchive="ARCHIVE/DATA/$year/$month/$day/"
+	
+	mkdir -p "$yearMonthDayArchive"
+	cp -R "$folderPath" "$yearMonthDayArchive"
+done
 
-if [ -d LOGS ]; then
-  echo "Copying logs to archive directory..."
-  for fileLog in LOGS/*; do
-     if [[ "$fileLog" =~ ^LOGS\/[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}-[a-z]+.log ]]; then
-          year="${fileLog:5:4}"
-          month="${fileLog:10:2}"
-          day="${fileLog:13:2}"
-          yearMonthDayArchive="ARCHIVE/LOGS/$year/$month/$day"
-          mkdir -p "$yearMonthDayArchive"
-          cp "$fileLog" "$yearMonthDayArchive"
-     fi
-  done
-fi
+# Archive LOGS
+echo "[INFO]  Copying logs to archive directory..."
+for fileLog in $(find LOGS -type f -regextype posix-extended -regex ".*/[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}(-[0-9]{3})?-[a-z]+.log"); do
+  	year="${fileLog:5:4}"
+  	month="${fileLog:10:2}"
+  	yearMonthArchive="ARCHIVE/LOGS/$year/$month/"
 
-# remove_old_backups_from_archive "DATA"
-remove_old_backups_from_archive "LOGS"
+  	mkdir -p "$yearMonthArchive"
+  	cp "$fileLog" "$yearMonthArchive"
+done
 
-# Send data
-echo "Syncing Data..."
+# Archive Webcam images
+echo "[INFO]  Copying webcam images to archive directory..."
+for imgfile in $(find OTHER/ -type f -regextype posix-extended -regex "OTHER/WEBCAM_(SITE|SKY)/.*[0-9]{8}T[0-9]{6}.jpg"); do
+	filename="$(basename $imgfile)"
+	year="${filename:0:4}"
+	month="${filename:4:2}"
+	camfolder="$(awk -F/ '{print $2}' <<< $imgfile)"
+	yearMonthArchive="ARCHIVE/OTHER/$camfolder/$year/$month/"
+	
+	mkdir -p "$yearMonthArchive"
+	cp "$imgfile" "$yearMonthArchive"
+done
 
-rsync -e "ssh -p $sshPort" -rt --exclude "metadata.txt" --exclude "CUR*" \
-	 "DATA" "$ipServer:$remoteDir"
 
-# rsync -e "ssh -p $sshPort" -rt --exclude "metadata.txt" --exclude "CUR*" \
-# 	--remove-source-files "DATA" "$ipServer:$remoteDir"
+## Clean up ARCHIVE
+#
+# Second parameter is level:
+# no subfolders - 0
+# YYYY - 1
+# YYYY/MM - 2
+# YYYY/MM/DD - 3
+#
+# Third parameter is how many to keep
+#
+# remove_old_backups_from_archive "FOLDER" level keep
+remove_old_backups_from_archive "DATA" 3 30
+remove_old_backups_from_archive "LOGS" 2 6
+remove_old_backups_from_archive "OTHER/WEBCAM_SITE" 2 3
+remove_old_backups_from_archive "OTHER/WEBCAM_SKY" 2 3
 
+
+
+####### SYNCING DATA ##########
+
+echo "[INFO]  Syncing Data..."
+
+## first sync the SEQ folders without metadata.txt
+rsync -e "ssh -p $sshPort" -ram $rsync_loglevel $rsync_chmod --remove-source-files \
+		--exclude "metadata.txt" --exclude "CUR*" \
+		"DATA" "$ipServer:$remoteDir"
+
+# then sync metadata.txt to indicate that the sequence 
+# has been completely transferred to the server
 if [ $? -eq 0 ]; then
-
-	rsync -e "ssh -p $sshPort" -aim --exclude "CUR*" --include "*/" \
+	rsync -e "ssh -p $sshPort" -am $rsync_loglevel $rsync_chmod --remove-source-files --exclude "CUR*" --include "*/" \
 		--include "metadata.txt" --exclude "*" "DATA" "$ipServer:$remoteDir"
-#		--include "metadata.txt" --exclude "*" --remove-source-files "DATA" "$ipServer:$remoteDir" && \
-#  find DATA/ -mindepth 1 -depth -type d  -empty -exec rmdir {} \;
 
 	if [ $? -eq 0 ]; then
-		echo "[INFO] All data and metadata files have been successfully uploaded."
+		echo "[INFO]  All data and metadata files have been successfully uploaded."
 	else
-		echo "[WARNING] Error during the uploading metadata process!"
+		echo "[WARNING]  Error during the uploading metadata process!"
 	fi
 
 else
-	echo "[WARNING] Error during the uploading data process!"
+	echo "[WARNING]  Error during the uploading data process!"
 fi
 
-echo "Syncing Logs..."
-rsync -e "ssh -p $sshPort" -rt --remove-source-files "LOGS" "$ipServer:$remoteDir" && \
-find LOGS/ -mindepth 1 -depth -type d -empty -exec rmdir {} \;
+# finally sync only meteo.csv from CUR folders and delete the folders after successful transfer
+# exclude CUR folders from current day
+echo "[INFO]  Syncing uncompled (CUR) sequence meteo.csv..."
+rsync -e "ssh -p $sshPort" -am $rsync_loglevel $rsync_chmod --remove-source-files \
+		--exclude "SEQ*" --exclude "$(date +'CUR%Y%m%dT*')" --include "*/" \
+		--include "meteo.csv" --exclude "*" "DATA" "$ipServer:$remoteDir" && \
+	find DATA -mindepth 1 -depth -type d -regextype posix-extended -regex ".*/CUR[0-9]{8}T[0-9]{6}" \
+		\! -exec test -f '{}/meteo.csv' \; -exec rm -rf {} +
+
+# clean up empty folders, exclude CUR folders from current day
+find DATA/ -mindepth 1 -depth -type d -not -path "$(date +'DATA/%Y/%m/%d')" -not -path "$(date +'*CUR%Y%m%dT*')" -empty -delete
+
+
+
+####### SYNCING LOGS ##########
+
+echo "[INFO]  Syncing Logs..."
+
+## first sync only the auto-generated service logs and remove after sync
+rsync -e "ssh -p $sshPort" -am $rsync_loglevel $rsync_chmod --remove-source-files \
+		-f'+ *[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9]-[a-z]*.log' \
+		-f'+ *[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9]-[a-z]*.log' \
+		-f'+ */' -f'- *' "LOGS" "$ipServer:$remoteDir" && \
+	find LOGS/ -mindepth 1 -depth -type d -not -path "LOGS/$YMFolder" -empty -delete
+
+## next sync all the remaining logs without removing after sync
+rsync -e "ssh -p $sshPort" -am $rsync_loglevel $rsync_chmod "LOGS" "$ipServer:$remoteDir"
+
+
+
+####### SYNCING OTHER ##########
 
 if [ -d "OTHER" ]; then
-	echo "Syncing Directory OTHER..."
-	# rsync --ignore-existing -e "ssh -p $sshPort" -r --remove-source-files "OTHER" "$ipServer:$remoteDir" && \
-	# find OTHER/ -mindepth 1 -depth -type d  -empty -exec rmdir {} \;
+	echo "[INFO]  Syncing Directory OTHER..."
+	
+	## first sync only the auto-generated webcam images and remove after sync
+	rsync -e "ssh -p $sshPort" -am $rsync_loglevel $rsync_chmod --remove-source-files \
+			-f'+ *[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]T[0-9][0-9][0-9][0-9][0-9][0-9].jpg' \
+			-f'+ */' -f'- *' "OTHER" "$ipServer:$remoteDir" && \
+		find OTHER/ -mindepth 2 -depth -type d -not -path "OTHER/WEBCAM_*/$YMFolder" -empty -delete
 
-	rsync -e "ssh -p $sshPort" -rt "OTHER" "$ipServer:$remoteDir"
+	## next sync all the remaining files without removing after sync
+	rsync -e "ssh -p $sshPort" -am $rsync_loglevel $rsync_chmod "OTHER" "$ipServer:$remoteDir"
 fi
-echo "Syncing uncompled (CUR) sequence from yesterday..."
-find DATA/ -type d -name "CUR$(date -d yesterday +'%Y%m%d')*" \
-	-exec rsync -e "ssh -p $sshPort" -rt {} "$ipServer:$remoteDir/CUR/" \;
-echo "End."
+
+
+echo "[INFO]  End."

@@ -150,7 +150,7 @@ class HypstarHandler(Hypstar):
             with open(path_to_file, 'wb') as f:
                 f.write(stream)
 
-            info(f"Saved to {path_to_file}.")
+            info(f"Saved to {path_to_file}")
             if return_stream:
                 return stream
             return True

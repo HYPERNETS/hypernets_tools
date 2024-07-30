@@ -1402,8 +1402,8 @@ webpic() (
 		echo
 		echo "Take webcam picture"
 		echo 
-		echo "  site    store site (relay 5) picture in $HYPERNETS_TOOLS/OTHER/WEBCAM_SITE/"
-		echo "  sky     store sky (relay 6) picture in $HYPERNETS_TOOLS/OTHER/WEBCAM_SKY/"
+		echo "  site    store site (relay 5) picture in $HYPERNETS_TOOLS/OTHER/WEBCAM_SITE/YYYY/MM/"
+		echo "  sky     store sky (relay 6) picture in $HYPERNETS_TOOLS/OTHER/WEBCAM_SKY/YYYY/MM/"
 		echo "  -h, --help      print this help"
 		echo
 		echo "eg: webpic site    webpic sky"
@@ -1423,6 +1423,8 @@ webpic() (
 		webpic_help
 	fi
 
+	YMFolder=$(date +"%Y/%m/")
+
 	source utils/configparser.sh
 	config=$(parse_config "webcam_$cam" config_static.ini)
 	
@@ -1438,7 +1440,7 @@ webpic() (
 	set +e
 	set pipefail
 	export AV_LOG_FORCE_COLOR=1
-	cap_out=$(utils/webcam_get_image.sh -c "$webcam_credent" -i "$webcam_ip" -d "OTHER/WEBCAM_${cam^^}/" 2>&1 | tee /dev/fd/2)
+	cap_out=$(utils/webcam_get_image.sh -c "$webcam_credent" -i "$webcam_ip" -d "OTHER/WEBCAM_${cam^^}/$YMFolder" 2>&1 | tee /dev/fd/2)
 	cap_retcode=$?
 
 	if [[ "$cap_retcode" -ne 0 ]]; then

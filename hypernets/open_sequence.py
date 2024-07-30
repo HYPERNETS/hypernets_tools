@@ -84,7 +84,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         dir_branch = Path(start.strftime("%Y/%m/%d"))
         DATA_DIR = Path(path.join(DATA_DIR, dir_branch))
         DATA_DIR.mkdir(parents=True, exist_ok=True)
-        info(f"The data directory is now: {DATA_DIR}.")
+        info(f"The data directory is now: {DATA_DIR}")
 
     seq_path = path.join(DATA_DIR, seq_name)
     final_seq_path = path.join(DATA_DIR, Protocol.create_seq_name(now=start))
@@ -105,7 +105,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     final_seq_path = path.join(DATA_DIR, Protocol.create_seq_name(now=start,
                                suffix=suffix))
 
-    info(f"Creating directories: {seq_path} and {filepath}...")
+    info(f"Creating directories: {seq_path} and {filepath}")
 
     mkdir(seq_path)
     mkdir(filepath)

@@ -138,7 +138,7 @@ shutdown_sequence() {
 		## take a nap if necessary
 		if (( $uptime < $min_uptime )); then
 			let sleep_duration=$min_uptime-$uptime
-			echo "[INFO]  Sequence duration was $uptime seconds (min. allowed $min_uptime s)"
+			echo "[INFO]  Sequence duration was $uptime seconds (min. allowed $min_uptime s for exit code $return_value)"
 			echo "[INFO]  Sleeping for $sleep_duration s..."
 
 			sleep $sleep_duration
@@ -515,6 +515,12 @@ exit_actions() {
 			echo "[WARNING]  Second try : "
 			set +e
 			python3 -m hypernets.open_sequence -f $sequence_file $extra_args
+			return_value=$?
+		    if [ $return_value -eq 0 ] ; then
+		        echo "[INFO]  Success on second attempt"
+		    else
+				echo "[WARNING]  Hysptar scheduled job on second attempt exited with code $return_value";
+			fi
 			set -e
 		fi
     fi

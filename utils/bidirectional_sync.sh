@@ -24,8 +24,8 @@ bidirectional_sync(){
 	remotePath="$3"
 	sshPort="$4"
 
-	echo "Sync files : $remoteAccess:$remotePath"
-	echo "        <->  $localPath"
+	echo "[INFO]  Sync files : $remoteAccess:$remotePath"
+	echo "[INFO]          <->  $localPath"
 
 	set +e  # Temporary allow error in script
 	remoteDate=$(ssh -p "$sshPort" -t "$remoteAccess" \
@@ -33,14 +33,14 @@ bidirectional_sync(){
 		2> /dev/null)
 
 	if [[ "$?" -eq 1 ]]; then
-		echo "$0 : Remote file does not exist"
+		echo "[INFO]  $0 : Remote file does not exist"
 		scp -P "$sshPort" "$localPath" "$remoteAccess:$remotePath"
 		return $?
 	fi
 
 	localDate=$(stat -c %y "$localPath" 2> /dev/null)
 	if [[ "$?" -eq 1 ]]; then
-		echo "$0 : Local file does not exist"
+		echo "[INFO]  $0 : Local file does not exist"
 		scp -P "$sshPort" "$remoteAccess:$remotePath" "$localPath"
 		return $?
 	fi
@@ -52,13 +52,13 @@ bidirectional_sync(){
 
 	# Both files exists, compare of datetimes and sync
 	if [ "$remoteDate" -gt "$localDate" ] ; then
-		echo "Sync from remote to local"
+		echo "[INFO]  Sync from remote to local"
 		rsync -e "ssh -p $sshPort" -vt "$remoteAccess:$remotePath" "$localPath"
 	elif [ "$remoteDate" -lt "$localDate" ] ; then
-		echo "Sync from local to remote"
+		echo "[INFO]  Sync from local to remote"
 		rsync -e "ssh -p $sshPort" -vt "$localPath" "$remoteAccess:$remotePath"
 	else
-		echo "Files are synchronized."
+		echo "[INFO]  Files are synchronized."
 	fi
 	return $?
 }

@@ -27,15 +27,14 @@ if [[ ${PWD##*/} != "hypernets_tools"* ]]; then
 fi
 
 IFS=$'\n\t'
+YMFolder=$(date +"%Y/%m/")
 
 webcam_site()(
 	echo "[INFO]  site_cam: Sleeping 60s"
 	sleep 60 # empirical
 	set +e
-	./utils/webcam_get_image.sh -c "$credent_site" -i "$ip_site" -d "OTHER/WEBCAM_SITE/" -wv
+	./utils/webcam_get_image.sh -c "$credent_site" -i "$ip_site" -d "OTHER/WEBCAM_SITE/$YMFolder" -wv
 	set -e
-	echo "[INFO]  site_cam: Sleeping 30s"
-	sleep 30
 	python -m hypernets.yocto.relay -n5 -soff
 	echo "[INFO]  site_cam: Closing relay 5"
 )
@@ -44,10 +43,8 @@ webcam_sky()(
 	echo "[INFO]  sky_cam: Sleeping 60s"
 	sleep 60 # empirical
 	set +e
-	./utils/webcam_get_image.sh -c "$credent_sky" -i "$ip_sky" -d "OTHER/WEBCAM_SKY/" -wv
+	./utils/webcam_get_image.sh -c "$credent_sky" -i "$ip_sky" -d "OTHER/WEBCAM_SKY/$YMFolder" -wv
 	set -e
-	echo "[INFO]  sky_cam: Sleeping 30s"
-	sleep 30
 	python -m hypernets.yocto.relay -n6 -soff
 	echo "[INFO]  sky_cam: Closing relay 6"
 )
