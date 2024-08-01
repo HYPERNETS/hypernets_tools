@@ -138,11 +138,6 @@ make_log $logNameBase access ssh sshd
 make_log $logNameBase webcam
 disk_usage $logNameBase
 
-# We check if network is on
-echo "[INFO]  Waiting for network..."
-nm-online
-echo "[INFO]  Ok !"
-
 # Read config file :
 source utils/configparser.sh
 
@@ -159,8 +154,21 @@ if [ -z $autoUpdate ]; then
 	autoUpdate="no"
 fi
 
-# We first make sure that server is up
+# Wait until we have connection with the server
 set +e
+echo "[INFO]  Waiting for network..."
+ipServer_ip=$(cut -d "@" -f2 <<< $ipServer)
+while true ; do
+	nc -zw1 $ipServer_ip $sshPort >/dev/null 2>&1
+
+	if [[ $? -eq 0 ]] ; then
+		echo "[INFO]  got response from the network server"
+		break
+	fi
+
+	sleep 1
+done
+
 for i in {1..30}
 do
 	# Update the datetime flag on the server

@@ -39,11 +39,17 @@ function usage(){
 function take_picture(){
 	mkdir -p "$OUTPUT_DIR"
 	DATE=$(date +"%Y%m%dT%H%M%S") 
-	# touch $OUTPUT_DIR/$DATE.jpg
-	ffmpeg -y -i rtsp://"$CREDENTIALS$IP_ADDRESS":554 -update 1 -frames:v 1 \
+
+	if [ "$VERBOSE" -eq 1 ] ; then
+		loglevel=32
+	else
+		loglevel=24
+	fi
+	ffmpeg -v $loglevel -y -i rtsp://"$CREDENTIALS$IP_ADDRESS":554 -update 1 -frames:v 1 \
 		"$OUTPUT_DIR/$FILEPREFIX$DATE.jpg"
-	if [ "$VERBOSE" -eq 1 ]; then
-		echo Output File is : "$OUTPUT_DIR/$FILEPREFIX$DATE".jpg 
+
+	if [[ $? -eq 0 ]] ; then
+		echo "[INFO]  Output File is : '$OUTPUT_DIR/$FILEPREFIX$DATE.jpg'"
 	fi
 }
 
@@ -54,7 +60,7 @@ function wait_up(){
 	timeout=150
 
 	if [ "$VERBOSE" -eq 1 ] ; then
-		echo Waiting for "$IP_ADDRESS"...
+		echo "[DEBUG]  Waiting for $IP_ADDRESS..."
 	fi
 
 	p=1 ; i=1
@@ -65,19 +71,17 @@ function wait_up(){
 		p=$?
 		set -e
 		if [ "$VERBOSE" -eq 1 ] ; then
-			echo Sending ping $i
+			echo "[DEBUG]  Sending ping $i"
 		fi
 		i=$(($i+1))
 	done
 
 	if [ $p -ne 0 ] ; then
-		if [ "$VERBOSE" -eq 1 ] ; then
-			echo "[ERROR] Timeout : $IP_ADDRESS is unreachable."
-		fi	
+		echo "[ERROR]  Timeout : $IP_ADDRESS is unreachable."
 		exit 1
 	else
 		if [ "$VERBOSE" -eq 1 ] ; then
-			echo "$IP_ADDRESS" is up.
+			echo "[DEBUG]  $IP_ADDRESS is up."
 		fi
 	fi
 }
@@ -105,12 +109,12 @@ done
 # shift $OPTIND -1
 
 if [ "$VERBOSE" -eq 1 ] ; then
-	echo "(Verbose Mode On)" 
-	echo "OUTPUT_DIR provided : $OUTPUT_DIR" 
-	echo "FILEPREFIX provided : $FILEPREFIX" 
-	echo "IP_ADDRESS provided : $IP_ADDRESS"
-	echo "CREDENTIALS provided : $CREDENTIALS"
-	echo "WAIT_UP provided : $WAIT_UP"
+	echo "[DEBUG]  (Verbose Mode On)" 
+	echo "[DEBUG]  OUTPUT_DIR provided : $OUTPUT_DIR" 
+	echo "[DEBUG]  FILEPREFIX provided : $FILEPREFIX" 
+	echo "[DEBUG]  IP_ADDRESS provided : $IP_ADDRESS"
+	echo "[DEBUG]  CREDENTIALS provided : $CREDENTIALS"
+	echo "[DEBUG]  WAIT_UP provided : $WAIT_UP"
 fi
 
 # No IP : error
@@ -129,7 +133,7 @@ else
 fi
 
 if [ $VERBOSE -eq 1 ] ; then
-	echo "OUTPUT_DIR : $OUTPUT_DIR" 
+	echo "[DEBUG]  OUTPUT_DIR : $OUTPUT_DIR" 
 fi
 
 # FILEPREFIX Parser

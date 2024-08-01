@@ -40,6 +40,20 @@ if [ -z $remoteSSHPort ]; then
 	remoteSSHPort="20213"
 fi
 
+# Wait until we have connection with the server
+set +e
+echo "[INFO]  Waiting for network..."
+ipServer_ip=$(cut -d "@" -f2 <<< $ipServer)
+while true ; do
+	nc -zw1 $ipServer_ip $sshPort >/dev/null 2>&1
+
+	if [[ $? -eq 0 ]] ; then
+		echo "[INFO]  got response from the network server"
+		break
+	fi
+
+	sleep 1
+done
 
 case $ssh_loglevel in
 
