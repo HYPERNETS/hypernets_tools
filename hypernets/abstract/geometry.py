@@ -106,10 +106,10 @@ class Geometry(object):
             config_file = "config_dynamic.ini"
             config = ConfigParser()
             config.read(config_file)
-            offset_pan = int(config["pantilt"]["offset_pan"])
-            offset_tilt = int(config["pantilt"]["offset_tilt"])
+            offset_pan = float(config["pantilt"]["offset_pan"])
+            offset_tilt = float(config["pantilt"]["offset_tilt"])
             reverse_tilt = config["pantilt"]["reverse_tilt"] == "yes"
-            azimuth_switch = int(config["pantilt"]["azimuth_switch"])
+            azimuth_switch = float(config["pantilt"]["azimuth_switch"])
 
         except KeyError as key:
             warning(f" {key} default values loaded")
