@@ -15,7 +15,6 @@ function print_logo(){
 	echo "        |___/|_|"
 	echo 
 	echo "This script aims to help hypernets_tools installation"
-	echo "(Yoctopuce USB mode only)"
 	echo 
 }
 
@@ -30,7 +29,7 @@ function check_sudo_user(){
 
 function check_if_online(){
 	set +e
-	nm-online
+	nc -zw1 google.com 443 > /dev/null 2>&1
 	if [ $? -ne 0 ]; then
 		echo "Error : please connect to internet."
 		exit 1
@@ -53,7 +52,7 @@ function download_yoctohub(){
 	echo 
 	echo "-- Download and Install the Yoctohub..."
 	echo "------------------------------------------------"
-	sudo ./install/00_install_yoctohub.sh
+	./install/00_install_yoctohub.sh
 }
 
 function auto_config_yocto(){
@@ -106,7 +105,7 @@ function install_dependencies(){
 	echo 
 	echo "-- Installation of python dependencies..."
 	echo "------------------------------------------------"
-	sudo ./install/01_dependencies.sh
+	./install/01_dependencies.sh
 }
 
 
@@ -115,31 +114,16 @@ function update_libhypstar(){
 	echo 
 	echo "-- Downloading and installing libhypstar..."
 	echo "------------------------------------------------"
-    user="$SUDO_USER"
-
-    # Init
-    sudo -u $user git submodule init
-    sudo -u $user git submodule update
-
-    # Update and Install
-    cd hypernets/hypstar/libhypstar/
-    sudo -u $user git checkout main
-    sudo -u $user git pull
-    sudo -u $user make lib
-    sudo make install
-    cd -
-    # sudo ./install/03_update_libhypstar.sh 
+    ./install/03_update_libhypstar.sh 
 }
 
 
 function configure_port(){
     echo 
 	echo 
-	echo "-- Configuration of the Hypstar Port..."
+	echo "-- Configuration of the Hypstar, pan-tilt, and rain sensor ports..."
 	echo "------------------------------------------------"
-	echo "Please connect the FTDI card and press enter to continue"
-	read
-	sudo ./install/02_configure_ports.sh
+	./install/02_configure_ports.sh
 }
 
 
@@ -148,80 +132,144 @@ function setup_backdoor(){
 	echo 
 	echo "-- Seting up ssh server for backup access..."
 	echo "------------------------------------------------"
-	sudo ./install/07_setup_backup_access.sh
+	./install/07_setup_backup_access.sh
+}
+
+
+function os_config(){
+    echo 
+	echo 
+	echo "-- Optimising Operating System configuration..."
+	echo "------------------------------------------------"
+	./install/09_sysconfig.sh
+}
+
+
+function setup_services(){
+    echo 
+	echo 
+	echo "-- Setting up Hypernets startup services..."
+	echo "------------------------------------------------"
+	echo 
+	echo "Which service to configure?"
+	echo "------------------------------------------------"
+    PS3='Please select an option: '
+    srv_options=(
+		"Spectral measurements (hypernets-sequence.service)" # 1
+		"Data synchronisation (hypernets-hello.service)" # 2
+		"Reverse ssh (hypernets-access.service)" # 3
+		"Webcams (hypernets-webcam.service)" # 4
+		"All of the above" # 5
+    )
+	select opt in "${srv_options[@]}"
+	do
+		case $opt in 
+			"${srv_options[0]}") # (hypernets-sequence.service) # 1
+				./install/04_setup_script_at_boot.sh
+				break
+				;;
+			"${srv_options[1]}") # (hypernets-hello.service) # 2
+				./install/05_setup_server_communication.sh
+				break
+				;;
+			"${srv_options[2]}") # (hypernets-access.service) # 3
+				./install/06_setup_remote_access.sh
+				break
+				;;
+			"${srv_options[3]}") # (hypernets-webcam.service) # 4
+				./install/CC_setup_webcams.sh
+				break
+				;;
+			"${srv_options[4]}") # "All of the above" # 5
+				./install/04_setup_script_at_boot.sh
+				./install/05_setup_server_communication.sh
+				./install/06_setup_remote_access.sh
+				./install/CC_setup_webcams.sh
+				break
+				;;
+			*)
+				echo -e "\nInvalid choice!\n"
+				break
+				;;
+		esac
+	done
+
 }
 
 
 function main_menu(){
 while true; do
+	echo
 	echo "------------------------------------------------"
-	PS3='Please select an option:'
+	PS3='Please select an option: '
 	options=(
-		"Update hypernets_tools"
- 		"Install Dependencies"
-		"Download and install YoctoHub" 
- 		"Run Yocto-Pictor auto-configuration"
-		"Install / Update libhypstar"
-		"Configure Hypstar Port"
-		# "Check installation before field deployment"
-		"Configure ssh server as backup access"
-		"Setup shortcut commands for convenience"
-		"Operating system configuration"
- 		"Quit")
+		"Update hypernets_tools" # 1
+ 		"Install dependencies" # 2
+		"Download and install YoctoHub" # 3
+ 		"Run Yocto-Pictor auto-configuration" # 4
+		"Install / update libhypstar" # 5
+		"Configure ports" # 6
+		"Operating system configuration" # 7
+		"Configure ssh server as backup access" # 8
+		"Setup shortcut commands for convenience" # 9
+		"Configure Hypernets startup services" #10
+ 		"Quit" # 11
+	)
 
 	select opt in "${options[@]}"
 	do
 		case $opt in 
-			"${options[0]}")
+			"${options[0]}") # "Update hypernets_tools" # 1
 				check_if_online
 				update_repo
 				break
 				;;
-			"${options[1]}")
+			"${options[1]}") # "Install dependencies" # 2
 				check_if_online
 				install_dependencies
 				break
 				;;
-			"${options[2]}")
+			"${options[2]}") # "Download and install YoctoHub" # 3
 				check_if_online
 				download_yoctohub
 				break
 				;;
-			"${options[3]}")
+			"${options[3]}") # "Run Yocto-Pictor auto-configuration" # 4
 				auto_config_yocto
 				break
 				;;
-			"${options[4]}")
+			"${options[4]}") # "Install / update libhypstar" # 5
 				check_if_online
 				update_libhypstar
 				break
 				;;
-			"${options[5]}")
+			"${options[5]}") # "Configure ports" # 6
 				configure_port
 				break
 				;;
-			"${options[6]}")
+			"${options[6]}") # "Operating system configuration" # 7
+				os_config
+				break
+				;;
+			"${options[7]}") # "Configure ssh server as backup access" # 8
 				setup_backdoor
 				break
 				;;
-			"${options[7]}")
+			"${options[8]}") # "Setup shortcut commands for convenience" # 9
                 ./install/08_setup_shortcuts.sh
 				break
 				;;
-			"${options[8]}")
-                install/09_sysconfig.sh
+			"${options[9]}") # "Configure Hypernets startup services" #10
+                setup_services
 				break
 				;;
-			"${options[9]}")
+			"${options[10]}") # "Quit" # 11
                 exit 0
 				break
 				;;
 			*)
-				echo "Not implemented!"
+				echo -e "\nInvalid choice!\n"
 				break
-				;;
-			*)
-				echo "Invalid choice!"
 				;;
 		esac
 	done

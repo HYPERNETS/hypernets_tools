@@ -31,4 +31,3 @@ chmod 644 $service_file
 
 systemctl enable hypernets-webcam
 systemctl start hypernets-webcam
-journalctl --follow -u hypernets-webcam

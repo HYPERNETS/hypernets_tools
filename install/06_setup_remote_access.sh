@@ -30,6 +30,7 @@ if [ -z $sshPort ]; then
 	sshPort="22"
 fi
 
+echo
 echo "Read from config_static.ini : "
 echo " * Server credentials : $credentials"
 echo " * SSH port           : $sshPort"
@@ -54,9 +55,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
 	systemctl enable hypernets-access
 	systemctl start hypernets-access
-	journalctl --follow -u hypernets-access
 
 else
 	echo "Exit"
-	exit 1
 fi
