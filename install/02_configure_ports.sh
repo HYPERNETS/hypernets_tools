@@ -82,8 +82,8 @@ elif [ "$ID"  == "manjaro" ]; then
 	modules_file="/etc/modules-load.d/modules.conf"
 fi
 
-if [[ ! $(grep "^gpio_f7188x" "$modules_file") ]]; then
-	sed -i -e '/gpio_f7188x/d' "$modules_file"
+if [[ $(grep -c "^gpio_f7188x" "$modules_file") -ne 0 ]]; then
+	sed -i -e '/^gpio_f7188x/d' "$modules_file"
 fi
 
 

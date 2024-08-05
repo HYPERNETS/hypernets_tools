@@ -10,7 +10,7 @@ from argparse import ArgumentTypeError, ArgumentParser
 from serial import Serial
 from struct import unpack, pack
 from time import sleep  # noqa
-from datetime import datetime
+from datetime import datetime, timezone
 
 from logging import debug, info, warning, error
 
@@ -204,7 +204,7 @@ def move_to(ser, pan=None, tilt=None, wait=False):
         # full tilt rotation takes 65s at 10.8V supply, 58s at 12V
         # estimated_time can be unknown or miscalculated so we can't use that
         max_time_to_wait = 65 # seconds
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
 
         i = 0
         position_0 = None
@@ -213,7 +213,7 @@ def move_to(ser, pan=None, tilt=None, wait=False):
             i += 1
             debug(f"{'-'*29} {i} {'-'*29}")
             position_1 = query_position(ser)
-            time_1 = datetime.utcnow()
+            time_1 = datetime.now(timezone.utc)
 
             # time is up
             # either we can't get position from the pan-tilt
