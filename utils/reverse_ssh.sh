@@ -45,9 +45,11 @@ set +e
 echo "[INFO]  Waiting for network..."
 ipServer_ip=$(cut -d "@" -f2 <<< $ipServer)
 while true ; do
-	nc -zw1 $ipServer_ip $sshPort >/dev/null 2>&1
-
-	if [[ $? -eq 0 ]] ; then
+	## make a few different attempts to satisfy all distros
+	if nc -zw1 google.com 443 > /dev/null 2>&1 || \
+			ping -q -c 1 -W 1 google.com > /dev/null 2>&1 || \
+			wget -q --spider http://google.com > /dev/null 2>&1
+	then
 		echo "[INFO]  got response from the network server"
 		break
 	fi

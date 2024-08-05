@@ -1,7 +1,7 @@
 
 from argparse import ArgumentParser
 
-from datetime import datetime
+from datetime import datetime, UTC
 from time import time
 from os import mkdir, replace, path
 from pathlib import Path
@@ -76,7 +76,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     start_time = time()  # for ellapsed time
     flags_dict = {}
 
-    start = datetime.utcnow()  # start = datetime.now()
+    start = datetime.now(UTC)
     seq_name = Protocol.create_seq_name(now=start, prefix="CUR")
 
     if data_dir_tree is True:  # create a directory tree
@@ -280,7 +280,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             iter_line += 1
 
             block_position = geometry.create_block_position_name(iter_line)
-            now_str = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
+            now_str = datetime.now(UTC).strftime("%Y%m%dT%H%M%S")
 
             info(f"{iter_line}) {request} : {now_str}")
 

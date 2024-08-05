@@ -29,9 +29,12 @@ function check_sudo_user(){
 
 function check_if_online(){
 	set +e
-	nc -zw1 google.com 443 > /dev/null 2>&1
-	if [ $? -ne 0 ]; then
-		echo "Error : please connect to internet."
+	## make a few different attempts to satisfy all distros
+	if ! nc -zw1 google.com 443 > /dev/null 2>&1 && \
+			! ping -q -c 1 -W 1 google.com > /dev/null 2>&1 && \
+			! wget -q --spider http://google.com > /dev/null 2>&1
+	then
+		echo -e "\nError : please connect to internet.\n"
 		exit 1
 	fi
 	set -e
@@ -121,7 +124,7 @@ function update_libhypstar(){
 function configure_port(){
     echo 
 	echo 
-	echo "-- Configuration of the Hypstar, pan-tilt, and rain sensor ports..."
+	echo "-- Configuration of the Hypstar and pan-tilt ports..."
 	echo "------------------------------------------------"
 	./install/02_configure_ports.sh
 }
@@ -133,6 +136,15 @@ function setup_backdoor(){
 	echo "-- Seting up ssh server for backup access..."
 	echo "------------------------------------------------"
 	./install/07_setup_backup_access.sh
+}
+
+
+function setup_rain_sensor(){
+    echo 
+	echo 
+	echo "-- Seting up rain sensor..."
+	echo "------------------------------------------------"
+	./install/FF_setup_rain_sensor.sh
 }
 
 
@@ -202,68 +214,85 @@ while true; do
 	echo
 	echo "------------------------------------------------"
 	PS3='Please select an option: '
+	OPT1="Update hypernets_tools"
+ 	OPT2="Install dependencies"
+	OPT3="Download and install YoctoHub"
+ 	OPT4="Run Yocto-Pictor auto-configuration"
+	OPT5="Install / update libhypstar"
+	OPT6="Configure ports"
+	OPT7="Setup rain sensor"
+	OPT8="Operating system configuration"
+	OPT9="Configure ssh server as backup access"
+	OPT10="Setup shortcut commands for convenience"
+	OPT11="Configure Hypernets startup services"
+ 	OPT12="Quit"
 	options=(
-		"Update hypernets_tools" # 1
- 		"Install dependencies" # 2
-		"Download and install YoctoHub" # 3
- 		"Run Yocto-Pictor auto-configuration" # 4
-		"Install / update libhypstar" # 5
-		"Configure ports" # 6
-		"Operating system configuration" # 7
-		"Configure ssh server as backup access" # 8
-		"Setup shortcut commands for convenience" # 9
-		"Configure Hypernets startup services" #10
- 		"Quit" # 11
+		"$OPT1"
+		"$OPT2"
+		"$OPT3"
+		"$OPT4"
+		"$OPT5"
+		"$OPT6"
+		"$OPT7"
+		"$OPT8"
+		"$OPT9"
+		"$OPT10"
+		"$OPT11"
+		"$OPT12"
 	)
 
 	select opt in "${options[@]}"
 	do
 		case $opt in 
-			"${options[0]}") # "Update hypernets_tools" # 1
+			"$OPT1") # "Update hypernets_tools"
 				check_if_online
 				update_repo
 				break
 				;;
-			"${options[1]}") # "Install dependencies" # 2
+			"$OPT2") # "Install dependencies"
 				check_if_online
 				install_dependencies
 				break
 				;;
-			"${options[2]}") # "Download and install YoctoHub" # 3
+			"$OPT3") # "Download and install YoctoHub"
 				check_if_online
 				download_yoctohub
 				break
 				;;
-			"${options[3]}") # "Run Yocto-Pictor auto-configuration" # 4
+			"$OPT4") # "Run Yocto-Pictor auto-configuration"
 				auto_config_yocto
 				break
 				;;
-			"${options[4]}") # "Install / update libhypstar" # 5
+			"$OPT5") # "Install / update libhypstar"
 				check_if_online
 				update_libhypstar
 				break
 				;;
-			"${options[5]}") # "Configure ports" # 6
+			"$OPT6") # "Configure ports"
 				configure_port
 				break
 				;;
-			"${options[6]}") # "Operating system configuration" # 7
+			"$OPT7") # "Setup rain sensor"
+				setup_rain_sensor
+				break
+				;;
+			"$OPT8") # "Operating system configuration"
 				os_config
 				break
 				;;
-			"${options[7]}") # "Configure ssh server as backup access" # 8
+			"$OPT9") # "Configure ssh server as backup access"
 				setup_backdoor
 				break
 				;;
-			"${options[8]}") # "Setup shortcut commands for convenience" # 9
+			"$OPT10") # "Setup shortcut commands for convenience"
                 ./install/08_setup_shortcuts.sh
 				break
 				;;
-			"${options[9]}") # "Configure Hypernets startup services" #10
+			"$OPT11") # "Configure Hypernets startup services"
                 setup_services
 				break
 				;;
-			"${options[10]}") # "Quit" # 11
+			"$OPT12") # "Quit"
                 exit 0
 				break
 				;;
