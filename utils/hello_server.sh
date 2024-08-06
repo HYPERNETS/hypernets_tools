@@ -222,37 +222,9 @@ if [[ "$autoUpdate" == "yes" ]] ; then
 	set -e
 fi
 
-# Check disk free space, units are KB
-datasize="$(find DATA -type d -regextype posix-extended -regex '.*/(CUR|SEQ)[0-9]{8}T[0-9]{6}' -exec du -sk {} \+ | \
-		cut -f 1 | paste -sd+ - | bc)"
-logsize="$(find LOGS -type f -regextype posix-extended \
-		-regex '.*/[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}(-[0-9]{3})?-[a-z]+.log' -exec du -sk {} \+ | \
-		cut -f 1 | paste -sd+ - | bc)"
-othersize="$(find OTHER/ -type f -regextype posix-extended -regex 'OTHER/WEBCAM_(SITE|SKY)/.*[0-9]{8}T[0-9]{6}.jpg' \
-		-exec du -sk {} \+ | cut -f 1 | paste -sd+ - | bc)"
-totalspace="$(df -k . --output=size | tail -n 1 | sed -e 's/[[:space:]]//g')"
-usedspace="$(df -k . --output=used | tail -n 1 | sed -e 's/[[:space:]]//g')"
-
-archivedpercent=$(printf %.0f $(bc <<< "($usedspace + ${datasize:-0} + ${logsize:-0} + ${othersize:-0}) * 100 / $totalspace"))
-
-# Abort if archiving would fill the disk above 90%
-if [[ "$archivedpercent" -gt 90 ]]; then
-	echo "[ERROR]  Archiving would fill the disk above 90%"
-	echo "[WARNING]  Syncing only hello.log"
-
-	# Upload the hello.log to the server without deleting local copy
-	rsync -e "ssh -p $sshPort" -am $rsync_loglevel $rsync_chmod \
-			-f'+ *[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9]-hello.log' \
-			-f'+ *[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9]-hello.log' \
-			-f'+ */' -f'- *' "LOGS" "$ipServer:$remoteDir"
-
-	echo "[ERROR]  Aborting now!"
-	exit -1
-fi
-
 
 # Archive DATA
-echo "[INFO]  Copying data to archive directory..."
+echo "[INFO]  Linking data to archive directory..."
 for folderPath in $(find DATA -type d -regextype posix-extended -regex ".*/(CUR|SEQ)[0-9]{8}T[0-9]{6}"); do
 	seqname=$(basename $folderPath)
 	year="${seqname:3:4}"
@@ -261,22 +233,22 @@ for folderPath in $(find DATA -type d -regextype posix-extended -regex ".*/(CUR|
 	yearMonthDayArchive="ARCHIVE/DATA/$year/$month/$day/"
 	
 	mkdir -p "$yearMonthDayArchive"
-	cp -R "$folderPath" "$yearMonthDayArchive"
+	cp -Rul "$folderPath" "$yearMonthDayArchive"
 done
 
 # Archive LOGS
-echo "[INFO]  Copying logs to archive directory..."
+echo "[INFO]  Linking logs to archive directory..."
 for fileLog in $(find LOGS -type f -regextype posix-extended -regex ".*/[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}(-[0-9]{3})?-[a-z]+.log"); do
   	year="${fileLog:5:4}"
   	month="${fileLog:10:2}"
   	yearMonthArchive="ARCHIVE/LOGS/$year/$month/"
 
   	mkdir -p "$yearMonthArchive"
-  	cp "$fileLog" "$yearMonthArchive"
+  	cp -ul "$fileLog" "$yearMonthArchive"
 done
 
 # Archive Webcam images
-echo "[INFO]  Copying webcam images to archive directory..."
+echo "[INFO]  Linking webcam images to archive directory..."
 for imgfile in $(find OTHER/ -type f -regextype posix-extended -regex "OTHER/WEBCAM_(SITE|SKY)/.*[0-9]{8}T[0-9]{6}.jpg"); do
 	filename="$(basename $imgfile)"
 	year="${filename:0:4}"
@@ -285,26 +257,8 @@ for imgfile in $(find OTHER/ -type f -regextype posix-extended -regex "OTHER/WEB
 	yearMonthArchive="ARCHIVE/OTHER/$camfolder/$year/$month/"
 	
 	mkdir -p "$yearMonthArchive"
-	cp "$imgfile" "$yearMonthArchive"
+	cp -ul "$imgfile" "$yearMonthArchive"
 done
-
-
-## Clean up ARCHIVE
-#
-# Second parameter is level:
-# no subfolders - 0
-# YYYY - 1
-# YYYY/MM - 2
-# YYYY/MM/DD - 3
-#
-# Third parameter is how many to keep
-#
-# remove_old_backups_from_archive "FOLDER" level keep
-remove_old_backups_from_archive "DATA" 3 30
-remove_old_backups_from_archive "LOGS" 2 6
-remove_old_backups_from_archive "OTHER/WEBCAM_SITE" 2 3
-remove_old_backups_from_archive "OTHER/WEBCAM_SKY" 2 3
-
 
 
 ####### SYNCING DATA ##########
@@ -376,6 +330,23 @@ if [ -d "OTHER" ]; then
 	## next sync all the remaining files and folders in OTHER/ without removing after sync
 	rsync -e "ssh -p $sshPort" -am $rsync_loglevel $rsync_chmod "OTHER" "$ipServer:$remoteDir"
 fi
+
+
+## Clean up ARCHIVE
+#
+# Second parameter is level:
+# no subfolders - 0
+# YYYY - 1
+# YYYY/MM - 2
+# YYYY/MM/DD - 3
+#
+# Third parameter is how many to keep
+#
+# remove_old_backups_from_archive "FOLDER" level keep
+remove_old_backups_from_archive "DATA" 3 30
+remove_old_backups_from_archive "LOGS" 2 6
+remove_old_backups_from_archive "OTHER/WEBCAM_SITE" 2 3
+remove_old_backups_from_archive "OTHER/WEBCAM_SKY" 2 3
 
 
 echo "[INFO]  End."
