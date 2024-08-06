@@ -481,9 +481,8 @@ if [[ -n $dataDirTree ]] ; then
 fi
 
 if [[ "$bypassYocto" != "yes" ]] ; then
-	echo "[INFO]  Set relays #2 and #3 to ON."
-	python -m hypernets.yocto.relay -son -n2 -n3
-
+	echo "[INFO]  Set relay #2 to ON."
+	python -m hypernets.yocto.relay -son -n2
 else
 	echo "[INFO]  Bypassing Yocto"
     extra_args="$extra_args --noyocto"
@@ -510,7 +509,6 @@ exit_actions() {
 				echo "[INFO]  Power cycling the radiometer"
 				python -m hypernets.yocto.relay -soff -n3
 				sleep 10
-				python -m hypernets.yocto.relay -son -n3
 			fi
 			echo "[WARNING]  Second try : "
 			set +e

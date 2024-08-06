@@ -2,10 +2,11 @@
 from argparse import ArgumentParser
 
 from datetime import datetime, timezone
-from time import time
+from time import time, sleep
 from os import mkdir, replace, path
 from pathlib import Path
 from shutil import copy
+from threading import Thread
 
 from hypernets.abstract.protocol import Protocol
 from hypernets.abstract.create_metadata import parse_config_metadata
@@ -23,6 +24,7 @@ from hypernets.abstract.geometry import Geometry
 from hypernets.geometry.pan_tilt import move_to_geometry, move_to
 
 from hypernets.yocto.lightsensor_logger import start_lightsensor_thread, terminate_lightsensor_thread
+from hypernets.yocto.relay import set_state_relay
 
 
 def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
@@ -149,6 +151,13 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             error(f"{e}")
             error(f"Failed to read USB-RS485 converter serial number for radiometer port {instrument_port}")
 
+        # The latest FW revisions return BOOTED packet so quickly after
+        # power-on that we have to switch relay in a background thread after
+        # a short delay, otherwise we always get the timeout
+        if not instrument_standalone:
+            relay_thread = Thread(target = relay3_delayed_on)
+            relay_thread.start()
+
         try:
             instrument_instance = HypstarHandler(instrument_loglevel=instrument_loglvl,  # noqa
                                                  instrument_baudrate=instrument_br,
@@ -158,6 +167,9 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
         except Exception as e:
             error(f"{e}")
+
+        if not instrument_standalone:
+            relay_thread.join()
 
         instrument_sn, visible_sn, swir_sn, vm_sn = instrument_instance.get_serials()
         debug(f"SN : * instrument -> {instrument_sn}")
@@ -398,6 +410,12 @@ def park_to_nadir():
     # park radiometer to nadir 
     info("Parking radiometer to nadir")
     move_to(ser=None, tilt=park.tilt_abs, wait=True)
+
+
+def relay3_delayed_on():
+    sleep(1)
+    info("Set relay #3 to ON.")
+    set_state_relay([3], "on")
 
 
 if __name__ == '__main__':
