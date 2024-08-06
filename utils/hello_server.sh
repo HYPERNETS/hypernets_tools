@@ -233,7 +233,7 @@ for folderPath in $(find DATA -type d -regextype posix-extended -regex ".*/(CUR|
 	yearMonthDayArchive="ARCHIVE/DATA/$year/$month/$day/"
 	
 	mkdir -p "$yearMonthDayArchive"
-	cp -Rul "$folderPath" "$yearMonthDayArchive"
+	cp -Raul "$folderPath" "$yearMonthDayArchive"
 done
 
 # Archive LOGS
@@ -244,7 +244,7 @@ for fileLog in $(find LOGS -type f -regextype posix-extended -regex ".*/[0-9]{4}
   	yearMonthArchive="ARCHIVE/LOGS/$year/$month/"
 
   	mkdir -p "$yearMonthArchive"
-  	cp -ul "$fileLog" "$yearMonthArchive"
+  	cp -aul "$fileLog" "$yearMonthArchive"
 done
 
 # Archive Webcam images
@@ -257,7 +257,7 @@ for imgfile in $(find OTHER/ -type f -regextype posix-extended -regex "OTHER/WEB
 	yearMonthArchive="ARCHIVE/OTHER/$camfolder/$year/$month/"
 	
 	mkdir -p "$yearMonthArchive"
-	cp -ul "$imgfile" "$yearMonthArchive"
+	cp -aul "$imgfile" "$yearMonthArchive"
 done
 
 
