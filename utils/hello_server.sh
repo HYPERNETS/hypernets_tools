@@ -222,6 +222,35 @@ if [[ "$autoUpdate" == "yes" ]] ; then
 	set -e
 fi
 
+# Check disk free space, units are KB
+datasize="$(find DATA -type d -regextype posix-extended -regex '.*/(CUR|SEQ)[0-9]{8}T[0-9]{6}' -exec du -sk {} \+ | \
+		cut -f 1 | paste -sd+ - | bc)"
+logsize="$(find LOGS -type f -regextype posix-extended \
+		-regex '.*/[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}(-[0-9]{3})?-[a-z]+.log' -exec du -sk {} \+ | \
+		cut -f 1 | paste -sd+ - | bc)"
+othersize="$(find OTHER/ -type f -regextype posix-extended -regex 'OTHER/WEBCAM_(SITE|SKY)/.*[0-9]{8}T[0-9]{6}.jpg' \
+		-exec du -sk {} \+ | cut -f 1 | paste -sd+ - | bc)"
+totalspace="$(df -k . --output=size | tail -n 1 | sed -e 's/[[:space:]]//g')"
+usedspace="$(df -k . --output=used | tail -n 1 | sed -e 's/[[:space:]]//g')"
+
+archivedpercent=$(printf %.0f $(bc <<< "($usedspace + ${datasize:-0} + ${logsize:-0} + ${othersize:-0}) * 100 / $totalspace"))
+
+# Abort if archiving would fill the disk above 90%
+if [[ "$archivedpercent" -gt 90 ]]; then
+	echo "[ERROR]  Archiving would fill the disk above 90%"
+	echo "[WARNING]  Syncing only hello.log"
+
+	# Upload the hello.log to the server without deleting local copy
+	rsync -e "ssh -p $sshPort" -am $rsync_loglevel $rsync_chmod \
+			-f'+ *[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9]-hello.log' \
+			-f'+ *[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9]-hello.log' \
+			-f'+ */' -f'- *' "LOGS" "$ipServer:$remoteDir"
+
+	echo "[ERROR]  Aborting now!"
+	exit -1
+fi
+
+
 # Archive DATA
 echo "[INFO]  Copying data to archive directory..."
 for folderPath in $(find DATA -type d -regextype posix-extended -regex ".*/(CUR|SEQ)[0-9]{8}T[0-9]{6}"); do
@@ -304,7 +333,7 @@ else
 fi
 
 # finally sync only meteo.csv from CUR folders and delete the folders after successful transfer
-# exclude CUR folders from current day
+# exclude CUR folders from current day to avoid interfering with ongoing sequence
 echo "[INFO]  Syncing uncompled (CUR) sequence meteo.csv..."
 rsync -e "ssh -p $sshPort" -am $rsync_loglevel $rsync_chmod --remove-source-files \
 		--exclude "SEQ*" --exclude "$(date +'CUR%Y%m%dT*')" --include "*/" \
@@ -328,7 +357,7 @@ rsync -e "ssh -p $sshPort" -am $rsync_loglevel $rsync_chmod --remove-source-file
 		-f'+ */' -f'- *' "LOGS" "$ipServer:$remoteDir" && \
 	find LOGS/ -mindepth 1 -depth -type d -not -path "LOGS/$YMFolder" -empty -delete
 
-## next sync all the remaining logs without removing after sync
+## next sync all the remaining files and folders in LOGS/ without removing after sync
 rsync -e "ssh -p $sshPort" -am $rsync_loglevel $rsync_chmod "LOGS" "$ipServer:$remoteDir"
 
 
@@ -344,7 +373,7 @@ if [ -d "OTHER" ]; then
 			-f'+ */' -f'- *' "OTHER" "$ipServer:$remoteDir" && \
 		find OTHER/ -mindepth 2 -depth -type d -not -path "OTHER/WEBCAM_*/$YMFolder" -empty -delete
 
-	## next sync all the remaining files without removing after sync
+	## next sync all the remaining files and folders in OTHER/ without removing after sync
 	rsync -e "ssh -p $sshPort" -am $rsync_loglevel $rsync_chmod "OTHER" "$ipServer:$remoteDir"
 fi
 
