@@ -77,7 +77,9 @@ if [[ "$ip_site" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 	webcam_site &
 	pid_site=$!
 else
-	echo "[WARNING]  Site camera IP '$ip_site' is invalid"
+	if [[ $config_site != "" ]]; then
+		echo "[WARNING]  Site camera IP '$ip_site' is invalid"
+	fi
 	pid_site=0
 fi
 
@@ -95,7 +97,9 @@ if [[ "$ip_sky" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 	webcam_sky &
 	pid_sky=$!
 else
-	echo "[WARNING]  Sky camera IP '$ip_sky' is invalid"
+	if [[ $config_sky != "" ]]; then
+		echo "[WARNING]  Sky camera IP '$ip_sky' is invalid"
+	fi
 	pid_sky=0
 fi
 

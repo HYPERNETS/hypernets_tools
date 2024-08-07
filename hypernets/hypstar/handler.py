@@ -42,7 +42,7 @@ class HypstarHandler(Hypstar):
             try:
                 super().__init__(instrument_port, loglevel=instrument_loglevel)
             except IOError as e:
-                error("Did not get instrument BOOTED packet in {}s".format(boot_timeout)) # noqa
+                error("Radiometer is not responding")
                 exit(27)
 
             except Exception as e:
