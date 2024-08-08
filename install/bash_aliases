@@ -223,6 +223,19 @@ goto-sleep() (
 		exit -1	
 	fi
 
+	# Sleep inhibited by sleep.lock
+	if [ -f sleep.lock ]; then
+		echo "${XHL}Power off has been inhibited by sleep.lock file in the hypernets_tools folder${RESET_HL}"
+		read -p "${XHL}Confirm going to sleem? [y/n]: ${RESET_HL}" -rn1
+		echo
+		echo
+		
+		if [[ ! $REPLY =~ ^[Yy]$ ]]; then 
+			echo "${XHL}Aborting sleep${RESET_HL}"
+			exit -1
+		fi
+	fi
+
 	# dummy sudo for quick elevation of privileges later during poweroff
 	# yocto sleep timer is only 10 s
 	sudo sleep 0
