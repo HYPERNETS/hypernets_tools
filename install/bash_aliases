@@ -1547,7 +1547,7 @@ portal()(
 
 	set +e
 	echo "${HL}$(readlink -m ~/Portal)/ ---> linking to: ---> $ipServer:${remoteDir%/}/${RESET_HL}"
-	sshfs -p $sshPort "$ipServer:${remoteDir%/}/" ~/Portal
+	sshfs -p $sshPort -o reconnect,ServerAliveInterval=60,ServerAliveCountMax=3 "$ipServer:${remoteDir%/}/" ~/Portal
 
 	if [[ $? -eq 0 ]]; then
 		echo "${HL}Portal is open${RESET_HL}"
