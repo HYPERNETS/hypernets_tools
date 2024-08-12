@@ -20,10 +20,8 @@ class Protocol(list[(Geometry, list[Request])]):
                 first_line = fd.readline()
                 if first_line[:17] == "HypernetsProtocol":
                     self.version = first_line[18:-1]
-                    self.read_protocol_v2(fd.read())
-                else:
-                    self.version = "1"
-                    self.read_protocol_v1(fd.readlines())
+
+                self.read_protocol_v2(fd.read())
         else:
             self.name = "On the Fly Protocol"
 
@@ -51,26 +49,6 @@ class Protocol(list[(Geometry, list[Request])]):
             return var, operators[op], int(value)
         # variable, operator, value =
         self.flags[flag] = split_flag_definition(definition)
-
-    def read_protocol_v1(self, lines):
-
-        for line in lines:
-            line = [a.strip() for a in line.split(',')]
-            pan, ref, tilt, *measurement = line
-
-            if ref == 'sun' and pan == "-1" and tilt == "-1":
-                pan, ref, tilt = 0.0, 0, 0.0
-            elif ref == 'sun':
-                ref = 2
-            elif ref == 'abs' or ref == 'nor':
-                ref = 8
-            else:
-                ref = 4
-
-            request = Request.from_line(measurement)
-            info(request)
-            pan, tilt = float(pan), float(tilt)
-            self.append((Geometry(ref, pan=pan, tilt=tilt), [request]))
 
     def read_protocol_v2(self, lines):
         # regexes get very complicated very fast

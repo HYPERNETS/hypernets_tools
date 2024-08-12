@@ -37,11 +37,16 @@ if __name__ == '__main__':
     try:
         rain_sensor = RainSensor()
     except Exception as e:
+        error(f"{e}")
         exit(-1)
 
     for i in range(args.count):
-        value = int(rain_sensor.read_value())
-        info(f"Read value : {value}")
+        try:
+            value = int(rain_sensor.read_value())
+            info(f"Read value : {value}")
+        except Exception as e:
+            error(f"{e}")
+            exit(-1)
 
         if args.numeric:
             print(value)

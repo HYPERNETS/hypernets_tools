@@ -138,7 +138,7 @@ shutdown_sequence() {
 		## take a nap if necessary
 		if (( $uptime < $min_uptime )); then
 			let sleep_duration=$min_uptime-$uptime
-			echo "[INFO]  Sequence duration was $uptime seconds (min. allowed $min_uptime s)"
+			echo "[INFO]  Sequence duration was $uptime seconds (min. allowed $min_uptime s for exit code $return_value)"
 			echo "[INFO]  Sleeping for $sleep_duration s..."
 
 			sleep $sleep_duration
@@ -481,9 +481,8 @@ if [[ -n $dataDirTree ]] ; then
 fi
 
 if [[ "$bypassYocto" != "yes" ]] ; then
-	echo "[INFO]  Set relays #2 and #3 to ON."
-	python -m hypernets.yocto.relay -son -n2 -n3
-
+	echo "[INFO]  Set relay #2 to ON."
+	python -m hypernets.yocto.relay -son -n2
 else
 	echo "[INFO]  Bypassing Yocto"
     extra_args="$extra_args --noyocto"
@@ -500,8 +499,9 @@ exit_actions() {
 
 		# There is no point in trying again in case of some errors:
 		# 30 - sequence file not found
+		# 40 - failed to get instrument instance (no hypstar_port device)
 		# 88 - rainig
-		if [ $return_value -ne 30 ] && [ $return_value -ne 88 ]; then
+		if [ $return_value -ne 30 ] && [ $return_value -ne 40 ] && [ $return_value -ne 88 ]; then
 			sleep 1
 			## VM stabilisation failed
 			## power cycle, otherwise the second attempt fails as well
@@ -509,11 +509,16 @@ exit_actions() {
 				echo "[INFO]  Power cycling the radiometer"
 				python -m hypernets.yocto.relay -soff -n3
 				sleep 10
-				python -m hypernets.yocto.relay -son -n3
 			fi
 			echo "[WARNING]  Second try : "
 			set +e
 			python3 -m hypernets.open_sequence -f $sequence_file $extra_args
+			return_value=$?
+		    if [ $return_value -eq 0 ] ; then
+		        echo "[INFO]  Success on second attempt"
+		    else
+				echo "[WARNING]  Hysptar scheduled job on second attempt exited with code $return_value";
+			fi
 			set -e
 		fi
     fi

@@ -1,6 +1,6 @@
 
 from hypernets import __version__
-from datetime import datetime
+from datetime import datetime, timezone
 from configparser import ConfigParser, ExtendedInterpolation
 from configparser import MissingSectionHeaderError
 
@@ -13,7 +13,7 @@ vm_sn = 0
 
 def special_value(value):
     if value == "{datetime}":
-        return datetime.utcnow().strftime("%Y%m%dT%H%M%S")
+        return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
     elif value == "{v_hypernets_tools}":
         return __version__
     elif value == "{hypstar_sn}":
@@ -30,8 +30,7 @@ def metadata_header_base(protocol_file="placeholder.csv", now=None,
                          PI="Hypernets Virtual",
                          site_name="Virtual Site"):
     if now is None:
-        from datetime import datetime
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
     return ("[Metadata]\n"
             f"datetime = {now.strftime('%Y%m%dT%H%M%S')}\n"

@@ -27,15 +27,22 @@ if [[ ${PWD##*/} != "hypernets_tools"* ]]; then
 fi
 
 IFS=$'\n\t'
+YMFolder=$(date +"%Y/%m/")
+VERBOSE="" # "-v"
 
 webcam_site()(
 	echo "[INFO]  site_cam: Sleeping 60s"
 	sleep 60 # empirical
+
 	set +e
-	./utils/webcam_get_image.sh -c "$credent_site" -i "$ip_site" -d "OTHER/WEBCAM_SITE/" -wv
+	./utils/webcam_get_image.sh -c "$credent_site" -i "$ip_site" -d "OTHER/WEBCAM_SITE/$YMFolder" -w $VERBOSE
+	retcode=$?
 	set -e
-	echo "[INFO]  site_cam: Sleeping 30s"
-	sleep 30
+
+	if [[ $retcode -ne 0 ]] ; then
+		echo "[ERROR]  site_cam: image capture failed"
+	fi
+
 	python -m hypernets.yocto.relay -n5 -soff
 	echo "[INFO]  site_cam: Closing relay 5"
 )
@@ -43,11 +50,16 @@ webcam_site()(
 webcam_sky()(
 	echo "[INFO]  sky_cam: Sleeping 60s"
 	sleep 60 # empirical
+	
 	set +e
-	./utils/webcam_get_image.sh -c "$credent_sky" -i "$ip_sky" -d "OTHER/WEBCAM_SKY/" -wv
+	./utils/webcam_get_image.sh -c "$credent_sky" -i "$ip_sky" -d "OTHER/WEBCAM_SKY/$YMFolder" -w $VERBOSE
+	retcode=$?
 	set -e
-	echo "[INFO]  sky_cam: Sleeping 30s"
-	sleep 30
+
+	if [[ $retcode -ne 0 ]] ; then
+		echo "[ERROR]  sky_cam: image capture failed"
+	fi
+
 	python -m hypernets.yocto.relay -n6 -soff
 	echo "[INFO]  sky_cam: Closing relay 6"
 )
@@ -60,12 +72,14 @@ ip_site=$(echo $config_site | cut -d "@" -f2)
 
 # check if valid IP
 if [[ "$ip_site" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-	echo "[INFO]  Opening relay 5"
+	echo "[INFO]  site_cam: Opening relay 5"
 	python -m hypernets.yocto.relay -n5 -son
 	webcam_site &
 	pid_site=$!
 else
-	echo "[WARNING] Site camera IP '$ip_site' is invalid"
+	if [[ $config_site != "" ]]; then
+		echo "[WARNING]  Site camera IP '$ip_site' is invalid"
+	fi
 	pid_site=0
 fi
 
@@ -78,12 +92,14 @@ ip_sky=$(echo $config_sky | cut -d "@" -f2)
 
 # check if valid IP
 if [[ "$ip_sky" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-	echo "[INFO]  Opening relay 6"
+	echo "[INFO]  sky_cam: Opening relay 6"
 	python -m hypernets.yocto.relay -n6 -son
 	webcam_sky &
 	pid_sky=$!
 else
-	echo "[WARNING] Sky camera IP '$ip_sky' is invalid"
+	if [[ $config_sky != "" ]]; then
+		echo "[WARNING]  Sky camera IP '$ip_sky' is invalid"
+	fi
 	pid_sky=0
 fi
 

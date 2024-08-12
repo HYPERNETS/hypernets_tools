@@ -15,7 +15,6 @@ function print_logo(){
 	echo "        |___/|_|"
 	echo 
 	echo "This script aims to help hypernets_tools installation"
-	echo "(Yoctopuce USB mode only)"
 	echo 
 }
 
@@ -30,9 +29,12 @@ function check_sudo_user(){
 
 function check_if_online(){
 	set +e
-	nm-online
-	if [ $? -ne 0 ]; then
-		echo "Error : please connect to internet."
+	## make a few different attempts to satisfy all distros
+	if ! nc -zw1 google.com 443 > /dev/null 2>&1 && \
+			! ping -q -c 1 -W 1 google.com > /dev/null 2>&1 && \
+			! wget -q --spider http://google.com > /dev/null 2>&1
+	then
+		echo -e "\nError : please connect to internet.\n"
 		exit 1
 	fi
 	set -e
@@ -53,7 +55,7 @@ function download_yoctohub(){
 	echo 
 	echo "-- Download and Install the Yoctohub..."
 	echo "------------------------------------------------"
-	sudo ./install/00_install_yoctohub.sh
+	./install/00_install_yoctohub.sh
 }
 
 function auto_config_yocto(){
@@ -106,7 +108,7 @@ function install_dependencies(){
 	echo 
 	echo "-- Installation of python dependencies..."
 	echo "------------------------------------------------"
-	sudo ./install/01_dependencies.sh
+	./install/01_dependencies.sh
 }
 
 
@@ -115,31 +117,16 @@ function update_libhypstar(){
 	echo 
 	echo "-- Downloading and installing libhypstar..."
 	echo "------------------------------------------------"
-    user="$SUDO_USER"
-
-    # Init
-    sudo -u $user git submodule init
-    sudo -u $user git submodule update
-
-    # Update and Install
-    cd hypernets/hypstar/libhypstar/
-    sudo -u $user git checkout main
-    sudo -u $user git pull
-    sudo -u $user make lib
-    sudo make install
-    cd -
-    # sudo ./install/03_update_libhypstar.sh 
+    ./install/03_update_libhypstar.sh 
 }
 
 
 function configure_port(){
     echo 
 	echo 
-	echo "-- Configuration of the Hypstar Port..."
+	echo "-- Configuration of the Hypstar and pan-tilt ports..."
 	echo "------------------------------------------------"
-	echo "Please connect the FTDI card and press enter to continue"
-	read
-	sudo ./install/02_configure_ports.sh
+	./install/02_configure_ports.sh
 }
 
 
@@ -148,80 +135,170 @@ function setup_backdoor(){
 	echo 
 	echo "-- Seting up ssh server for backup access..."
 	echo "------------------------------------------------"
-	sudo ./install/07_setup_backup_access.sh
+	./install/07_setup_backup_access.sh
+}
+
+
+function setup_rain_sensor(){
+    echo 
+	echo 
+	echo "-- Seting up rain sensor..."
+	echo "------------------------------------------------"
+	./install/FF_setup_rain_sensor.sh
+}
+
+
+function os_config(){
+    echo 
+	echo 
+	echo "-- Optimising Operating System configuration..."
+	echo "------------------------------------------------"
+	./install/09_sysconfig.sh
+}
+
+
+function setup_services(){
+    echo 
+	echo 
+	echo "-- Setting up Hypernets startup services..."
+	echo "------------------------------------------------"
+	echo 
+	echo "Which service to configure?"
+	echo "------------------------------------------------"
+    PS3='Please select an option: '
+    srv_options=(
+		"Spectral measurements (hypernets-sequence.service)" # 1
+		"Data synchronisation (hypernets-hello.service)" # 2
+		"Reverse ssh (hypernets-access.service)" # 3
+		"Webcams (hypernets-webcam.service)" # 4
+		"All of the above" # 5
+    )
+	select opt in "${srv_options[@]}"
+	do
+		case $opt in 
+			"${srv_options[0]}") # (hypernets-sequence.service) # 1
+				./install/04_setup_script_at_boot.sh
+				break
+				;;
+			"${srv_options[1]}") # (hypernets-hello.service) # 2
+				./install/05_setup_server_communication.sh
+				break
+				;;
+			"${srv_options[2]}") # (hypernets-access.service) # 3
+				./install/06_setup_remote_access.sh
+				break
+				;;
+			"${srv_options[3]}") # (hypernets-webcam.service) # 4
+				./install/CC_setup_webcams.sh
+				break
+				;;
+			"${srv_options[4]}") # "All of the above" # 5
+				./install/04_setup_script_at_boot.sh
+				./install/05_setup_server_communication.sh
+				./install/06_setup_remote_access.sh
+				./install/CC_setup_webcams.sh
+				break
+				;;
+			*)
+				echo -e "\nInvalid choice!\n"
+				break
+				;;
+		esac
+	done
+
 }
 
 
 function main_menu(){
 while true; do
+	echo
 	echo "------------------------------------------------"
-	PS3='Please select an option:'
+	PS3='Please select an option: '
+	OPT1="Update hypernets_tools"
+ 	OPT2="Install dependencies"
+	OPT3="Download and install YoctoHub"
+ 	OPT4="Run Yocto-Pictor auto-configuration"
+	OPT5="Install / update libhypstar"
+	OPT6="Configure ports"
+	OPT7="Setup rain sensor"
+	OPT8="Operating system configuration"
+	OPT9="Configure ssh server as backup access"
+	OPT10="Setup shortcut commands for convenience"
+	OPT11="Configure Hypernets startup services"
+ 	OPT12="Quit"
 	options=(
-		"Update hypernets_tools"
- 		"Install Dependencies"
-		"Download and install YoctoHub" 
- 		"Run Yocto-Pictor auto-configuration"
-		"Install / Update libhypstar"
-		"Configure Hypstar Port"
-		# "Check installation before field deployment"
-		"Configure ssh server as backup access"
-		"Setup shortcut commands for convenience"
-		"Operating system configuration"
- 		"Quit")
+		"$OPT1"
+		"$OPT2"
+		"$OPT3"
+		"$OPT4"
+		"$OPT5"
+		"$OPT6"
+		"$OPT7"
+		"$OPT8"
+		"$OPT9"
+		"$OPT10"
+		"$OPT11"
+		"$OPT12"
+	)
 
 	select opt in "${options[@]}"
 	do
 		case $opt in 
-			"${options[0]}")
+			"$OPT1") # "Update hypernets_tools"
 				check_if_online
 				update_repo
 				break
 				;;
-			"${options[1]}")
+			"$OPT2") # "Install dependencies"
 				check_if_online
 				install_dependencies
 				break
 				;;
-			"${options[2]}")
+			"$OPT3") # "Download and install YoctoHub"
 				check_if_online
 				download_yoctohub
 				break
 				;;
-			"${options[3]}")
+			"$OPT4") # "Run Yocto-Pictor auto-configuration"
 				auto_config_yocto
 				break
 				;;
-			"${options[4]}")
+			"$OPT5") # "Install / update libhypstar"
 				check_if_online
 				update_libhypstar
 				break
 				;;
-			"${options[5]}")
+			"$OPT6") # "Configure ports"
 				configure_port
 				break
 				;;
-			"${options[6]}")
+			"$OPT7") # "Setup rain sensor"
+				setup_rain_sensor
+				break
+				;;
+			"$OPT8") # "Operating system configuration"
+				os_config
+				break
+				;;
+			"$OPT9") # "Configure ssh server as backup access"
 				setup_backdoor
 				break
 				;;
-			"${options[7]}")
+			"$OPT10") # "Setup shortcut commands for convenience"
                 ./install/08_setup_shortcuts.sh
 				break
 				;;
-			"${options[8]}")
-                install/09_sysconfig.sh
+			"$OPT11") # "Configure Hypernets startup services"
+                setup_services
 				break
 				;;
-			"${options[9]}")
+			"$OPT12") # "Quit"
                 exit 0
 				break
 				;;
 			*)
-				echo "Not implemented!"
+				echo -e "\nInvalid choice!\n"
 				break
-				;;
-			*)
-				echo "Invalid choice!"
 				;;
 		esac
 	done

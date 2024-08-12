@@ -223,6 +223,19 @@ goto-sleep() (
 		exit -1	
 	fi
 
+	# Sleep inhibited by sleep.lock
+	if [ -f sleep.lock ]; then
+		echo "${XHL}Power off has been inhibited by sleep.lock file in the hypernets_tools folder${RESET_HL}"
+		read -p "${XHL}Confirm going to sleem? [y/n]: ${RESET_HL}" -rn1
+		echo
+		echo
+		
+		if [[ ! $REPLY =~ ^[Yy]$ ]]; then 
+			echo "${XHL}Aborting sleep${RESET_HL}"
+			exit -1
+		fi
+	fi
+
 	# dummy sudo for quick elevation of privileges later during poweroff
 	# yocto sleep timer is only 10 s
 	sudo sleep 0
@@ -1402,8 +1415,8 @@ webpic() (
 		echo
 		echo "Take webcam picture"
 		echo 
-		echo "  site    store site (relay 5) picture in $HYPERNETS_TOOLS/OTHER/WEBCAM_SITE/"
-		echo "  sky     store sky (relay 6) picture in $HYPERNETS_TOOLS/OTHER/WEBCAM_SKY/"
+		echo "  site    store site (relay 5) picture in $HYPERNETS_TOOLS/OTHER/WEBCAM_SITE/YYYY/MM/"
+		echo "  sky     store sky (relay 6) picture in $HYPERNETS_TOOLS/OTHER/WEBCAM_SKY/YYYY/MM/"
 		echo "  -h, --help      print this help"
 		echo
 		echo "eg: webpic site    webpic sky"
@@ -1423,6 +1436,8 @@ webpic() (
 		webpic_help
 	fi
 
+	YMFolder=$(date +"%Y/%m/")
+
 	source utils/configparser.sh
 	config=$(parse_config "webcam_$cam" config_static.ini)
 	
@@ -1438,7 +1453,8 @@ webpic() (
 	set +e
 	set pipefail
 	export AV_LOG_FORCE_COLOR=1
-	cap_out=$(utils/webcam_get_image.sh -c "$webcam_credent" -i "$webcam_ip" -d "OTHER/WEBCAM_${cam^^}/" 2>&1 | tee /dev/fd/2)
+	echo "utils/webcam_get_image.sh -v -c $webcam_credent -i $webcam_ip -d OTHER/WEBCAM_${cam^^}/$YMFolder 2>&1 | tee /dev/fd/2"
+	cap_out=$(utils/webcam_get_image.sh -v -c "$webcam_credent" -i "$webcam_ip" -d "OTHER/WEBCAM_${cam^^}/$YMFolder" 2>&1 | tee /dev/fd/2)
 	cap_retcode=$?
 
 	if [[ "$cap_retcode" -ne 0 ]]; then
@@ -1453,7 +1469,7 @@ webpic() (
 		echo "Is the webcam_$cam config in config_static.ini correct?${RESET_HL}"
 		echo
 	else
-		imgname=$(grep -o "[^']*WEBCAM_${cam^^}[^']*" <<< "$cap_out")
+		imgname=$(grep "Output File is" <<< "$cap_out" | sed -e "s/[^']*'//;s/'.*//")
 		echo "${HL}$cam camera image has been stored as $imgname${RESET_HL}"
 
 		source utils/configparser.sh
@@ -1531,7 +1547,7 @@ portal()(
 
 	set +e
 	echo "${HL}$(readlink -m ~/Portal)/ ---> linking to: ---> $ipServer:${remoteDir%/}/${RESET_HL}"
-	sshfs -p $sshPort "$ipServer:${remoteDir%/}/" ~/Portal
+	sshfs -p $sshPort -o reconnect,ServerAliveInterval=60,ServerAliveCountMax=3 "$ipServer:${remoteDir%/}/" ~/Portal
 
 	if [[ $? -eq 0 ]]; then
 		echo "${HL}Portal is open${RESET_HL}"

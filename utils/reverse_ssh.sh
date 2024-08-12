@@ -18,19 +18,19 @@ reverse_ssh(){
 	ipServer="$1"
 	sshPort="$2"
 	remoteSSHPort="$3"
+	verbosity="$4"
 
-    ssh -p $sshPort -v -g -N -T -o "ServerAliveInterval 10" -o "ExitOnForwardFailure yes" \
+    ssh -p $sshPort $verbosity -g -N -T -o "ServerAliveInterval 10" -o "ExitOnForwardFailure yes" \
 	-R$remoteSSHPort:127.0.0.1:22 $ipServer 
-	# ssh -p $sshPort -o "ExitOnForwardFailure yes" -f -N -R0:127.0.0.1:22 $ipServer > /tmp/ssh_last 2>&1
-	# ssh -p $sshPort $ipServer "cat >> $pathToPortFile" < /tmp/ssh_last 
 }
 
 # Read config file :
 source utils/configparser.sh
 
-ipServer=$(parse_config "credentials" config_static.ini)
-sshPort=$(parse_config "ssh_port" config_static.ini)
-remoteSSHPort=$(parse_config "remote_ssh_port" config_static.ini)
+ipServer="$(parse_config "credentials" config_static.ini)"
+sshPort="$(parse_config "ssh_port" config_static.ini)"
+remoteSSHPort="$(parse_config "remote_ssh_port" config_static.ini)"
+ssh_loglevel="$(parse_config "ssh_loglevel" config_static.ini)"
 
 if [ -z $sshPort ]; then
 	sshPort="22"
@@ -40,5 +40,46 @@ if [ -z $remoteSSHPort ]; then
 	remoteSSHPort="20213"
 fi
 
+# Wait until we have connection with the server
+set +e
+echo "[INFO]  Waiting for network..."
+ipServer_ip=$(cut -d "@" -f2 <<< $ipServer)
+while true ; do
+	## make a few different attempts to satisfy all distros
+	if nc -zw1 google.com 443 > /dev/null 2>&1 || \
+			ping -q -c 1 -W 1 google.com > /dev/null 2>&1 || \
+			wget -q --spider http://google.com > /dev/null 2>&1
+	then
+		echo "[INFO]  got response from the network server"
+		break
+	fi
+
+	sleep 1
+done
+
+case $ssh_loglevel in
+
+  DEBUG | DEBUG1)
+	verbosity="-v"
+    ;;
+
+  DEBUG2)
+	verbosity="-vv"
+    ;;
+
+  DEBUG3)
+	verbosity="-vvv"
+    ;;
+
+  ERROR | *)
+	verbosity=""
+    ;;
+esac
+
+# Increase verbosity for every 10th service restart
+if [[ "$((($(systemctl show hypernets-access.service -p NRestarts --value)+1)%10))" -eq 0 ]]; then
+	verbosity="$verbosity -v"
+fi
+
 echo "[-> $sshPort:]$ipServer:$remoteSSHPort"
-reverse_ssh $ipServer $sshPort $remoteSSHPort
+reverse_ssh "$ipServer" "$sshPort" "$remoteSSHPort" "$verbosity"

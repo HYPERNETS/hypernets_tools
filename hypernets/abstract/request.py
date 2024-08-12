@@ -1,6 +1,6 @@
 
 from enum import IntEnum
-from datetime import datetime
+from datetime import datetime, timezone
 
 from hypernets.hypstar.libhypstar.python.data_structs.spectrum_raw import \
     RadiometerType, RadiometerEntranceType
@@ -168,4 +168,4 @@ class Request(object):
 
     @staticmethod
     def make_datetime_name(extension=".jpg"):
-        return datetime.utcnow().strftime("%Y%m%dT%H%M%S") + extension
+        return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S") + extension

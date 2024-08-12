@@ -14,17 +14,7 @@ if [[ ${PWD##*/} != "hypernets_tools"* ]]; then
 	exit 1
 fi
 
-user="$SUDO_USER"
-
-
-# Init
-sudo -u $user git submodule init
-sudo -u $user git submodule update
-
-# Update and Install
-cd hypernets/hypstar/libhypstar/
-sudo -u $user git checkout vm_dev
-sudo -u $user git pull
-sudo -u $user make clean lib
-make install
+cd hypernets/rain_sensor/
+sudo make
 cd -
+

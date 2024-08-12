@@ -75,20 +75,18 @@ chmod 755 /usr/local/sbin/unique-num
 
 
 
-# load GPIO chip kernel module
+# don't load GPIO chip kernel module
 if [ "$ID"  == "debian" ]; then
 	modules_file="/etc/modules"
 elif [ "$ID"  == "manjaro" ]; then
 	modules_file="/etc/modules-load.d/modules.conf"
 fi
 
-if [[ ! $(grep "^gpio_f7188x" "$modules_file") ]]; then
-	echo "gpio_f7188x" >> "$modules_file"
+if [[ $(grep -c "^gpio_f7188x" "$modules_file") -ne 0 ]]; then
+	sed -i -e '/^gpio_f7188x/d' "$modules_file"
 fi
 
-set +e
-modprobe -rq ftdi-sio gpio_f7188x 
-set -e
+
 
 ### UDEV RULES:
 
@@ -102,26 +100,13 @@ KERNEL=="ttyUSB*", SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", IMPORT{program}="/
 # allow rw access to pan-tilt port
 KERNEL=="$pantiltPort", SUBSYSTEM=="tty", MODE="0666"
 
-# Allow rw access to rain sensor gpio port through libgpiod.
-# Normally gpio-f7188x is initialised before ftdi-sio
-# and gpio-f7188x-7 is gpiochip7, however, we must be sure we
-# are not messing with the wrong GPIO lines. 
-# The chip label is unfortunately not listed in udevadm info --attribute-walk /dev/gpiochip7
-# Therefore we use this ugly workaround to detect which is the first
-# gpio-f7188x chip and add 7 to get the correct chip.
-# It is given a+rw permissions and /dev/rain_sensor is linked to it.
-KERNEL=="gpiochip*", SUBSYSTEM=="gpio", DRIVERS=="gpio-f7188x", ACTION=="add", RUN+="/usr/bin/bash -c 'chip_base=\$\$(ls /sys/devices/platform/gpio-f7188x/ | grep gpiochip | sort -n | head -n 1); ln -sf gpiochip\$\$((\$\${chip_base:8}+7)) /dev/rain_sensor; chmod -f a+rw /dev/rain_sensor'"
-
 EOF
 
 ## cleanup, reload and trigger
 udevadm control --reload-rules
 sleep 1
-rm -f /dev/radiometer* /dev/rain_sensor
+rm -f /dev/radiometer*
 udevadm trigger
 sleep 1
-modprobe gpio_f7188x
-modprobe ftdi-sio
-sleep 1
 set +e
-ls -l /dev/radiometer* /dev/rain_sensor
+ls -l /dev/radiometer*

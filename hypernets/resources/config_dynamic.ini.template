@@ -3,7 +3,7 @@
 keep_pc = on
 start_sequence = no
 
-sequence_file = hypernets/resources/sequences_samples/v2/your_sequence.txt
+sequence_file = hypernets/resources/sequences_samples/your_sequence.txt
 
 # To enable schedule2 (alternative) set checkup reason to 'yes'
 # and uncomment the 'sequence_file_alt' field
@@ -11,12 +11,12 @@ sequence_file = hypernets/resources/sequences_samples/v2/your_sequence.txt
 # when using the yocto-pictor schedule2
 
 check_wakeup_reason = no
-# sequence_file_alt = hypernets/resources/sequences_samples/v2/sequence_validation_v2.txt
+# sequence_file_alt = hypernets/resources/sequences_samples/your_validation_sequence.txt
 
 # check the rain sensor and abort the sequence if rain is detected
 check_rain = yes
 
-# Make a directory tree: YYYY/MM/DD/SEQXXX inside the DATA folder
+# Make a directory tree: YYYY/MM/DD/SEQ... inside the DATA folder
 data_dir_tree = no
 
 auto_update = no

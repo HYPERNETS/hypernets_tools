@@ -26,6 +26,7 @@ if [ -z $sshPort ]; then
 	sshPort="22"
 fi
 
+echo
 echo "Read from config_static.ini : "
 echo " * Server credentials : $credentials"
 echo " * Remote directory   : $remoteDir"
@@ -40,7 +41,10 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 	echo
 
 	if [[ $REPLY =~ ^[Yy]$ ]]; then 
-		# sudo -u $user ssh-keygen -t rsa
+		if [[ ! -f "/home/$user/.ssh/id_rsa" ]]; then
+			sudo -u $user ssh-keygen -t rsa
+		fi
+
 		sudo -u $user ssh-copy-id -i /home/$user/.ssh/id_rsa \
 			-p $sshPort $credentials
 	fi
@@ -60,8 +64,6 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
 	systemctl enable hypernets-hello
 	systemctl start hypernets-hello
-	journalctl --follow -u hypernets-hello
-
 else
 	echo "Exit"
 fi

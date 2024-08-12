@@ -1,11 +1,12 @@
 
 from argparse import ArgumentParser
 
-from datetime import datetime
-from time import time
+from datetime import datetime, timezone
+from time import time, sleep
 from os import mkdir, replace, path
 from pathlib import Path
 from shutil import copy
+from threading import Thread
 
 from hypernets.abstract.protocol import Protocol
 from hypernets.abstract.create_metadata import parse_config_metadata
@@ -23,6 +24,7 @@ from hypernets.abstract.geometry import Geometry
 from hypernets.geometry.pan_tilt import move_to_geometry, move_to
 
 from hypernets.yocto.lightsensor_logger import start_lightsensor_thread, terminate_lightsensor_thread
+from hypernets.yocto.relay import set_state_relay
 
 
 def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
@@ -76,7 +78,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     start_time = time()  # for ellapsed time
     flags_dict = {}
 
-    start = datetime.utcnow()  # start = datetime.now()
+    start = datetime.now(timezone.utc)
     seq_name = Protocol.create_seq_name(now=start, prefix="CUR")
 
     if data_dir_tree is True:  # create a directory tree
@@ -84,7 +86,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         dir_branch = Path(start.strftime("%Y/%m/%d"))
         DATA_DIR = Path(path.join(DATA_DIR, dir_branch))
         DATA_DIR.mkdir(parents=True, exist_ok=True)
-        info(f"The data directory is now: {DATA_DIR}.")
+        info(f"The data directory is now: {DATA_DIR}")
 
     seq_path = path.join(DATA_DIR, seq_name)
     final_seq_path = path.join(DATA_DIR, Protocol.create_seq_name(now=start))
@@ -105,7 +107,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     final_seq_path = path.join(DATA_DIR, Protocol.create_seq_name(now=start,
                                suffix=suffix))
 
-    info(f"Creating directories: {seq_path} and {filepath}...")
+    info(f"Creating directories: {seq_path} and {filepath}")
 
     mkdir(seq_path)
     mkdir(filepath)
@@ -149,11 +151,25 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             error(f"{e}")
             error(f"Failed to read USB-RS485 converter serial number for radiometer port {instrument_port}")
 
-        instrument_instance = HypstarHandler(instrument_loglevel=instrument_loglvl,  # noqa
-                                             instrument_baudrate=instrument_br,
-                                             instrument_port=instrument_port,
-                                             expect_boot_packet=except_boot,
-                                             boot_timeout=instrument_boot_timeout)   # noqa
+        # The latest FW revisions return BOOTED packet so quickly after
+        # power-on that we have to switch relay in a background thread after
+        # a short delay, otherwise we always get the timeout
+        if not instrument_standalone:
+            relay_thread = Thread(target = relay3_delayed_on)
+            relay_thread.start()
+
+        try:
+            instrument_instance = HypstarHandler(instrument_loglevel=instrument_loglvl,  # noqa
+                                                 instrument_baudrate=instrument_br,
+                                                 instrument_port=instrument_port,
+                                                 expect_boot_packet=except_boot,
+                                                 boot_timeout=instrument_boot_timeout)   # noqa
+
+        except Exception as e:
+            error(f"{e}")
+
+        if not instrument_standalone:
+            relay_thread.join()
 
         instrument_sn, visible_sn, swir_sn, vm_sn = instrument_instance.get_serials()
         debug(f"SN : * instrument -> {instrument_sn}")
@@ -276,7 +292,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             iter_line += 1
 
             block_position = geometry.create_block_position_name(iter_line)
-            now_str = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
+            now_str = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
 
             info(f"{iter_line}) {request} : {now_str}")
 
@@ -394,6 +410,12 @@ def park_to_nadir():
     # park radiometer to nadir 
     info("Parking radiometer to nadir")
     move_to(ser=None, tilt=park.tilt_abs, wait=True)
+
+
+def relay3_delayed_on():
+    sleep(1)
+    info("Set relay #3 to ON.")
+    set_state_relay([3], "on")
 
 
 if __name__ == '__main__':

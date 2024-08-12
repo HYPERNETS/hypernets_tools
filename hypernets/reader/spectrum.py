@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from datetime import datetime
+from datetime import datetime, timezone
 from struct import unpack, calcsize
 
 from hypernets.hypstar.libhypstar.python.data_structs.spectrum import \
@@ -62,4 +62,4 @@ class Spectrum(object):
 
     @staticmethod
     def read_timestamp(timestamp):
-        return datetime.utcfromtimestamp(timestamp/1000)
+        return datetime.fromtimestamp(timestamp/1000, timezone.utc)
