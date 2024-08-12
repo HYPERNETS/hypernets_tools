@@ -683,8 +683,12 @@ schedule() (
 	
 	if [[ "${1-}" == "-h" ]] || [[ "${1-}" == "--help" ]]
 	then
+		echo
 		echo "View & Adjust yocto schedules 1 & 2 and time zone"
-		echo " notes:		-avoid overlaping sequences, max-runtime should be less than time between sequences"
+		echo "schedule         without options shows current schedules and time zone"
+		echo "         set     opens interactive menu for setting the schedules and time zone"
+		echo "eg:  schedule      schedule set"
+		echo "note: avoid overlaping sequences, max-runtime should be less than time between sequences"
 		exit
 	fi
 	
@@ -697,15 +701,74 @@ schedule() (
 		exit -1
 	fi
 	
-	
-	clear
-	
 	yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yoctowifibrd get_utcOffset)
 	if [ "$yocto_offset" = 0 ]; then
 		utc_offset=""
 	else
 		utc_offset=$(printf "%+d" $(("$yocto_offset" / 3600)))
 	fi
+
+	## print current schedules and exit
+	if [[ "${1-}" == "" ]]
+	then
+		echo "Visible parameters are active, \"_\" marks inactive"
+		echo "All inactive is equivalent to all set for a single field"
+		echo "All inactive for all fields disables the schedule"
+
+		for i in 1 2;
+		do
+			echo "-----------------------------------------------------"
+			echo "   ${HL}Schedule $i${RESET_HL}"
+			echo -e -n "Months:\t\t"
+			YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$i" get_months
+			echo -e -n "Days:\t\t"
+			YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$i" get_monthDays
+			echo -e -n "Weekdays:\t"
+			YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$i" get_weekDays
+			echo -e -n "Hours:\t\t"
+			YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$i" get_hours
+
+			minutes_dec=$(YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$i" get_minutes)
+			minutes_bin=$(bc <<< "obase=2; $minutes_dec")
+			length=${#minutes_bin}
+			echo -e -n "Minutes:\t["
+			for ((i = $length, j=0; i >= 0; i--, j++)); do
+			    if [[ "${minutes_bin:i:1}" == "1" ]]; then
+				    echo -n "$j,"
+				fi
+			done
+			echo "]"
+		done
+
+		echo "-----------------------------------------------------"
+		echo -n "Rugged PC date & time:  "
+		date '+%Y/%m/%d %H:%M:%S %Z'
+		echo -n "Yocto date & time is:   "
+		yocto_time=$(YRealTimeClock -f '[result]' -r 127.0.0.1 "$yoctowifibrd" get_dateTime)
+		if [ "$yocto_offset" = 0 ]; then
+			echo "$yocto_time UTC"
+		else
+			echo "$yocto_time UTC$utc_offset (UTC offset is $yocto_offset s)"
+		fi
+
+		next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 "$yoctowifibrd" get_nextWakeUp|sed -e 's/[[:space:]].*//')
+		if [ "$next_wakeup_timestamp" = 0 ]; then
+			echo "${XHL}    Yocto scheduled wakeup is disabled${RESET_HL}"
+		else
+			yocto_timestamp=$(date -d "$yocto_time UTC" -u +%s)
+			delta=$(( "$next_wakeup_timestamp" - "$yocto_timestamp" ))
+			echo "Next wake up is at:     $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset (in $delta s)"
+		fi
+
+		exit 0
+	fi
+	
+	## only schedule set past this line
+	if [[ "${1-}" != "set" ]]; then
+		exit
+	fi
+	
+	clear
 	
 	while [ 1 ]
 	do
