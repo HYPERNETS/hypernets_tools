@@ -721,24 +721,42 @@ schedule() (
 			echo "   ${HL}Schedule $n_sched${RESET_HL}"
 			echo -e -n "Months:\t\t"
 			YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$n_sched" get_months
-			echo -e -n "Days:\t\t"
-			YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$n_sched" get_monthDays
+
+			days=$(YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$n_sched" get_monthDays)
+			if [[ "$days" =~ ^\[\.*\]$ ]]; then
+				echo -e "Days:\t\t$days"
+			else
+				echo -e -n "Days:\t\t["
+				for ((i = 0; i < 31; i++)); do
+				    if [[ "${days:i+1:1}" != "." ]]; then
+					    echo -n "$((i+1)) "
+					else
+					    echo -n ". "
+					fi
+				done
+				tput cub 1
+				echo "]"
+			fi
+
 			echo -e -n "Weekdays:\t"
 			YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$n_sched" get_weekDays
 			
 			hours=$(YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$n_sched" get_hours)
-			echo -e -n "Hours:\t\t["
-			for ((i = 0; i < 24; i++)); do
-			    if [[ "${hours:i+1:1}" != "." ]]; then
-				    echo -n "$i "
-				else
-				    echo -n ". "
-				fi
-			done
-			tput cub 1
-			echo "]"
+			if [[ "$hours" =~ ^\[\.*\]$ ]]; then
+				echo -e "Hours:\t\t$hours"
+			else
+				echo -e -n "Hours:\t\t["
+				for ((i = 0; i < 24; i++)); do
+				    if [[ "${hours:i+1:1}" != "." ]]; then
+					    echo -n "$i "
+					else
+					    echo -n ". "
+					fi
+				done
+				tput cub 1
+				echo "]"
+			fi
 			
-
 			minutes_dec=$(YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$n_sched" get_minutes)
 			minutes_bin=$(bc <<< "obase=2; $minutes_dec")
 			length=${#minutes_bin}
@@ -873,7 +891,6 @@ schedule() (
 		
 		
 		#################### #Adjust schedule #######################################################
-echo "ch2=$ch" >> /tmp/log
 		if [ "$ch" = "1" ] # Schedule 1
 		then
 			schedy=1
@@ -883,8 +900,6 @@ echo "ch2=$ch" >> /tmp/log
 			schedy=2
 			ch=99
 		fi
-		
-echo "ch3=$ch" >> /tmp/log
 		
 		if [ "$ch" = "99" ] 
 		then
@@ -1358,10 +1373,7 @@ echo "ch3=$ch" >> /tmp/log
 				if [[ "$userinput" =~ ^([rR])$ ]] #redo
 				then
 					echo "  Give it another crack then....  "
-
-echo "schedy=$schedy" >> /tmp/log
 					ch=99
-echo "ch=$ch" >> /tmp/log
 					skipread=1
 				fi
 			
