@@ -711,36 +711,50 @@ schedule() (
 	## print current schedules and exit
 	if [[ "${1-}" == "" ]]
 	then
-		echo "Visible parameters are active, \"_\" marks inactive"
+		echo "Visible parameters are active, \".\" marks inactive"
 		echo "All inactive is equivalent to all set for a single field"
 		echo "All inactive for all fields disables the schedule"
 
-		for i in 1 2;
+		for n_sched in 1 2;
 		do
-			echo "-----------------------------------------------------"
-			echo "   ${HL}Schedule $i${RESET_HL}"
+			echo "----------------------------------------------------------"
+			echo "   ${HL}Schedule $n_sched${RESET_HL}"
 			echo -e -n "Months:\t\t"
-			YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$i" get_months
+			YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$n_sched" get_months
 			echo -e -n "Days:\t\t"
-			YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$i" get_monthDays
+			YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$n_sched" get_monthDays
 			echo -e -n "Weekdays:\t"
-			YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$i" get_weekDays
-			echo -e -n "Hours:\t\t"
-			YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$i" get_hours
+			YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$n_sched" get_weekDays
+			
+			hours=$(YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$n_sched" get_hours)
+			echo -e -n "Hours:\t\t["
+			for ((i = 0; i < 24; i++)); do
+			    if [[ "${hours:i+1:1}" != "." ]]; then
+				    echo -n "$i "
+				else
+				    echo -n ". "
+				fi
+			done
+			tput cub 1
+			echo "]"
+			
 
-			minutes_dec=$(YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$i" get_minutes)
+			minutes_dec=$(YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$n_sched" get_minutes)
 			minutes_bin=$(bc <<< "obase=2; $minutes_dec")
 			length=${#minutes_bin}
 			echo -e -n "Minutes:\t["
-			for ((i = $length, j=0; i >= 0; i--, j++)); do
+			for ((i = (($length - 1)), j=0; i >= 0; i--, j++)); do
 			    if [[ "${minutes_bin:i:1}" == "1" ]]; then
 				    echo -n "$j,"
 				fi
 			done
+			if [[ $minutes_dec != "0" ]]; then
+				tput cub 1
+			fi
 			echo "]"
 		done
 
-		echo "-----------------------------------------------------"
+		echo "----------------------------------------------------------"
 		echo -n "Rugged PC date & time:  "
 		date '+%Y/%m/%d %H:%M:%S %Z'
 		echo -n "Yocto date & time is:   "
@@ -859,6 +873,7 @@ schedule() (
 		
 		
 		#################### #Adjust schedule #######################################################
+echo "ch2=$ch" >> /tmp/log
 		if [ "$ch" = "1" ] # Schedule 1
 		then
 			schedy=1
@@ -869,6 +884,7 @@ schedule() (
 			ch=99
 		fi
 		
+echo "ch3=$ch" >> /tmp/log
 		
 		if [ "$ch" = "99" ] 
 		then
@@ -1319,28 +1335,17 @@ schedule() (
 					#save to yocto
 					YWakeUpSchedule -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$schedy" set_hours "$hours"
 			
-					minsbinarray=() #clear mins array
-					marray=($(echo "$minutes" | tr "," "\n")) #remove the , put into an array
-					len=${#marray[@]} # number of vars in arrays
-					arn=$((len - 1))
-					mnn=${marray[$arn]} # 1st num in array (ie 1st num from right)
-					for (( mn=59;mn>=0;mn-- )) ; do #loop until last num creating binary num
-						revvar=$((60 - mn))
-						if [[ "$mn" -eq "$mnn" ]] #check var against loop mn
-						then 
-							arn=$((arn - 1))
-							mnn=${marray[$arn]} #load next bit to look for	
-							minsbinarray[$revvar]="1"
-						else
-							minsbinarray[$revvar]="0"
+ 					marray=($(echo "$minutes" | tr "," "\n")) #remove the , put into an array
+ 					len=${#marray[@]} # number of vars in arrays
+
+					dec=0
+					for (( i = 0; i < len; i++)); do
+						if ((${marray[$i]} >= 0 && ${marray[$i]} <= 59)); then
+							dec=$((dec + 2**${marray[$i]}))
 						fi
 					done
-					b2d=$(echo "${minsbinarray[*]}") #put array contents back into minss var
-					b2d=$(echo "$b2d" | sed -r 's/[ ]+//g') #replace space with nufn
-					dec=$(echo "obase=10; ibase=2; $b2d" | bc)
 					#save to yocto
-					#last one with -s for saving to flash
-					YWakeUpSchedule -s -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$schedy" set_minutes "$dec"
+ 					YWakeUpSchedule -s -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$schedy" set_minutes "$dec"
 			
 					echo
 					#all saved to yocto!
@@ -1353,7 +1358,10 @@ schedule() (
 				if [[ "$userinput" =~ ^([rR])$ ]] #redo
 				then
 					echo "  Give it another crack then....  "
-					ch=2
+
+echo "schedy=$schedy" >> /tmp/log
+					ch=99
+echo "ch=$ch" >> /tmp/log
 					skipread=1
 				fi
 			
