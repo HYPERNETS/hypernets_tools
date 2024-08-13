@@ -73,7 +73,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     protocol.check_if_vm_requested()
 
     if not path.exists(DATA_DIR):  # TODO move management of output folder
-        mkdir(DATA_DIR)
+        mkdir(DATA_DIR, mode=0o755)
 
     start_time = time()  # for ellapsed time
     flags_dict = {}
@@ -85,7 +85,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         info("Creating the directory tree...")
         dir_branch = Path(start.strftime("%Y/%m/%d"))
         DATA_DIR = Path(path.join(DATA_DIR, dir_branch))
-        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        DATA_DIR.mkdir(parents=True, exist_ok=True, mode=0o755)
         info(f"The data directory is now: {DATA_DIR}")
 
     seq_path = path.join(DATA_DIR, seq_name)

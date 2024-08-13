@@ -128,7 +128,7 @@ class HypstarHandler(Hypstar):
             path_to_file = path.join("DATA", request.spectra_name_convention())
 
             if not exists("DATA"):
-                mkdir("DATA")
+                mkdir("DATA", mode=0o755)
 
         if request.action == InstrumentAction.PICTURE:
             self.take_picture(path_to_file)
