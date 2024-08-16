@@ -39,9 +39,6 @@ PATH="$PATH:~/.local/bin"
 
 source utils/configparser.sh
 
-# Sequence Configuration:
-dataDirTree=$(parse_config "data_dir_tree" config_dynamic.ini)
-
 # Hypstar Configuration:
 baudrate=$(parse_config "baudrate" config_dynamic.ini)
 hypstarPort=$(parse_config "hypstar_port" config_dynamic.ini)
@@ -472,12 +469,6 @@ fi
 
 if [[ -n $verbosity ]] ; then
 	extra_args="$extra_args -v $verbosity"
-fi
-
-if [[ -n $dataDirTree ]] ; then
-	if [[ "$dataDirTree" == "yes" ]] ; then
-		extra_args="$extra_args -d"
-	fi
 fi
 
 if [[ "$bypassYocto" != "yes" ]] ; then

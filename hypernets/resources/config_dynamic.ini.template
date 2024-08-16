@@ -55,11 +55,6 @@ sequence_file_alt = hypernets/resources/sequences_samples/your_validation_sequen
 # The pan-tilt is parked to nadir (0, hyper) before exiting
 check_rain = yes
 
-# Make a directory tree: YYYY/MM/DD/SEQ... inside the DATA folder
-#
-# DEPRECATED OPTION THAT WILL SOON BE FORCED TO yes AND REMOVED FROM CONFIG!
-data_dir_tree = yes
-
 # auto_update - attempt updating hypernets_tools at system boot
 # Allowed values: yes/no - do/don't git pull if hypernets-hello.service is enabled
 #
