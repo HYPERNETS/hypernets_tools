@@ -44,6 +44,7 @@ def parse_config_metadata(sequence_file, config_file="config_dynamic.ini",
         str_metadata += f"{field} = {metadata_section[field]}\n"
 
     # populate auto-generated metadata
+    str_metadata += f"hypernets_tools_version = {__version__}\n"
     now = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
     str_metadata += f"datetime = {now}\n"
     str_metadata += f"hypstar_sn = {instrument_sn}\n"

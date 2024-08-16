@@ -66,6 +66,8 @@ auto_update = no
 # Allowed values: ERROR, WARNING, INFO, DEBUG
 #
 # All messages up to the selected level are recorded in sequence.log
+# Some important INFO records (OS and hypernets_tools version, environmental logs, etc.)
+# are logged even if loglevel = ERROR or WARNING
 verbosity = INFO
 
 

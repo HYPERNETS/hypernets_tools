@@ -16,7 +16,7 @@ from hypernets.hypstar.handler import HypstarHandler
 from hypernets.hypstar.libhypstar.python.hypstar_wrapper import HypstarLogLevel
 from hypernets.hypstar.libhypstar.python.data_structs.environment_log import get_csv_header
 
-from logging import debug, info, warning, error # noqa
+from logging import debug, info, warning, error, getLogger, INFO
 
 from hypernets.rain_sensor import RainSensor
 
@@ -253,7 +253,6 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             info(f"--> Requested Position : {geometry}")
 
             # try up to 2 times moving the pan-tilt
-            from logging import getLogger
             logger = getLogger()
             old_loglevel = logger.level
             for i in range(2):
@@ -302,7 +301,8 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                     env_request = 0
 
                 env = instrument_instance.get_env_log(env_request)
-                info(env.get_csv_line())
+                # dump instrument environmental log at all log levels
+                force_log_info(env.get_csv_line())
                 instrument_instance.take_request(request, path_to_file=output)
 
             except Exception as e:
@@ -374,7 +374,9 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             error(f"Error: {e}")
 
     replace(seq_path, final_seq_path)
-    info(f"Created sequence : {final_seq_path}")
+
+    # log the sequence name at all log levels
+    force_log_info(f"Created sequence : {final_seq_path}")
 
     if swir_is_requested is True:
         instrument_instance.shutdown_SWIR_module_thermal_control()
@@ -410,6 +412,19 @@ def relay3_delayed_on():
     sleep(1)
     info("Set relay #3 to ON.")
     set_state_relay([3], "on")
+
+
+def force_log_info(msg):
+    logger = getLogger()
+    old_loglevel = logger.level
+
+    if old_loglevel > INFO:
+        logger.setLevel(INFO)
+        info(msg)
+        logger.setLevel(old_loglevel)
+    else:
+        info(msg)
+
 
 
 if __name__ == '__main__':

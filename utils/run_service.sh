@@ -318,7 +318,9 @@ else
 		hn_tools_commit="${hn_tools_commit}-mod"
 	fi
 
-	echo "[INFO]  Running hypernets_tools from $hn_tools_repo branch $hn_tools_branch commit $hn_tools_commit"
+	hn_tools_ver=$(python -c "import hypernets; print(hypernets.__version__)")
+
+	echo "[INFO]  Running hypernets_tools version $hn_tools_ver from $hn_tools_repo branch $hn_tools_branch commit $hn_tools_commit"
 fi
 set -e
 
