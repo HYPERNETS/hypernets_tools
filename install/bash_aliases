@@ -425,41 +425,6 @@ EOF
 ) # yapo()
 
 
-## helper functions for converting between absolute and relative positions
-## force to 0...360 range
-_pt_abs2rel_pan() {
-	if [[ "$reverse_tilt" == "yes" ]]; then
-		printf "%.1f" $( bc <<< "($1 - ($offset_pan) - 180 + 36000) % 360" )
-	else
-		printf "%.1f" $( bc <<< "($1 + ($offset_pan) + 36000) % 360" )
-	fi
-}
-
-_pt_abs2rel_tilt() {
-	if [[ "$reverse_tilt" == "yes" ]]; then
-		printf "%.1f" $( bc <<< "(- ($1) - ($offset_tilt) + 36000) % 360" )
-	else
-		printf "%.1f" $( bc <<< "($1 + ($offset_tilt) + 36000) % 360" )
-	fi
-}
-
-_pt_rel2abs_pan() {
-	if [[ "$reverse_tilt" == "yes" ]]; then
-		printf "%.1f" $( bc <<< "($1 + ($offset_pan) + 180 + 36000) % 360" )
-	else
-		printf "%.1f" $( bc <<< "($1 - ($offset_pan) + 36000) % 360" )
-	fi
-}
-
-_pt_rel2abs_tilt() {
-	if [[ "$reverse_tilt" == "yes" ]]; then
-		printf "%.1f" $( bc <<< "(- ($1 + ($offset_tilt)) + 36000) % 360" )
-	else
-		printf "%.1f" $( bc <<< "($1 - ($offset_tilt) + 36000) % 360" )
-	fi
-}
-
-
 ## Pan-Tilt control
 pt() (
 	cd "$HYPERNETS_TOOLS"
@@ -485,7 +450,6 @@ pt() (
 	source utils/configparser.sh
 	offset_tilt=$(parse_config "offset_tilt" config_dynamic.ini)
 	offset_pan=$(parse_config "offset_pan" config_dynamic.ini)
-	reverse_tilt=$(parse_config "reverse_tilt" config_dynamic.ini)
 
 	# remove plus sign, if any
 	offset_tilt=${offset_tilt#+}
@@ -548,7 +512,6 @@ EOF
 		echo "elevation = $elevation"
 		echo "offset_pan = $offset_pan"
 		echo "offset_tilt = $offset_tilt"
-		echo "reverse_tilt = $reverse_tilt"
 		echo "Using system time $(date '+%Y/%m/%d %H:%M:%S %Z')"
 
 		if [ "$gps_hasfix" = 1 ]; then
@@ -591,15 +554,14 @@ EOF
 	current_abs_tilt=$(cut -f 2 <<< $current_abs_pos)
 
 	## calculate current position in hypy coords
-	current_hyper_pan=$(_pt_abs2rel_pan "$current_abs_pan")
-	current_hyper_tilt=$(_pt_abs2rel_tilt "$current_abs_tilt")
+	current_hyper_pan=$(printf "%.1f" $(bc <<< "(($current_abs_pan) + ($offset_pan) + 36000) % 360"))
+	current_hyper_tilt=$(printf "%.1f" $(bc <<< "(($current_abs_tilt) + ($offset_tilt) + 36000) % 360"))
 
 	############### print current position #################
 	if [[ "${1-}" == "" ]]; then
 		echo "Current parameters"
 		echo "offset_pan = $offset_pan"
 		echo "offset_tilt = $offset_tilt"
-		echo "reverse_tilt = $reverse_tilt"
 		echo
 		echo "Current positions"
 		printf "abs:   pan = %.1f, tilt = %.1f\n" "$current_abs_pan" "$current_abs_tilt"
@@ -625,11 +587,11 @@ EOF
 			requested_abs_pan="$new_pan"
 		elif [ "$sunpos" = 1 ]; then ## requested sun
 			requested_rel_sun_pan=$(bc <<< "$sun_azimuth + ($new_pan)")
-			requested_abs_pan=$(_pt_rel2abs_pan "$requested_rel_sun_pan")
+			requested_abs_pan=$(printf "%.1f" $(bc <<< "(($requested_rel_sun_pan) - ($offset_pan) + 36000) % 360"))
 		elif [ "$deltapos" = 1 ]; then ## requested delta
 			requested_abs_pan=$(bc <<< "$current_abs_pan + ($new_pan)")
 		else ## requested hyper
-			requested_abs_pan=$(_pt_rel2abs_pan "$new_pan")
+			requested_abs_pan=$(printf "%.1f" $(bc <<< "(($new_pan) - ($offset_pan) + 36000) % 360"))
 		fi
 
 		if [[ "$new_tilt" == "x" ]]; then ## use current
@@ -638,11 +600,11 @@ EOF
 			requested_abs_tilt="$new_tilt"
 		elif [ "$sunpos" = 1 ]; then ## requested sun, zenith is 180 in relative coords
 			requested_rel_sun_tilt=$(bc <<< "(180 - $sun_zenith + ($new_tilt))")
-			requested_abs_tilt=$(_pt_rel2abs_tilt "$requested_rel_sun_tilt")
+			requested_abs_tilt=$(printf "%.1f" $(bc <<< "(($requested_rel_sun_tilt) - ($offset_tilt) + 36000) % 360"))
 		elif [ "$deltapos" = 1 ]; then ## requested delta
 			requested_abs_tilt=$(bc <<< "$current_abs_tilt + ($new_tilt)")
 		else ## requested hyper
-			requested_abs_tilt=$(_pt_rel2abs_tilt "$new_tilt")
+			requested_abs_tilt=$(printf "%.1f" $(bc <<< "(($new_tilt) - ($offset_tilt) + 36000) % 360"))
 		fi
 
 		## force to 0...360 range
@@ -658,12 +620,12 @@ EOF
 		new_abs_tilt=$(cut -f 2 <<< $new_abs_pos)
 	
 		## calculate relative position
-		new_hyper_pan=$(_pt_abs2rel_pan "$new_abs_pan")
-		new_hyper_tilt=$(_pt_abs2rel_tilt "$new_abs_tilt")
+		new_hyper_pan=$(printf "%.1f" $(bc <<< "(($new_abs_pan) + ($offset_pan) + 36000) % 360"))
+		new_hyper_tilt=$(printf "%.1f" $(bc <<< "(($new_abs_tilt) + ($offset_tilt) + 36000) % 360"))
 
 		## calculate residuals
-		residual_pan=$( bc <<< "$new_abs_pan - $requested_abs_pan" )
-		residual_tilt=$( bc <<< "$new_abs_tilt - $requested_abs_tilt" )
+		residual_pan=$(bc <<< "$new_abs_pan - $requested_abs_pan")
+		residual_tilt=$(bc <<< "$new_abs_tilt - $requested_abs_tilt")
 
 		echo
 		echo "New positions"

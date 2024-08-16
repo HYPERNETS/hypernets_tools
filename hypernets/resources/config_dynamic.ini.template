@@ -116,9 +116,6 @@ offset_pan = 0
 # tilt(hyper) = 0 should point to nadir
 offset_tilt = 60
 
-# DEPRECATED OPTION THAT WILL SOON BE FORCED TO no AND REMOVED FROM CONFIG!
-reverse_tilt = no
-
 # pantilt_port - the pan-tilt serial port device file
 # 
 # This should be normally /dev/ttyS3 for V1 & V2 systems (PC COM4) and /dev/ttyS0 for V3 (PC COM1)
