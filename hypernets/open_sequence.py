@@ -31,7 +31,6 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                       instrument_loglvl, instrument_boot_timeout,
                       instrument_standalone=False,
                       instrument_swir_tec=0,
-                      dump_environment_logs=False,
                       DATA_DIR="DATA",
                       check_rain=False):
 
@@ -200,8 +199,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         info("Done!")
 
     # print env log header
-    if dump_environment_logs:
-        info(get_csv_header())
+    info(get_csv_header())
 
     iter_line, nb_error = 0, 0
     for i, (geometry, requests) in enumerate(protocol, start=1):
@@ -297,15 +295,14 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             output = path.join(filepath, filename)
 
             try:
-                if dump_environment_logs:
-                    # 0xFF returns live data, 0 returns last captured on FW > 0.15.24
-                    if (instrument_FW_major, instrument_FW_minor, instrument_FW_rev) > (0, 15, 24):
-                        env_request = 0xff 
-                    else:
-                        env_request = 0
+                # 0xFF returns live data, 0 returns last captured on FW > 0.15.24
+                if (instrument_FW_major, instrument_FW_minor, instrument_FW_rev) > (0, 15, 24):
+                    env_request = 0xff 
+                else:
+                    env_request = 0
 
-                    env = instrument_instance.get_env_log(env_request)
-                    info(env.get_csv_line())
+                env = instrument_instance.get_env_log(env_request)
+                info(env.get_csv_line())
                 instrument_instance.take_request(request, path_to_file=output)
 
             except Exception as e:
@@ -467,10 +464,6 @@ if __name__ == '__main__':
                         help="Thermoelectric Cooler Point for the SWIR module",
                         default=0)
 
-    parser.add_argument("-e", "--log-environment", action='store_true',
-                        help="Dumps instrument environmental logs to stdout",
-                        default=False)
-
     args = parser.parse_args()
 
     basicConfig(level=log_levels[args.verbosity], format=log_fmt, datefmt=dt_fmt) # noqa
@@ -483,5 +476,4 @@ if __name__ == '__main__':
                       instrument_boot_timeout=args.timeout,
                       instrument_standalone=args.noyocto,
                       instrument_swir_tec=args.swir_tec,
-                      dump_environment_logs=args.log_environment,
                       check_rain=args.check_rain)

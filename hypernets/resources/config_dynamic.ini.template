@@ -163,9 +163,6 @@ loglevel = INFO
 # The setpoint is usually 0 'C in normal conditions and 10 'C in extreme hot conditions. 
 swir_tec = 0
 
-# outputs environmental readings to log before each capture with a single header at the beginning of log
-# DEPRECATED OPTION THAT WILL SOON BE FORCED TO yes AND REMOVED FROM CONFIG!
-log_environment = yes
 
 [metadata]
 # The fields in the [metadata] section are directly copied into metadata.txt of each sequence.
