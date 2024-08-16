@@ -352,8 +352,8 @@ yapo() (
 # in config_dynamic.ini
 # 
 # Delete this file to re-enable sleep or even better, 
-# use   yapo set   which re-enables yocto auto-power-off and 
-# deletes this file or see   yapo -h   for help.
+# use 'yapo set' or 'yapo restore' which re-enables yocto auto-power-off and 
+# deletes this file. See 'yapo -h' for help.
 #
 # The last used yocto auto-power-off setting was
 last_yapo_set=$max_wakeup_time
