@@ -22,8 +22,6 @@ if [ -z $forwardPort ]; then
 	forwardPort="5555"
 fi
 
-ipYocto=$(parse_config "yoctopuce_ip" config_static.ini) 
-
 webcamSite=$(parse_config "webcam_site" config_static.ini)
 webcamSky=$(parse_config "webcam_sky" config_static.ini)
 
@@ -31,24 +29,19 @@ ipSky=$(echo $webcamSky | cut -d "@" -f2)
 ipSite=$(echo $webcamSite | cut -d "@" -f2)
 
 echo "[DEBUG]  $ipServer:$sshPort --> [$forwardPort]"
-echo "[DEBUG]  IP Yocto-Pictor : $ipYocto" 
+echo "[DEBUG]  IP VirtualHub   : 127.0.0.1" 
 echo "[DEBUG]  IP Webcam Site  : $ipSite" 
 echo "[DEBUG]  IP Webcam Sky   : $ipSky"
 
 
 
 PS3="Select the service that you want to forward : "
-options=("Yocto-Pictor" "VirtualHub" "Camera Site" "Camera Sky" 
+options=("VirtualHub" "Camera Site" "Camera Sky" 
 	"Jupyter Notebook" "Quit")
 
 select opt in "${options[@]}"
 do
 	case $opt in
-		"Yocto-Pictor")
-			echo "You choose : $opt"
-			service="$ipYocto:4444"
-			break
-			;;
 		"VirtualHub")
 			echo "You choose : $opt"
 			service="127.0.0.1:4444"

@@ -1,7 +1,4 @@
 [yoctopuce]
-# DEPRECATED OPTION THAT WILL SOON BE FORCED TO usb AND REMOVED FROM CONFIG!
-yoctopuce_ip  = usb
-
 # yocto_prefix1 - Yocto-Pictor (relay board) serial number
 yocto_prefix1 = OBSVLFR1-XXXXXX
 

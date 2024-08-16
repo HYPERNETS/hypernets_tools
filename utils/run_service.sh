@@ -308,74 +308,62 @@ if [[ "$bypassYocto" != "yes" ]] ; then
     fi
 
 	# Ensure Yocto is online
-	yoctopuceIP=$(parse_config "yoctopuce_ip" config_static.ini)
-
-	if [[ "$yoctopuceIP" != "usb" ]] ; then
-		# We ping it if there is an IP address
-		echo "[INFO]  Waiting for yoctopuce..."
-		while ! timeout 2 ping -c 1 -n $yoctopuceIP &>/dev/null
-		do
-			echo -n '.'
-		done
-		echo "[INFO]  Ok !"
-	else
-		# Else check  if VirtualHub is running
-		set +e
-		systemctl is-active yvirtualhub.service > /dev/null
-		if [[ $? -eq 0 ]] ; then
-			set -e
-			echo "[INFO]  VirtualHub is running."
-		else
-			set -e
-			echo "[INFO]  Starting VirtualHub..."
-            if [[ "$ID" == "manjaro" ]]; then
-			    /usr/bin/VirtualHub &
-            elif [[ "$ID" == "debian" ]]; then
-                /usr/sbin/VirtualHub &
-            else
-                echo "[ERROR] Not able to identify the distribution."
-                exit 0
-            fi
-			sleep 2
-			echo "[INFO]  ok"
-		fi
-
-		# Check if yocto is accessible
-		yocto=$(parse_config "yocto_prefix2" config_static.ini)
-		set +e
-		wget -O- "http://127.0.0.1:4444/bySerial/$yocto/api.txt" > /dev/null 2>&1
-		retcode=$?
-		if [[ $retcode == 0 ]]; then
-			echo "[INFO]  Found Yocto"
-			yoctoSN=$(python -m hypernets.yocto.get_FW_ver)
-			echo "[INFO]  $yoctoSN"
-		elif [[ $retcode == 8 ]]; then 
-			# Server issued an error response. Probably 404 not found.
-			echo "[CRITICAL] Yocto '$yocto' is not accessible !!"
-
-			# list modules if command line API is installed
-			if [[ $(command -v YModule) ]]; then
-				inventory=$(YModule -r 127.0.0.1 inventory)
-				echo "[CRITICAL] The list of modules found:"
-				echo "$inventory"
-			fi
-
-			echo "[CRITICAL] Can't do anything without Yocto !!"
-			echo "[CRITICAL] Exiting the sequence !!"
-			exit -1
-		else
-			# Some other wget error
-			echo "[ERROR] Yocto request finished with error code $retcode"
-		fi
+	set +e
+	# check if VirtualHub is running
+	systemctl is-active yvirtualhub.service > /dev/null
+	if [[ $? -eq 0 ]] ; then
 		set -e
+		echo "[INFO]  VirtualHub is running."
+	else
+		set -e
+		echo "[INFO]  Starting VirtualHub..."
+        if [[ "$ID" == "manjaro" ]]; then
+		    /usr/bin/VirtualHub &
+        elif [[ "$ID" == "debian" ]]; then
+            /usr/sbin/VirtualHub &
+        else
+            echo "[ERROR] Not able to identify the distribution."
+            exit 0
+        fi
+		sleep 2
+		echo "[INFO]  ok"
+	fi
 
-		# log uptimes
+	# Check if yocto is accessible
+	yocto=$(parse_config "yocto_prefix2" config_static.ini)
+	set +e
+	wget -O- "http://127.0.0.1:4444/bySerial/$yocto/api.txt" > /dev/null 2>&1
+	retcode=$?
+	if [[ $retcode == 0 ]]; then
+		echo "[INFO]  Found Yocto"
+		yoctoSN=$(python -m hypernets.yocto.get_FW_ver)
+		echo "[INFO]  $yoctoSN"
+	elif [[ $retcode == 8 ]]; then 
+		# Server issued an error response. Probably 404 not found.
+		echo "[CRITICAL] Yocto '$yocto' is not accessible !!"
+
+		# list modules if command line API is installed
 		if [[ $(command -v YModule) ]]; then
-            yocto=$(parse_config "yocto_prefix2" config_static.ini)
-			yocto_uptime_millisec=$(YModule -f '[result]' -r 127.0.0.1 $yocto get_upTime | awk '{print $1}')
-			sys_uptime_sec=$(awk '{print $1}' /proc/uptime)
-			printf "[INFO]  yocto uptime is %.1f min, system uptime is %.1f min\n" $(bc -l <<< "$yocto_uptime_millisec / 60000") $(bc -l <<< "$sys_uptime_sec / 60")
+			inventory=$(YModule -r 127.0.0.1 inventory)
+			echo "[CRITICAL] The list of modules found:"
+			echo "$inventory"
 		fi
+
+		echo "[CRITICAL] Can't do anything without Yocto !!"
+		echo "[CRITICAL] Exiting the sequence !!"
+		exit -1
+	else
+		# Some other wget error
+		echo "[ERROR] Yocto request finished with error code $retcode"
+	fi
+	set -e
+
+	# log uptimes
+	if [[ $(command -v YModule) ]]; then
+        yocto=$(parse_config "yocto_prefix2" config_static.ini)
+		yocto_uptime_millisec=$(YModule -f '[result]' -r 127.0.0.1 $yocto get_upTime | awk '{print $1}')
+		sys_uptime_sec=$(awk '{print $1}' /proc/uptime)
+		printf "[INFO]  yocto uptime is %.1f min, system uptime is %.1f min\n" $(bc -l <<< "$yocto_uptime_millisec / 60000") $(bc -l <<< "$sys_uptime_sec / 60")
 	fi
 
 	# log supply voltage
