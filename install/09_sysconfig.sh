@@ -45,6 +45,11 @@ if [ "$ID" == "debian" ]; then
 	echo "${HL}Uninstalling needless large packages${RESET_HL}"
 	apt purge libreoffice* gimp-data
 	apt autoremove
+elif [ "$ID" == "manjaro" ]; then
+	echo
+	echo "${HL}Uninstalling needless large packages${RESET_HL}"
+	pacman -D --asdeps thunderbird android-tools 2> /dev/null
+	pacman -Rns $(pacman -Qqtd) 2> /dev/null
 fi
 set -e
 
