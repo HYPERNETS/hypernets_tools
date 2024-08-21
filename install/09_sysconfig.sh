@@ -49,6 +49,7 @@ elif [ "$ID" == "manjaro" ]; then
 	echo
 	echo "${HL}Uninstalling needless large packages${RESET_HL}"
 	pacman -D --asdeps thunderbird android-tools 2> /dev/null
+	pacman -D --asexplicit gcc
 	pacman -Rns $(pacman -Qqtd)
 fi
 set -e
