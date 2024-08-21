@@ -163,6 +163,7 @@ loglevel = INFO
 # The SWIR temperature controller can handle setpoint up to approximately 35...40 'C below
 # ambient before going into thermal runaway. 
 # The setpoint is usually 0 'C in normal conditions and 10 'C in extreme hot conditions. 
+# This parameter has no effect if no SWIR spectra are requested in the sequence.
 swir_tec = 0
 
 
