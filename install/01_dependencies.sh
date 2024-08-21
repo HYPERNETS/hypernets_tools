@@ -58,10 +58,28 @@ if [ "$ID"  == "debian" ]; then
 	fi
 
 elif [ "$ID"  == "manjaro" ]; then
+	# store manjaro version
+	if [ -f /etc/lsb-release ]; then
+		source /etc/lsb-release
+		old_os_ver="${DISTRIB_RELEASE:-}"
+	fi
+
 	sudo pacman -Syu python python-pip tk make gcc python-pipx python-crcmod python-pyserial \
 			python-matplotlib python-geopy net-tools python-pyudev python-pyftdi gnu-netcat
 
 	sudo -u $user python -m pip install pysolar --break-system-packages
 	sudo -u $user python -m pip install yoctopuce --break-system-packages
+
+	# warn if new OS version
+	if [ -f /etc/lsb-release ]; then
+		source /etc/lsb-release
+
+		if [[ "${DISTRIB_RELEASE:-}" != "" ]] && [[ "${old_os_ver:-}" != "${DISTRIB_RELEASE:-}" ]]; then
+			echo -e "\n----------------------------------------------------\n"
+			echo -e "WARNING!!!!\n"
+			echo "Manjaro has been upgraded from version '${old_os_ver:-}' to '${DISTRIB_RELEASE:-}'"
+			echo -e "You should re-install libhypstar and rain sensor\n"
+		fi
+	fi
 fi
 
