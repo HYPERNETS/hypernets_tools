@@ -3,27 +3,9 @@ from hypernets import __version__
 from datetime import datetime, timezone
 from configparser import ConfigParser, ExtendedInterpolation
 from configparser import MissingSectionHeaderError
+from re import split
 
 from logging import debug, info, warning  # noqa
-
-# TODO : Dump data from pickle for lat:lon
-
-instrument_sn = 0
-vm_sn = 0
-
-def special_value(value):
-    if value == "{datetime}":
-        return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
-    elif value == "{v_hypernets_tools}":
-        return __version__
-    elif value == "{hypstar_sn}":
-        return instrument_sn
-    elif value == "{led_sn}":
-        return vm_sn
-    elif value == "{sequence_file}":
-        return sequence_file
-    else:
-        return "N/A"
 
 
 def metadata_header_base(protocol_file="placeholder.csv", now=None,
@@ -56,13 +38,32 @@ def parse_config_metadata(sequence_file, config_file="config_dynamic.ini",
         str_metadata = metadata_header_base()
         return str_metadata
 
+    # copy user-defined metadata from config file
     str_metadata = "[Metadata]\n"
     for field in metadata_section.keys():
-        if '{' and '}' in metadata_section[field]:
-            special = special_value(metadata_section[field])
-            str_metadata += f"{field} = {special}\n"
-        else:
-            str_metadata += f"{field} = {metadata_section[field]}\n"
+        str_metadata += f"{field} = {metadata_section[field]}\n"
+
+    # populate auto-generated metadata
+    str_metadata += f"hypernets_tools_version = {__version__}\n"
+    now = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+    str_metadata += f"datetime = {now}\n"
+    str_metadata += f"hypstar_sn = {instrument_sn}\n"
+    str_metadata += f"led_sn = {vm_sn}\n"
+    str_metadata += f"protocol_file_name = {sequence_file}\n"
+
+    # populate metadata from other config file sections
+    meta_fields = {"latitude": "GPS:latitude", "longitude": "GPS:longitude", 
+                   "offset_pan": "pantilt:offset_pan", "offset_tilt": "pantilt:offset_tilt",
+                   "azimuth_switch": "pantilt:azimuth_switch"}
+
+    for key in meta_fields:
+        try:
+            conf_sec, conf_parm = split(":", meta_fields[key])
+            str_metadata += f"{key} = {config[conf_sec][conf_parm]}\n"
+
+        except (KeyError) as e:
+            warning(f"{e} not found in '{config_file}' while parsing '{meta_fields[key]}'")
+
     return str_metadata
 
 

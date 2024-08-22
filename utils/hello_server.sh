@@ -154,6 +154,45 @@ if [ -z $autoUpdate ]; then
 	autoUpdate="no"
 fi
 
+
+# Archive DATA
+echo "[INFO]  Linking data to archive directory..."
+for folderPath in $(find DATA -type d -regextype posix-extended -regex ".*/(CUR|SEQ)[0-9]{8}T[0-9]{6}"); do
+	seqname=$(basename $folderPath)
+	year="${seqname:3:4}"
+	month="${seqname:7:2}"
+	day="${seqname:9:2}"
+	yearMonthDayArchive="ARCHIVE/DATA/$year/$month/$day/"
+	
+	mkdir -p "$yearMonthDayArchive"
+	cp -Raul "$folderPath" "$yearMonthDayArchive"
+done
+
+# Archive LOGS
+echo "[INFO]  Linking logs to archive directory..."
+for fileLog in $(find LOGS -type f -regextype posix-extended -regex ".*/[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}(-[0-9]{3})?-[a-z]+.log"); do
+  	year="${fileLog:5:4}"
+  	month="${fileLog:10:2}"
+  	yearMonthArchive="ARCHIVE/LOGS/$year/$month/"
+
+  	mkdir -p "$yearMonthArchive"
+  	cp -aul "$fileLog" "$yearMonthArchive"
+done
+
+# Archive Webcam images
+echo "[INFO]  Linking webcam images to archive directory..."
+for imgfile in $(find OTHER/ -type f -regextype posix-extended -regex "OTHER/WEBCAM_(SITE|SKY)/.*[0-9]{8}T[0-9]{6}.jpg"); do
+	filename="$(basename $imgfile)"
+	year="${filename:0:4}"
+	month="${filename:4:2}"
+	camfolder="$(awk -F/ '{print $2}' <<< $imgfile)"
+	yearMonthArchive="ARCHIVE/OTHER/$camfolder/$year/$month/"
+	
+	mkdir -p "$yearMonthArchive"
+	cp -aul "$imgfile" "$yearMonthArchive"
+done
+
+
 # Wait until we have connection with the server
 set +e
 echo "[INFO]  Waiting for network..."
@@ -218,44 +257,6 @@ if [[ "$autoUpdate" == "yes" ]] ; then
 	if [ $? -ne 0 ]; then echo "[ERROR]  Can't pull : do you have local change ?" ; fi
 	set -e
 fi
-
-
-# Archive DATA
-echo "[INFO]  Linking data to archive directory..."
-for folderPath in $(find DATA -type d -regextype posix-extended -regex ".*/(CUR|SEQ)[0-9]{8}T[0-9]{6}"); do
-	seqname=$(basename $folderPath)
-	year="${seqname:3:4}"
-	month="${seqname:7:2}"
-	day="${seqname:9:2}"
-	yearMonthDayArchive="ARCHIVE/DATA/$year/$month/$day/"
-	
-	mkdir -p "$yearMonthDayArchive"
-	cp -Raul "$folderPath" "$yearMonthDayArchive"
-done
-
-# Archive LOGS
-echo "[INFO]  Linking logs to archive directory..."
-for fileLog in $(find LOGS -type f -regextype posix-extended -regex ".*/[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}(-[0-9]{3})?-[a-z]+.log"); do
-  	year="${fileLog:5:4}"
-  	month="${fileLog:10:2}"
-  	yearMonthArchive="ARCHIVE/LOGS/$year/$month/"
-
-  	mkdir -p "$yearMonthArchive"
-  	cp -aul "$fileLog" "$yearMonthArchive"
-done
-
-# Archive Webcam images
-echo "[INFO]  Linking webcam images to archive directory..."
-for imgfile in $(find OTHER/ -type f -regextype posix-extended -regex "OTHER/WEBCAM_(SITE|SKY)/.*[0-9]{8}T[0-9]{6}.jpg"); do
-	filename="$(basename $imgfile)"
-	year="${filename:0:4}"
-	month="${filename:4:2}"
-	camfolder="$(awk -F/ '{print $2}' <<< $imgfile)"
-	yearMonthArchive="ARCHIVE/OTHER/$camfolder/$year/$month/"
-	
-	mkdir -p "$yearMonthArchive"
-	cp -aul "$imgfile" "$yearMonthArchive"
-done
 
 
 ####### SYNCING DATA ##########

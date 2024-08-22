@@ -16,7 +16,7 @@ from hypernets.hypstar.handler import HypstarHandler
 from hypernets.hypstar.libhypstar.python.hypstar_wrapper import HypstarLogLevel
 from hypernets.hypstar.libhypstar.python.data_structs.environment_log import get_csv_header
 
-from logging import debug, info, warning, error # noqa
+from logging import debug, info, warning, error, getLogger, INFO
 
 from hypernets.rain_sensor import RainSensor
 
@@ -31,10 +31,8 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                       instrument_loglvl, instrument_boot_timeout,
                       instrument_standalone=False,
                       instrument_swir_tec=0,
-                      dump_environment_logs=False,
                       DATA_DIR="DATA",
-                      check_rain=False,
-                      data_dir_tree=False):
+                      check_rain=False):
 
     # Check if it is raining
     if not instrument_standalone and check_rain:
@@ -73,7 +71,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     protocol.check_if_vm_requested()
 
     if not path.exists(DATA_DIR):  # TODO move management of output folder
-        mkdir(DATA_DIR)
+        mkdir(DATA_DIR, mode=0o755)
 
     start_time = time()  # for ellapsed time
     flags_dict = {}
@@ -81,12 +79,10 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     start = datetime.now(timezone.utc)
     seq_name = Protocol.create_seq_name(now=start, prefix="CUR")
 
-    if data_dir_tree is True:  # create a directory tree
-        info("Creating the directory tree...")
-        dir_branch = Path(start.strftime("%Y/%m/%d"))
-        DATA_DIR = Path(path.join(DATA_DIR, dir_branch))
-        DATA_DIR.mkdir(parents=True, exist_ok=True)
-        info(f"The data directory is now: {DATA_DIR}")
+    # Creating the directory tree
+    dir_branch = Path(start.strftime("%Y/%m/%d"))
+    DATA_DIR = Path(path.join(DATA_DIR, dir_branch))
+    DATA_DIR.mkdir(parents=True, exist_ok=True, mode=0o755)
 
     seq_path = path.join(DATA_DIR, seq_name)
     final_seq_path = path.join(DATA_DIR, Protocol.create_seq_name(now=start))
@@ -109,10 +105,10 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
     info(f"Creating directories: {seq_path} and {filepath}")
 
-    mkdir(seq_path)
-    mkdir(filepath)
+    mkdir(seq_path, mode=0o755)
+    mkdir(filepath, mode=0o755)
 
-    # XXX Add option to copy
+    # copy acquisition protocol file to sequence folder
     copy(sequence_file, path.join(seq_path, path.basename(sequence_file)))
 
     if not instrument_standalone:
@@ -203,8 +199,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         info("Done!")
 
     # print env log header
-    if dump_environment_logs:
-        info(get_csv_header())
+    info(get_csv_header())
 
     iter_line, nb_error = 0, 0
     for i, (geometry, requests) in enumerate(protocol, start=1):
@@ -258,7 +253,6 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             info(f"--> Requested Position : {geometry}")
 
             # try up to 2 times moving the pan-tilt
-            from logging import getLogger
             logger = getLogger()
             old_loglevel = logger.level
             for i in range(2):
@@ -300,15 +294,15 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             output = path.join(filepath, filename)
 
             try:
-                if dump_environment_logs:
-                    # 0xFF returns live data, 0 returns last captured on FW > 0.15.24
-                    if (instrument_FW_major, instrument_FW_minor, instrument_FW_rev) > (0, 15, 24):
-                        env_request = 0xff 
-                    else:
-                        env_request = 0
+                # 0xFF returns live data, 0 returns last captured on FW > 0.15.24
+                if (instrument_FW_major, instrument_FW_minor, instrument_FW_rev) > (0, 15, 24):
+                    env_request = 0xff 
+                else:
+                    env_request = 0
 
-                    env = instrument_instance.get_env_log(env_request)
-                    info(env.get_csv_line())
+                env = instrument_instance.get_env_log(env_request)
+                # dump instrument environmental log at all log levels
+                force_log_info(env.get_csv_line())
                 instrument_instance.take_request(request, path_to_file=output)
 
             except Exception as e:
@@ -380,7 +374,9 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             error(f"Error: {e}")
 
     replace(seq_path, final_seq_path)
-    info(f"Created sequence : {final_seq_path}")
+
+    # log the sequence name at all log levels
+    force_log_info(f"Created sequence : {final_seq_path}")
 
     if swir_is_requested is True:
         instrument_instance.shutdown_SWIR_module_thermal_control()
@@ -416,6 +412,19 @@ def relay3_delayed_on():
     sleep(1)
     info("Set relay #3 to ON.")
     set_state_relay([3], "on")
+
+
+def force_log_info(msg):
+    logger = getLogger()
+    old_loglevel = logger.level
+
+    if old_loglevel > INFO:
+        logger.setLevel(INFO)
+        info(msg)
+        logger.setLevel(old_loglevel)
+    else:
+        info(msg)
+
 
 
 if __name__ == '__main__':
@@ -470,14 +479,6 @@ if __name__ == '__main__':
                         help="Thermoelectric Cooler Point for the SWIR module",
                         default=0)
 
-    parser.add_argument("-e", "--log-environment", action='store_true',
-                        help="Dumps instrument environmental logs to stdout",
-                        default=False)
-
-    parser.add_argument("-d", "--data-dir-tree", action='store_true',
-                        help="Create a YYYY/MM/DD directory tree in the DATA folder",
-                        default=False)
-
     args = parser.parse_args()
 
     basicConfig(level=log_levels[args.verbosity], format=log_fmt, datefmt=dt_fmt) # noqa
@@ -490,6 +491,4 @@ if __name__ == '__main__':
                       instrument_boot_timeout=args.timeout,
                       instrument_standalone=args.noyocto,
                       instrument_swir_tec=args.swir_tec,
-                      dump_environment_logs=args.log_environment,
-                      check_rain=args.check_rain,
-                      data_dir_tree=args.data_dir_tree)
+                      check_rain=args.check_rain)

@@ -108,21 +108,19 @@ class Geometry(object):
             config.read(config_file)
             offset_pan = float(config["pantilt"]["offset_pan"])
             offset_tilt = float(config["pantilt"]["offset_tilt"])
-            reverse_tilt = config["pantilt"]["reverse_tilt"] == "yes"
             azimuth_switch = float(config["pantilt"]["azimuth_switch"])
 
         except KeyError as key:
             warning(f" {key} default values loaded")
             # Default values :
             # offset_tilt = 0
-            offset_pan, reverse_tilt = 0, False
+            offset_pan = 0
             azimuth_switch = 360
 
         except Exception as e:
             error(f"Config Error : {e}")
 
         from operator import neg, pos
-        reverse_tilt = {True: neg, False: pos}[reverse_tilt]
 
         self.pan_abs, self.tilt_abs = self.pan, self.tilt
         pan_ref, tilt_ref = Geometry.int_to_reference(self.reference)
@@ -168,15 +166,10 @@ class Geometry(object):
         if 'sun' in [pan_ref, tilt_ref] or 'hyp' in [pan_ref, tilt_ref]:
             # Orientation
             if pan_ref in ['sun', 'hyp']:
-                self.pan_abs -= reverse_tilt(offset_pan)
-                # self.pan_abs -= offset_pan
+                self.pan_abs -= offset_pan
 
             if tilt_ref in ['sun', 'hyp']:
-                self.tilt_abs -= reverse_tilt(offset_tilt)
-
-        self.tilt_abs = reverse_tilt(self.tilt_abs)
-        if reverse_tilt is neg:
-            self.pan_abs = self.pan_abs + 180
+                self.tilt_abs -= offset_tilt
 
         # force to [0...360] range
         self.pan_abs = self.pan_abs % 360

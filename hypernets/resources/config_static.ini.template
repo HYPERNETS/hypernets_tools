@@ -1,30 +1,74 @@
-
 [yoctopuce]
-yoctopuce_ip  = usb
+# yocto_prefix1 - Yocto-Pictor (relay board) serial number
 yocto_prefix1 = OBSVLFR1-XXXXXX
+
+# yocto_prefix2 - Yocto-Pictor-Wifi (upper board) serial number
 yocto_prefix2 = OBSVLFR2-XXXXXX
+
+# yocto_gps - Yocto-GPS-V2 (gps board) serial number
 yocto_gps = YGNSSMK2-XXXXXX
+
+# bypass_yocto - disable all Yocto functionality 
+# Allowed values: yes/no
+#
+# Set bypass_yocto = yes to test only the radiometer functionality
 bypass_yocto = no
+
+# debug_yocto - dump Yocto debug information into OTHER/ during the sequence
+# Allowed values: yes/no
 debug_yocto = no
 
 
 [network]
+# credentials - the ssh credentials of the network server
 credentials = user@server
+
+# remote_dir - the remote directory at the network server where to sync config and data
+# 
+# hypernets_hello.service uploads DATA/ OTHER/ and LOGS/ folders to the network server
+# and bidirectionally synchronises the confid_dynamic.ini with the server (whichever has
+# the newer file)
 remote_dir = ~
+
+# ssh_port - the ssh port number of the network server
 ssh_port = 22
-# remote ssh port must be unique for each site connected to the same server
+
+# remote_ssh_port - the port number at the network server for reverse ssh tunnel
+# Allowed values: [1024...49151]
+#
+# remote ssh port must be unused on the network server and unique for each site 
+# connected to the same server
 remote_ssh_port = 20213
-# Valid loglevels are ERROR, DEBUG, DEBUG2, DEBUG3
+
+# ssh_loglevel - the verbosity of the reverse ssh tunnel client
+# Allowed values: ERROR, DEBUG, DEBUG2, DEBUG3
+#
+# The reverse ssh tunnel client logs are stored in access.log by hypernets-access.service
 ssh_loglevel = ERROR
 
-# Local ssh backup access 
-# enp1s0 is eth port 1, enp2s0 is eth port 2, wlp12s0 is wifi
+# backup_ssh_interface - the interface for local ssh backup access in case the network is
+# unavailable and the reverse ssh tunnel to the network server can not be created
+# Allowed values: enp1s0 (eth port 1)
+#                 enp2s0 (eth port 2)
+#                 wlp12s0 (wifi)
 backup_ssh_interface = wlp12s0
+
+# backup_ssh_ip - static IP address of the backup_ssh_interface
 backup_ssh_ip = 10.42.0.1
+
+# dhcp_server - set up DHCP server at the backup_ssh_interface?
+# Allowed values: yes/no
 dhcp_server = yes
 
-# Webcam relay 5:
+
+[webcam]
+# For disabling either webcam and suppressing warnings about inaccessible or invalid IP
+# comment out the respective webcam_... parameter
+#
+# ip_cam_... must be an IPv4 address
+
+# webcam_site - site webcam (relay 5) credentials
 webcam_site = user:pass@ip_cam_site
 
-# Webcam relay 6:
+# webcam_sky - sky webcam (relay 6) credentials
 webcam_sky = user:pass@ip_cam_sky

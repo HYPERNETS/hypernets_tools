@@ -40,7 +40,12 @@ if [ "$ID" != "debian" ] && [ "$ID" != "manjaro" ]; then
 fi
 
 if [ "$ID"  == "debian" ]; then
-	sudo apt install python3-pip tk make gcc python3-tk rsync python3-pysolar python3-crcmod python3-serial python3-matplotlib python3-geopy net-tools ffmpeg sshfs python3-pyudev
+	# Delete manually created symlink if it exists. It will be replaced by python-is-python3 package
+	[ -e /usr/bin/python ] && [ $(dpkg-query -S /usr/bin/python > /dev/null 2>&1 ; echo $?) -eq 1 ] && rm -f /usr/bin/python
+
+	sudo apt install python3-pip tk make gcc python3-tk rsync python3-pysolar python3-crcmod \
+			python3-serial python3-matplotlib python3-geopy net-tools ffmpeg sshfs python3-pyudev \
+			python-is-python3
 
 	# pipx is not available on older Debian releases
 	if [[ $(apt-cache search -n -q -q pipx | wc -l) -eq 0 ]]; then
@@ -52,12 +57,29 @@ if [ "$ID"  == "debian" ]; then
 		sudo -u $user python -m pip install yoctopuce --break-system-packages
 	fi
 
-    [ ! -e /usr/bin/python ] && ln -s /usr/bin/python3 /usr/bin/python
-
 elif [ "$ID"  == "manjaro" ]; then
-	sudo pacman -Syu python python-pip tk make gcc python-pipx python-crcmod python-pyserial python-matplotlib python-geopy net-tools python-pyudev python-pyftdi gnu-netcat
+	# store manjaro version
+	if [ -f /etc/lsb-release ]; then
+		source /etc/lsb-release
+		old_os_ver="${DISTRIB_RELEASE:-}"
+	fi
+
+	sudo pacman -Syu python python-pip tk make gcc python-pipx python-crcmod python-pyserial \
+			python-matplotlib python-geopy net-tools python-pyudev python-pyftdi gnu-netcat
 
 	sudo -u $user python -m pip install pysolar --break-system-packages
 	sudo -u $user python -m pip install yoctopuce --break-system-packages
+
+	# warn if new OS version
+	if [ -f /etc/lsb-release ]; then
+		source /etc/lsb-release
+
+		if [[ "${DISTRIB_RELEASE:-}" != "" ]] && [[ "${old_os_ver:-}" != "${DISTRIB_RELEASE:-}" ]]; then
+			echo -e "\n----------------------------------------------------\n"
+			echo -e "WARNING!!!!\n"
+			echo "Manjaro has been upgraded from version '${old_os_ver:-}' to '${DISTRIB_RELEASE:-}'"
+			echo -e "You should re-install libhypstar and rain sensor\n"
+		fi
+	fi
 fi
-	
+

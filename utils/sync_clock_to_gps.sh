@@ -9,36 +9,57 @@ if [[ ${PWD##*/} != "hypernets_tools"* ]]; then
     exit 1
 fi
 
-if [[ "${1-}" == "-h" ]] || [[ "${1-}" == "--help" ]]; then
-	echo "$0 [-h|--help] [-m max_offset]"
+#if [[ "${1-}" == "-h" ]] || [[ "${1-}" == "--help" ]]; then
+usage() {
+	echo "$0 [-h|--help] [-m max_offset] [-l loglevel]"
 	echo
 	echo "Sync PC clock to Yocto GPS time"
 	echo 
 	echo "  -m max_offset   sync only if difference from GPS time is larger than max_offset seconds"
+	echo "  -l loglevel     numeric loglevel: 1=ERROR, 2=WARNING, 3=INFO(default), 4=DEBUG"
 	echo "  -h, --help      print this help"
 	echo
 	exit
-fi
+}
+#fi
 
-if [[ "${1-}" == "-m" ]]; then
-	# check if max_offset is not empty and is integer
-	set +eu
-	[ -n "$2" ] && [ "$2" -eq "$2" ] 2>/dev/null
-	if [ $? -ne 0 ]; then
-		echo "[ERROR] $0 -m requires max allowed time offset from GPS in seconds as second parameter."
-		exit -1
-	fi
-	set -eu
-	max_offset="$2"
-else
-	max_offset=0
+log_debug() { if [[ $numeric_verbosity -ge 4 ]]; then echo "[DEBUG]  $1"; fi }
+log_info() { if [[ $numeric_verbosity -ge 3 ]]; then echo "[INFO]  $1"; fi }
+log_warning() { if [[ $numeric_verbosity -ge 2 ]]; then echo "[WARNING]  $1"; fi }
+log_error() { if [[ $numeric_verbosity -ge 1 ]]; then echo "[ERROR]  $1"; fi }
+
+set +o nounset
+
+while getopts 'hm:l:' OPTION; do
+	case "$OPTION" in
+		m) max_offset="$OPTARG" ;;
+		l) numeric_verbosity="$OPTARG" ;;
+		?|h) usage ;;
+	esac
+done
+
+# check if loglevel is integer and in allowed range - set to 3=INFO if not
+set +eu
+[ -n "$numeric_verbosity" ] && [ "$numeric_verbosity" -eq "$numeric_verbosity" ] 2>/dev/null && [ "$numeric_verbosity" -ge 1 ] && [ "$numeric_verbosity" -le 4 ]
+if [ $? -ne 0 ]; then
+	numeric_verbosity=3
 fi
+set -eu
+
+# check if max_offset is integer
+set +eu
+[ -n "$max_offset" ] && [ "$max_offset" -eq "$max_offset" ] 2>/dev/null
+if [ $? -ne 0 ]; then
+	log_error "$0 -m requires max allowed time offset from GPS in seconds as second parameter."
+	exit -1
+fi
+set -eu
 
 # Check if VirtualHub is running
 set +e
 systemctl is-active yvirtualhub.service > /dev/null
 if [[ $? -ne 0 ]] ; then
-	echo "[CRITICAL] VirtualHub is not running"
+	log_error "VirtualHub is not running"
 	exit -1
 fi
 
@@ -51,12 +72,12 @@ wget -O- "http://127.0.0.1:4444/bySerial/$yocto/api.txt" > /dev/null 2>&1
 retcode=$?
 if [[ $retcode == 8 ]]; then 
 	# Server issued an error response. Probably 404 not found.
-	echo "[CRITICAL] Yocto '$yocto' is not accessible !!"
+	log_error "Yocto '$yocto' is not accessible !!"
 	exit -1
 fi
 set -e
 
-echo "[INFO]  Checking if PC clock is within $max_offset s from Yocto GPS"
+log_info "Checking if PC clock is within $max_offset s from Yocto GPS"
 
 # check if pc clock is in sync with gps
 gps=$(python -m hypernets.yocto.gps | sed -e "s/, /\t/g; s/[()]//g; s/b\?'//g")
@@ -100,9 +121,9 @@ if [[ "$gps_datetime" != "N/A" ]] && [[ "$gps_datetime" != "" ]]; then
 		echo "[WARNING] Yocto GPS time: $gps_datetime UTC"
 		echo "[WARNING] PC time:        $(date -u -d @$sys_timestamp '+%Y/%m/%d %H:%M:%S') UTC"
 	else 
-		echo "[INFO]  PC clock is within $max_offset seconds from Yocto GPS time"
+		log_info "PC clock is within $max_offset seconds from Yocto GPS time"
 	fi
 else
-	echo "[INFO]  No GPS time available from Yocto"
+	log_info "No GPS time available from Yocto"
 fi
 

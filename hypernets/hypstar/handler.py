@@ -36,7 +36,9 @@ class HypstarHandler(Hypstar):
             error("Failed to get instrument instance")
             exit(40)
 
-        if expect_boot_packet and not wait_for_instrument(instrument_port, boot_timeout): # noqa
+        if expect_boot_packet and not wait_for_instrument(port=instrument_port, 
+                                                          timeout_s=boot_timeout, 
+                                                          loglevel=instrument_loglevel):
             # just in case instrument sent BOOTED packet while we were
             # switching baudrates, let's test if it's there
             try:
@@ -126,7 +128,7 @@ class HypstarHandler(Hypstar):
             path_to_file = path.join("DATA", request.spectra_name_convention())
 
             if not exists("DATA"):
-                mkdir("DATA")
+                mkdir("DATA", mode=0o755)
 
         if request.action == InstrumentAction.PICTURE:
             self.take_picture(path_to_file)

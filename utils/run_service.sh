@@ -39,9 +39,6 @@ PATH="$PATH:~/.local/bin"
 
 source utils/configparser.sh
 
-# Sequence Configuration:
-dataDirTree=$(parse_config "data_dir_tree" config_dynamic.ini)
-
 # Hypstar Configuration:
 baudrate=$(parse_config "baudrate" config_dynamic.ini)
 hypstarPort=$(parse_config "hypstar_port" config_dynamic.ini)
@@ -50,7 +47,6 @@ loglevel=$(parse_config "loglevel" config_dynamic.ini)
 bootTimeout=$(parse_config "boot_timeout" config_dynamic.ini)
 swirTec=$(parse_config "swir_tec" config_dynamic.ini)
 verbosity=$(parse_config "verbosity" config_dynamic.ini)
-dumpEnvironmentLogs=$(parse_config "log_environment" config_dynamic.ini)
 
 # Starting Conditions:
 sequence_file=$(parse_config "sequence_file" config_dynamic.ini)
@@ -59,6 +55,8 @@ sequence_file_alt=$(parse_config "sequence_file_alt" config_dynamic.ini)
 checkWakeUpReason=$(parse_config "check_wakeup_reason" config_dynamic.ini)
 checkRain=$(parse_config "check_rain" config_dynamic.ini)
 debugYocto=$(parse_config "debug_yocto" config_static.ini)
+yoctoPrefix2=$(parse_config "yocto_prefix2" config_static.ini)
+
 
 # Test run, don't send yocto to sleep and don't ignore the sequence
 if [[ "${1-}" == "--test-run" ]]; then
@@ -72,6 +70,29 @@ else
 	startSequence=$(parse_config "start_sequence" config_dynamic.ini)
 fi
 
+case $verbosity in
+  ERROR)
+    numeric_verbosity=1
+    ;;
+
+  WARNING)
+    numeric_verbosity=2
+    ;;
+
+  DEBUG)
+    numeric_verbosity=4
+    ;;
+
+  INFO | *)
+    numeric_verbosity=3
+    ;;
+esac
+
+
+log_debug() { if [[ $numeric_verbosity -ge 4 ]]; then echo "[DEBUG]  $1"; fi }
+log_info() { if [[ $numeric_verbosity -ge 3 ]]; then echo "[INFO]  $1"; fi }
+log_warning() { if [[ $numeric_verbosity -ge 2 ]]; then echo "[WARNING]  $1"; fi }
+log_error() { if [[ $numeric_verbosity -ge 1 ]]; then echo "[ERROR]  $1"; fi }
 
 shutdown_sequence() {
 	return_value="$1"
@@ -81,26 +102,25 @@ shutdown_sequence() {
 		voltage=$(python -m hypernets.yocto.voltage)
 		echo "[INFO]  Supply voltage: $voltage V"
 
-	    echo "[INFO]  Set relays #2 and #3 to OFF."
+	    log_info "Set relays #2 and #3 to OFF."
 	    python -m hypernets.yocto.relay -soff -n2 -n3
 
 		if [[ "$checkRain" == "yes" ]]; then
-	    	echo "[INFO]  Set relay #4 to OFF."
+	    	log_info "Set relay #4 to OFF."
 		    python -m hypernets.yocto.relay -soff -n4
 		fi
 
 		# Sync PC clock to yocto gps if more than 5 sec out of sync
 		# and yocto gps has fix
 		set +e
-		utils/sync_clock_to_gps.sh -m 5
+		utils/sync_clock_to_gps.sh -m 5 -l $numeric_verbosity
 		set -e
 
 		# log next scheduled yocto wakeup if yocto command line API is installed
 		if [[ $(command -v YWakeUpMonitor) ]]; then
-			yocto=$(parse_config "yocto_prefix2" config_static.ini)
-			yocto_time=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yocto get_dateTime)
-			next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_nextWakeUp|sed -e 's/[[:space:]].*//')
-			yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yocto get_utcOffset)
+			yocto_time=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yoctoPrefix2 get_dateTime)
+			next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yoctoPrefix2 get_nextWakeUp|sed -e 's/[[:space:]].*//')
+			yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yoctoPrefix2 get_utcOffset)
 
 			if [ "$yocto_offset" = 0 ]; then
 				utc_offset=""
@@ -109,11 +129,11 @@ shutdown_sequence() {
 			fi
 
 			if [ "$next_wakeup_timestamp" = 0 ]; then
-				echo "[WARNING]  Yocto scheduled wakeup is disabled !!"
+				log_warning "Yocto scheduled wakeup is disabled !!"
 			else
 				yocto_timestamp=$(date -d "$yocto_time UTC" -u +%s)
 				delta=$(( "$next_wakeup_timestamp" - "$yocto_timestamp" ))
-				echo "[INFO]  Next Yocto wakeup is scheduled on $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset (in $delta s)"
+				log_info "Next Yocto wakeup is scheduled on $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset (in $delta s)"
 			fi
 		fi # log next scheduled yocto wakeup if yocto command line API is installed
     fi # [[ "$bypassYocto" != "yes" ]] && [[ "$startSequence" == "yes" ]]
@@ -121,7 +141,7 @@ shutdown_sequence() {
 	## Log network traffic
 	## interface1 Rx Tx,interface2 Rx Tx,....
 	traffic=$(grep : /proc/net/dev | sed -e 's/^[[:space:]]\+//;s/[[:space:]]\+/ /g;s/://g'| cut -d " " -f 1,2,10 | paste -sd ",")
-	echo "[INFO]  Network traffic:$traffic"
+	log_info "Network traffic:$traffic"
 
 	# check minimum uptime
     if [[ "$keepPc" == "off" ]]; then
@@ -138,8 +158,8 @@ shutdown_sequence() {
 		## take a nap if necessary
 		if (( $uptime < $min_uptime )); then
 			let sleep_duration=$min_uptime-$uptime
-			echo "[INFO]  Sequence duration was $uptime seconds (min. allowed $min_uptime s for exit code $return_value)"
-			echo "[INFO]  Sleeping for $sleep_duration s..."
+			log_info "Sequence duration was $uptime seconds (min. allowed $min_uptime s for exit code $return_value)"
+			log_info "Sleeping for $sleep_duration s..."
 
 			sleep $sleep_duration
 		fi
@@ -152,35 +172,35 @@ shutdown_sequence() {
 	fi
 
     if [[ "$keepPc" == "off" ]]; then
-	    echo "[INFO]  Option : Keep PC OFF"
+	    log_info "Option : Keep PC OFF"
 
-	    echo "[INFO]  Send Yoctopuce To sleep (or not)"
+	    log_info "Send Yoctopuce To sleep (or not)"
 		set +e
 	    python -m hypernets.yocto.sleep_monitor
 		yocto_sleep=$?
 		set -e
 
-		echo "[DEBUG] Yoctosleep status : $yocto_sleep"
+		log_info "Yoctosleep status : $yocto_sleep"
 
 		if [[ $yocto_sleep -eq 0 ]]; then
 			# All OK, shuttig down
-			echo "[DEBUG] Shutting down"
+			log_info "Shutting down"
 			exit 0
 		fi
 
 		# Something went wrong
 	    # Cause service exit 1 and doesn't execute SuccessAction=poweroff
 		if [[ $yocto_sleep -eq 1 ]]; then
-			echo "[CRITICAL] Yocto unreachable !!"
+			log_error "Yocto unreachable !!"
 		elif [[ $yocto_sleep -eq 255 ]]; then
-			echo "[CRITICAL] Yocto scheduled wakeup is disabled !!"
-			echo "[CRITICAL] Waking up is possible ONLY by manually pressing 'WAKE' button !!"
+			log_error "Yocto scheduled wakeup is disabled !!"
+			log_error "Waking up is possible ONLY by manually pressing 'WAKE' button !!"
 		fi
 
-		echo "[CRITICAL] NOT shutting down !!"
+		log_error "NOT shutting down !!"
 	    exit 1
     else
-	    echo "[INFO]  Option : Keep PC ON"
+	    log_info "Option : Keep PC ON"
 
 		# Test run
 		if [[ "${keepPcInConf-}" == "off" ]]; then
@@ -198,12 +218,11 @@ shutdown_sequence() {
 
 		# sleep inhibited by sleep.lock file
 		if [[ "${sleepLocked-}" == 1 ]]; then
-			echo "[ERROR] Power off has been inhibited by sleep.lock file in the hypernets_tools folder"
-			echo "[ERROR] Remove the sleep.lock file to enable sending yocto to sleep and powering off the PC"
-			echo
+			log_error "Power off has been inhibited by sleep.lock file in the hypernets_tools folder"
+			log_error "Remove the sleep.lock file to enable sending yocto to sleep and powering off the PC"
 		fi
 
-	    # Cause service exit 1 and doesnt execute SuccessAction=poweroff
+	    # Cause systemd service exit 1 and doesn't execute SuccessAction=poweroff
 	    exit 1
     fi
 }
@@ -215,7 +234,6 @@ debug_yocto(){
     # YOCTO DEBUG ------------------------------------------------------------------
     # ------------------------------------------------------------------------------
     echo "[DEBUG]  Check if Yocto-Pictor is in (pseudo) deep-sleep mode..."
-    yoctoPrefix2=$(parse_config "yocto_prefix2" config_static.ini)
     set +e
     yoctoState=$(wget -O- \
         'http://127.0.0.1:4444/bySerial/$yoctoPrefix2/api/wakeUpMonitor/wakeUpState' \
@@ -300,7 +318,9 @@ else
 		hn_tools_commit="${hn_tools_commit}-mod"
 	fi
 
-	echo "[INFO]  Running hypernets_tools from $hn_tools_repo branch $hn_tools_branch commit $hn_tools_commit"
+	hn_tools_ver=$(python -c "import hypernets; print(hypernets.__version__)")
+
+	echo "[INFO]  Running hypernets_tools version $hn_tools_ver from $hn_tools_repo branch $hn_tools_branch commit $hn_tools_commit"
 fi
 set -e
 
@@ -312,74 +332,60 @@ if [[ "$bypassYocto" != "yes" ]] ; then
     fi
 
 	# Ensure Yocto is online
-	yoctopuceIP=$(parse_config "yoctopuce_ip" config_static.ini)
-
-	if [[ "$yoctopuceIP" != "usb" ]] ; then
-		# We ping it if there is an IP address
-		echo "[INFO]  Waiting for yoctopuce..."
-		while ! timeout 2 ping -c 1 -n $yoctopuceIP &>/dev/null
-		do
-			echo -n '.'
-		done
-		echo "[INFO]  Ok !"
-	else
-		# Else check  if VirtualHub is running
-		set +e
-		systemctl is-active yvirtualhub.service > /dev/null
-		if [[ $? -eq 0 ]] ; then
-			set -e
-			echo "[INFO]  VirtualHub is running."
-		else
-			set -e
-			echo "[INFO]  Starting VirtualHub..."
-            if [[ "$ID" == "manjaro" ]]; then
-			    /usr/bin/VirtualHub &
-            elif [[ "$ID" == "debian" ]]; then
-                /usr/sbin/VirtualHub &
-            else
-                echo "[ERROR] Not able to identify the distribution."
-                exit 0
-            fi
-			sleep 2
-			echo "[INFO]  ok"
-		fi
-
-		# Check if yocto is accessible
-		yocto=$(parse_config "yocto_prefix2" config_static.ini)
-		set +e
-		wget -O- "http://127.0.0.1:4444/bySerial/$yocto/api.txt" > /dev/null 2>&1
-		retcode=$?
-		if [[ $retcode == 0 ]]; then
-			echo "[INFO]  Found Yocto"
-			yoctoSN=$(python -m hypernets.yocto.get_FW_ver)
-			echo "[INFO]  $yoctoSN"
-		elif [[ $retcode == 8 ]]; then 
-			# Server issued an error response. Probably 404 not found.
-			echo "[CRITICAL] Yocto '$yocto' is not accessible !!"
-
-			# list modules if command line API is installed
-			if [[ $(command -v YModule) ]]; then
-				inventory=$(YModule -r 127.0.0.1 inventory)
-				echo "[CRITICAL] The list of modules found:"
-				echo "$inventory"
-			fi
-
-			echo "[CRITICAL] Can't do anything without Yocto !!"
-			echo "[CRITICAL] Exiting the sequence !!"
-			exit -1
-		else
-			# Some other wget error
-			echo "[ERROR] Yocto request finished with error code $retcode"
-		fi
+	set +e
+	# check if VirtualHub is running
+	systemctl is-active yvirtualhub.service > /dev/null
+	if [[ $? -eq 0 ]] ; then
 		set -e
+		log_info "VirtualHub is running."
+	else
+		set -e
+		log_info "Starting VirtualHub..."
+        if [[ "$ID" == "manjaro" ]]; then
+		    /usr/bin/VirtualHub &
+        elif [[ "$ID" == "debian" ]]; then
+            /usr/sbin/VirtualHub &
+        else
+            log_error "Not able to identify the distribution."
+            exit 0
+        fi
+		sleep 2
+		log_info "ok"
+	fi
 
-		# log uptimes
+	# Check if yocto is accessible
+	set +e
+	wget -O- "http://127.0.0.1:4444/bySerial/$yoctoPrefix2/api.txt" > /dev/null 2>&1
+	retcode=$?
+	if [[ $retcode == 0 ]]; then
+		log_info "Found Yocto"
+		yoctoFW=$(python -m hypernets.yocto.get_FW_ver)
+		log_info "$yoctoFW"
+	elif [[ $retcode == 8 ]]; then 
+		# Server issued an error response. Probably 404 not found.
+		log_error "Yocto '$yoctoPrefix2' is not accessible !!"
+
+		# list modules if command line API is installed
 		if [[ $(command -v YModule) ]]; then
-            yocto=$(parse_config "yocto_prefix2" config_static.ini)
-			yocto_uptime_millisec=$(YModule -f '[result]' -r 127.0.0.1 $yocto get_upTime | awk '{print $1}')
-			sys_uptime_sec=$(awk '{print $1}' /proc/uptime)
-			printf "[INFO]  yocto uptime is %.1f min, system uptime is %.1f min\n" $(bc -l <<< "$yocto_uptime_millisec / 60000") $(bc -l <<< "$sys_uptime_sec / 60")
+			inventory=$(YModule -r 127.0.0.1 inventory)
+			log_error "The list of modules found:"
+			echo "$inventory"
 		fi
+
+		log_error "Can't do anything without Yocto !!"
+		log_error "Exiting the sequence !!"
+		exit -1
+	else
+		# Some other wget error
+		log_error "Yocto request finished with error code $retcode"
+	fi
+	set -e
+
+	# log uptimes
+	if [[ $(command -v YModule) ]]; then
+		yocto_uptime_millisec=$(YModule -f '[result]' -r 127.0.0.1 $yoctoPrefix2 get_upTime | awk '{print $1}')
+		sys_uptime_sec=$(awk '{print $1}' /proc/uptime)
+		log_info "$(printf "yocto uptime is %.1f min, system uptime is %.1f min\n" $(bc -l <<< "$yocto_uptime_millisec / 60000") $(bc -l <<< "$sys_uptime_sec / 60"))"
 	fi
 
 	# log supply voltage
@@ -399,7 +405,7 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 			echo "[WARNING]  $wakeupreason is not a reason to start the sequence."
 			startSequence="no"
 			if [[ "$keepPc" != "on" ]]; then
-				echo "[DEBUG]  Security sleep 2 minutes..."
+				log_info "Security sleep 2 minutes..."
 				sleep 120
 			fi
 			shutdown_sequence 0
@@ -407,18 +413,18 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 
 		if [[ "$wakeupreason" == "SCHEDULE2" ]]; then
             if [[ ! -n $sequence_file_alt ]] ; then
-                echo "[WARNING ] No alternative sequence file is defined."
-                echo "[WARNING ] $sequence_file will be run instead."
+                echo "[WARNING]  No alternative sequence file is defined."
+                echo "[WARNING]  $sequence_file will be run instead."
             else
-                echo "[INFO    ] $sequence_file_alt as alternative sequence file is defined."
+                echo "[INFO] $sequence_file_alt as alternative sequence file is defined."
                 sequence_file=$sequence_file_alt
             fi 
         fi
 	fi # checkWakeUpReason
 
 	if [[ "$checkRain" == "yes" ]] ; then
-		echo "[INFO]  Rain sensor check is enabled."
-		echo "[INFO]  Set relay #4 to ON."
+		log_info "Rain sensor check is enabled."
+		log_info "Set relay #4 to ON."
 		python -m hypernets.yocto.relay -son -n4
 		sleep 5
 	fi # checkRain
@@ -426,14 +432,14 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 	# Sync PC clock to yocto gps if more than 5 sec out of sync
 	# and yocto gps has fix
 	set +e
-	utils/sync_clock_to_gps.sh -m 5
+	utils/sync_clock_to_gps.sh -m 5 -l $numeric_verbosity
 	set -e
 fi # bypassYocto != yes
 
 if [[ "$startSequence" == "no" ]] ; then
 	echo "[INFO]  Start sequence = no"
 	if [[ "$keepPc" != "on" ]]; then
-		echo "[INFO]  5 minutes sleep..."
+		log_info "5 minutes sleep..."
 		sleep 300
 	fi
 	shutdown_sequence 0
@@ -458,10 +464,6 @@ if [[ -n $bootTimeout ]] ; then
 	extra_args="$extra_args -t $bootTimeout"
 fi
 
-if [[ "$dumpEnvironmentLogs" == "yes" ]] ; then
-	extra_args="$extra_args -e "
-fi
-
 if [[ "$checkRain" == "yes" ]] ; then
 	extra_args="$extra_args -r "
 fi
@@ -474,14 +476,8 @@ if [[ -n $verbosity ]] ; then
 	extra_args="$extra_args -v $verbosity"
 fi
 
-if [[ -n $dataDirTree ]] ; then
-	if [[ "$dataDirTree" == "yes" ]] ; then
-		extra_args="$extra_args -d"
-	fi
-fi
-
 if [[ "$bypassYocto" != "yes" ]] ; then
-	echo "[INFO]  Set relay #2 to ON."
+	log_info "Set relay #2 to ON."
 	python -m hypernets.yocto.relay -son -n2
 else
 	echo "[INFO]  Bypassing Yocto"

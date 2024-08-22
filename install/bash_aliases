@@ -352,8 +352,8 @@ yapo() (
 # in config_dynamic.ini
 # 
 # Delete this file to re-enable sleep or even better, 
-# use   yapo set   which re-enables yocto auto-power-off and 
-# deletes this file or see   yapo -h   for help.
+# use 'yapo set' or 'yapo restore' which re-enables yocto auto-power-off and 
+# deletes this file. See 'yapo -h' for help.
 #
 # The last used yocto auto-power-off setting was
 last_yapo_set=$max_wakeup_time
@@ -425,41 +425,6 @@ EOF
 ) # yapo()
 
 
-## helper functions for converting between absolute and relative positions
-## force to 0...360 range
-_pt_abs2rel_pan() {
-	if [[ "$reverse_tilt" == "yes" ]]; then
-		printf "%.1f" $( bc <<< "($1 - ($offset_pan) - 180 + 36000) % 360" )
-	else
-		printf "%.1f" $( bc <<< "($1 + ($offset_pan) + 36000) % 360" )
-	fi
-}
-
-_pt_abs2rel_tilt() {
-	if [[ "$reverse_tilt" == "yes" ]]; then
-		printf "%.1f" $( bc <<< "(- ($1) - ($offset_tilt) + 36000) % 360" )
-	else
-		printf "%.1f" $( bc <<< "($1 + ($offset_tilt) + 36000) % 360" )
-	fi
-}
-
-_pt_rel2abs_pan() {
-	if [[ "$reverse_tilt" == "yes" ]]; then
-		printf "%.1f" $( bc <<< "($1 + ($offset_pan) + 180 + 36000) % 360" )
-	else
-		printf "%.1f" $( bc <<< "($1 - ($offset_pan) + 36000) % 360" )
-	fi
-}
-
-_pt_rel2abs_tilt() {
-	if [[ "$reverse_tilt" == "yes" ]]; then
-		printf "%.1f" $( bc <<< "(- ($1 + ($offset_tilt)) + 36000) % 360" )
-	else
-		printf "%.1f" $( bc <<< "($1 - ($offset_tilt) + 36000) % 360" )
-	fi
-}
-
-
 ## Pan-Tilt control
 pt() (
 	cd "$HYPERNETS_TOOLS"
@@ -485,7 +450,6 @@ pt() (
 	source utils/configparser.sh
 	offset_tilt=$(parse_config "offset_tilt" config_dynamic.ini)
 	offset_pan=$(parse_config "offset_pan" config_dynamic.ini)
-	reverse_tilt=$(parse_config "reverse_tilt" config_dynamic.ini)
 
 	# remove plus sign, if any
 	offset_tilt=${offset_tilt#+}
@@ -548,7 +512,6 @@ EOF
 		echo "elevation = $elevation"
 		echo "offset_pan = $offset_pan"
 		echo "offset_tilt = $offset_tilt"
-		echo "reverse_tilt = $reverse_tilt"
 		echo "Using system time $(date '+%Y/%m/%d %H:%M:%S %Z')"
 
 		if [ "$gps_hasfix" = 1 ]; then
@@ -591,15 +554,14 @@ EOF
 	current_abs_tilt=$(cut -f 2 <<< $current_abs_pos)
 
 	## calculate current position in hypy coords
-	current_hyper_pan=$(_pt_abs2rel_pan "$current_abs_pan")
-	current_hyper_tilt=$(_pt_abs2rel_tilt "$current_abs_tilt")
+	current_hyper_pan=$(printf "%.1f" $(bc <<< "(($current_abs_pan) + ($offset_pan) + 36000) % 360"))
+	current_hyper_tilt=$(printf "%.1f" $(bc <<< "(($current_abs_tilt) + ($offset_tilt) + 36000) % 360"))
 
 	############### print current position #################
 	if [[ "${1-}" == "" ]]; then
 		echo "Current parameters"
 		echo "offset_pan = $offset_pan"
 		echo "offset_tilt = $offset_tilt"
-		echo "reverse_tilt = $reverse_tilt"
 		echo
 		echo "Current positions"
 		printf "abs:   pan = %.1f, tilt = %.1f\n" "$current_abs_pan" "$current_abs_tilt"
@@ -625,11 +587,11 @@ EOF
 			requested_abs_pan="$new_pan"
 		elif [ "$sunpos" = 1 ]; then ## requested sun
 			requested_rel_sun_pan=$(bc <<< "$sun_azimuth + ($new_pan)")
-			requested_abs_pan=$(_pt_rel2abs_pan "$requested_rel_sun_pan")
+			requested_abs_pan=$(printf "%.1f" $(bc <<< "(($requested_rel_sun_pan) - ($offset_pan) + 36000) % 360"))
 		elif [ "$deltapos" = 1 ]; then ## requested delta
 			requested_abs_pan=$(bc <<< "$current_abs_pan + ($new_pan)")
 		else ## requested hyper
-			requested_abs_pan=$(_pt_rel2abs_pan "$new_pan")
+			requested_abs_pan=$(printf "%.1f" $(bc <<< "(($new_pan) - ($offset_pan) + 36000) % 360"))
 		fi
 
 		if [[ "$new_tilt" == "x" ]]; then ## use current
@@ -638,11 +600,11 @@ EOF
 			requested_abs_tilt="$new_tilt"
 		elif [ "$sunpos" = 1 ]; then ## requested sun, zenith is 180 in relative coords
 			requested_rel_sun_tilt=$(bc <<< "(180 - $sun_zenith + ($new_tilt))")
-			requested_abs_tilt=$(_pt_rel2abs_tilt "$requested_rel_sun_tilt")
+			requested_abs_tilt=$(printf "%.1f" $(bc <<< "(($requested_rel_sun_tilt) - ($offset_tilt) + 36000) % 360"))
 		elif [ "$deltapos" = 1 ]; then ## requested delta
 			requested_abs_tilt=$(bc <<< "$current_abs_tilt + ($new_tilt)")
 		else ## requested hyper
-			requested_abs_tilt=$(_pt_rel2abs_tilt "$new_tilt")
+			requested_abs_tilt=$(printf "%.1f" $(bc <<< "(($new_tilt) - ($offset_tilt) + 36000) % 360"))
 		fi
 
 		## force to 0...360 range
@@ -658,12 +620,12 @@ EOF
 		new_abs_tilt=$(cut -f 2 <<< $new_abs_pos)
 	
 		## calculate relative position
-		new_hyper_pan=$(_pt_abs2rel_pan "$new_abs_pan")
-		new_hyper_tilt=$(_pt_abs2rel_tilt "$new_abs_tilt")
+		new_hyper_pan=$(printf "%.1f" $(bc <<< "(($new_abs_pan) + ($offset_pan) + 36000) % 360"))
+		new_hyper_tilt=$(printf "%.1f" $(bc <<< "(($new_abs_tilt) + ($offset_tilt) + 36000) % 360"))
 
 		## calculate residuals
-		residual_pan=$( bc <<< "$new_abs_pan - $requested_abs_pan" )
-		residual_tilt=$( bc <<< "$new_abs_tilt - $requested_abs_tilt" )
+		residual_pan=$(bc <<< "$new_abs_pan - $requested_abs_pan")
+		residual_tilt=$(bc <<< "$new_abs_tilt - $requested_abs_tilt")
 
 		echo
 		echo "New positions"
@@ -683,8 +645,12 @@ schedule() (
 	
 	if [[ "${1-}" == "-h" ]] || [[ "${1-}" == "--help" ]]
 	then
+		echo
 		echo "View & Adjust yocto schedules 1 & 2 and time zone"
-		echo " notes:		-avoid overlaping sequences, max-runtime should be less than time between sequences"
+		echo "schedule         without options shows current schedules and time zone"
+		echo "         set     opens interactive menu for setting the schedules and time zone"
+		echo "eg:  schedule      schedule set"
+		echo "note: avoid overlaping sequences, max-runtime should be less than time between sequences"
 		exit
 	fi
 	
@@ -697,15 +663,106 @@ schedule() (
 		exit -1
 	fi
 	
-	
-	clear
-	
 	yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yoctowifibrd get_utcOffset)
 	if [ "$yocto_offset" = 0 ]; then
 		utc_offset=""
 	else
 		utc_offset=$(printf "%+d" $(("$yocto_offset" / 3600)))
 	fi
+
+	## print current schedules and exit
+	if [[ "${1-}" == "" ]]
+	then
+		echo "Visible parameters are active, \".\" marks inactive"
+		echo "All inactive is equivalent to all set for a single field"
+		echo "All inactive for all fields disables the schedule"
+
+		for n_sched in 1 2;
+		do
+			echo "----------------------------------------------------------"
+			echo "   ${HL}Schedule $n_sched${RESET_HL}"
+			echo -e -n "Months:\t\t"
+			YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$n_sched" get_months
+
+			days=$(YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$n_sched" get_monthDays)
+			if [[ "$days" =~ ^\[\.*\]$ ]]; then
+				echo -e "Days:\t\t$days"
+			else
+				echo -e -n "Days:\t\t["
+				for ((i = 0; i < 31; i++)); do
+				    if [[ "${days:i+1:1}" != "." ]]; then
+					    echo -n "$((i+1)) "
+					else
+					    echo -n ". "
+					fi
+				done
+				tput cub 1
+				echo "]"
+			fi
+
+			echo -e -n "Weekdays:\t"
+			YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$n_sched" get_weekDays
+			
+			hours=$(YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$n_sched" get_hours)
+			if [[ "$hours" =~ ^\[\.*\]$ ]]; then
+				echo -e "Hours:\t\t$hours"
+			else
+				echo -e -n "Hours:\t\t["
+				for ((i = 0; i < 24; i++)); do
+				    if [[ "${hours:i+1:1}" != "." ]]; then
+					    echo -n "$i "
+					else
+					    echo -n ". "
+					fi
+				done
+				tput cub 1
+				echo "]"
+			fi
+			
+			minutes_dec=$(YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$n_sched" get_minutes)
+			minutes_bin=$(bc <<< "obase=2; $minutes_dec")
+			length=${#minutes_bin}
+			echo -e -n "Minutes:\t["
+			for ((i = (($length - 1)), j=0; i >= 0; i--, j++)); do
+			    if [[ "${minutes_bin:i:1}" == "1" ]]; then
+				    echo -n "$j,"
+				fi
+			done
+			if [[ $minutes_dec != "0" ]]; then
+				tput cub 1
+			fi
+			echo "]"
+		done
+
+		echo "----------------------------------------------------------"
+		echo -n "Rugged PC date & time:  "
+		date '+%Y/%m/%d %H:%M:%S %Z'
+		echo -n "Yocto date & time is:   "
+		yocto_time=$(YRealTimeClock -f '[result]' -r 127.0.0.1 "$yoctowifibrd" get_dateTime)
+		if [ "$yocto_offset" = 0 ]; then
+			echo "$yocto_time UTC"
+		else
+			echo "$yocto_time UTC$utc_offset (UTC offset is $yocto_offset s)"
+		fi
+
+		next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 "$yoctowifibrd" get_nextWakeUp|sed -e 's/[[:space:]].*//')
+		if [ "$next_wakeup_timestamp" = 0 ]; then
+			echo "${XHL}    Yocto scheduled wakeup is disabled${RESET_HL}"
+		else
+			yocto_timestamp=$(date -d "$yocto_time UTC" -u +%s)
+			delta=$(( "$next_wakeup_timestamp" - "$yocto_timestamp" ))
+			echo "Next wake up is at:     $(date -d @$next_wakeup_timestamp '+%Y/%m/%d %H:%M:%S') UTC$utc_offset (in $delta s)"
+		fi
+
+		exit 0
+	fi
+	
+	## only schedule set past this line
+	if [[ "${1-}" != "set" ]]; then
+		exit
+	fi
+	
+	clear
 	
 	while [ 1 ]
 	do
@@ -805,7 +862,6 @@ schedule() (
 			schedy=2
 			ch=99
 		fi
-		
 		
 		if [ "$ch" = "99" ] 
 		then
@@ -1256,28 +1312,17 @@ schedule() (
 					#save to yocto
 					YWakeUpSchedule -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$schedy" set_hours "$hours"
 			
-					minsbinarray=() #clear mins array
-					marray=($(echo "$minutes" | tr "," "\n")) #remove the , put into an array
-					len=${#marray[@]} # number of vars in arrays
-					arn=$((len - 1))
-					mnn=${marray[$arn]} # 1st num in array (ie 1st num from right)
-					for (( mn=59;mn>=0;mn-- )) ; do #loop until last num creating binary num
-						revvar=$((60 - mn))
-						if [[ "$mn" -eq "$mnn" ]] #check var against loop mn
-						then 
-							arn=$((arn - 1))
-							mnn=${marray[$arn]} #load next bit to look for	
-							minsbinarray[$revvar]="1"
-						else
-							minsbinarray[$revvar]="0"
+ 					marray=($(echo "$minutes" | tr "," "\n")) #remove the , put into an array
+ 					len=${#marray[@]} # number of vars in arrays
+
+					dec=0
+					for (( i = 0; i < len; i++)); do
+						if ((${marray[$i]} >= 0 && ${marray[$i]} <= 59)); then
+							dec=$((dec + 2**${marray[$i]}))
 						fi
 					done
-					b2d=$(echo "${minsbinarray[*]}") #put array contents back into minss var
-					b2d=$(echo "$b2d" | sed -r 's/[ ]+//g') #replace space with nufn
-					dec=$(echo "obase=10; ibase=2; $b2d" | bc)
 					#save to yocto
-					#last one with -s for saving to flash
-					YWakeUpSchedule -s -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$schedy" set_minutes "$dec"
+ 					YWakeUpSchedule -s -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$schedy" set_minutes "$dec"
 			
 					echo
 					#all saved to yocto!
@@ -1290,7 +1335,7 @@ schedule() (
 				if [[ "$userinput" =~ ^([rR])$ ]] #redo
 				then
 					echo "  Give it another crack then....  "
-					ch=2
+					ch=99
 					skipread=1
 				fi
 			
