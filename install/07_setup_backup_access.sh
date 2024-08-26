@@ -67,19 +67,20 @@ if ! ip link show "$sshIf" > /dev/null 2>&1 ; then
 	echo "Available interfaces are:"
 	echo "$(ip -br link show | cut -d' ' -f 1 | grep -e "^enp" -e "^wlp")"
 	echo "${XHL}Please modify 'backup_ssh_interface' in config_static.ini and rerun this script!${RESET_HL}"
+	exit
 fi
-
-## delete previous conf
-rm -rf /etc/network/interfaces.d/ssh_backup_interface
-nmcli radio wifi off
-if [[ $(nmcli connection show | grep ssh_backup_interface) ]]; then
-	nmcli connection delete ssh_backup_interface
-fi
-
 
 
 ############ configure network interface
 if [[ "$sshIf" =~ ^enp ]]; then ## ethernet
+
+	## delete previous conf
+	rm -rf /etc/network/interfaces.d/ssh_backup_interface
+	nmcli radio wifi off
+	if [[ $(nmcli connection show | grep ssh_backup_interface) ]]; then
+		nmcli connection delete ssh_backup_interface
+	fi
+
 	if [ "$ID"  == "debian" ]; then
 		cat << EOF > /etc/network/interfaces.d/ssh_backup_interface
 auto $sshIf
@@ -113,6 +114,12 @@ elif [[ "$sshIf" =~ ^wlp ]]; then ## wifi
 			break
 		fi
 	done
+
+	## delete previous conf
+	rm -rf /etc/network/interfaces.d/ssh_backup_interface
+	if [[ $(nmcli connection show | grep ssh_backup_interface) ]]; then
+		nmcli connection delete ssh_backup_interface
+	fi
 
 	## if ipv4.method is shared instead of manual the PC will share its internet connection over wifi
 	nmcli connection add type wifi ifname $sshIf con-name ssh_backup_interface \
