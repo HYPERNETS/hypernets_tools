@@ -123,9 +123,9 @@ function update_libhypstar(){
 
     # Update and Install
     cd hypernets/hypstar/libhypstar/
-    sudo -u $user git checkout main
+    sudo -u $user git checkout oldmain
     sudo -u $user git pull
-    sudo -u $user make lib
+    sudo -u $user make clean lib
     sudo make install
     cd -
     # sudo ./install/03_update_libhypstar.sh 
