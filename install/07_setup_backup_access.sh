@@ -28,12 +28,12 @@ if [ -f /etc/os-release ]; then
 else
 	echo "Error: impossible to detect OS system version."
 	echo "Not a systemd freedesktop.org distribution?"
-	exit 1
+	exit
 fi
 
 if [ "$ID" != "debian" ] && [ "$ID" != "manjaro" ]; then
 	echo "${XHL}Error: only Debian and Manjaro are supported distributions${RESET_HL}"
-	exit 1
+	exit
 fi
 
 source utils/configparser.sh
@@ -56,22 +56,31 @@ echo
 
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then 
 	echo "${XHL}Exit${RESET_HL}"
-	exit -1
+	exit
 fi
 
 echo
 
-## delete previous conf
-rm -rf /etc/network/interfaces.d/ssh_backup_interface
-nmcli radio wifi off
-if [[ $(nmcli connection show | grep ssh_backup_interface) ]]; then
-	nmcli connection delete ssh_backup_interface
+## check if interface exists
+if ! ip link show "$sshIf" > /dev/null 2>&1 ; then
+	echo "${XHL}Interface $sshIf does not exist!${RESET_HL}"
+	echo "Available interfaces are:"
+	echo "$(ip -br link show | cut -d' ' -f 1 | grep -e "^enp" -e "^wlp")"
+	echo "${XHL}Please modify 'backup_ssh_interface' in config_static.ini and rerun this script!${RESET_HL}"
+	exit
 fi
 
 
-
 ############ configure network interface
-if [[ "$sshIf" =~ ^enp[12]s0$ ]]; then ## ethernet
+if [[ "$sshIf" =~ ^enp ]]; then ## ethernet
+
+	## delete previous conf
+	rm -rf /etc/network/interfaces.d/ssh_backup_interface
+	nmcli radio wifi off
+	if [[ $(nmcli connection show | grep ssh_backup_interface) ]]; then
+		nmcli connection delete ssh_backup_interface
+	fi
+
 	if [ "$ID"  == "debian" ]; then
 		cat << EOF > /etc/network/interfaces.d/ssh_backup_interface
 auto $sshIf
@@ -84,7 +93,7 @@ EOF
 		nmcli connection add type ethernet ifname $sshIf con-name ssh_backup_interface ip4 $sshIp/24 ipv4.method manual autoconnect yes
 		nmcli connection up ssh_backup_interface
 	fi
-elif [[ "$sshIf" == "wlp12s0" ]]; then ## wifi
+elif [[ "$sshIf" =~ ^wlp ]]; then ## wifi
 	## read the wifi password
 	while [ 1 ]; do
 		read -p "${HL}Enter new password for the wifi hotspot: ${RESET_HL}" -sr
@@ -106,6 +115,12 @@ elif [[ "$sshIf" == "wlp12s0" ]]; then ## wifi
 		fi
 	done
 
+	## delete previous conf
+	rm -rf /etc/network/interfaces.d/ssh_backup_interface
+	if [[ $(nmcli connection show | grep ssh_backup_interface) ]]; then
+		nmcli connection delete ssh_backup_interface
+	fi
+
 	## if ipv4.method is shared instead of manual the PC will share its internet connection over wifi
 	nmcli connection add type wifi ifname $sshIf con-name ssh_backup_interface \
 			autoconnect yes ssid HYPSTAR 802-11-wireless.mode ap 802-11-wireless.band bg \
@@ -116,9 +131,11 @@ elif [[ "$sshIf" == "wlp12s0" ]]; then ## wifi
 
 	unset wifi_pass
 else
-	echo "${XHL}Invalid interface $sshIf"
-	echo "Allowed values for backup_ssh_interface in config_static.ini are enp1s0, enp2s0 and wlp12s0${RESET_HL}"
-	exit -1
+	echo "${XHL}Invalid interface $sshIf${RESET_HL}"
+	echo "Allowed values for backup_ssh_interface in config_static.ini are:"
+	echo "$(ip -br link show | cut -d' ' -f 1 | grep -e "^enp" -e "^wlp")"
+	echo "${XHL}Please modify 'backup_ssh_interface' in config_static.ini and rerun this script!${RESET_HL}"
+	exit
 fi
 
 
