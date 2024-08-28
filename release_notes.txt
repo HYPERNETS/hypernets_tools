@@ -1,6 +1,11 @@
+Version 2.0.2: (2024-08-28)
+	- Catch all exceptions during graceful shutdown of the radiometer 
+	  at the end of the sequence
+
 Version 2.0.1: (2024-08-27)
 	- Install script fixes
 	- SSH backup access configuration fixes
 	- Added release_notes.txt
+
 Version 2.0.0: (2024-08-16)
 	- Start versioning hypernets_tools in sequence logs and metadata.txt

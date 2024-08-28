@@ -378,11 +378,16 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     # log the sequence name at all log levels
     force_log_info(f"Created sequence : {final_seq_path}")
 
-    if swir_is_requested is True:
-        instrument_instance.shutdown_SWIR_module_thermal_control()
+    try:
+        if swir_is_requested is True:
+            instrument_instance.shutdown_SWIR_module_thermal_control()
+    
+        if instrument_is_requested:
+            del instrument_instance
 
-    if instrument_is_requested:
-        del instrument_instance
+    # The sequence has been successfully finished, graceful shutdown errors are not critical
+    except Exception as e:
+        error(f"Error: {e}")
 
 
 def is_raining(rain_sensor=None):
