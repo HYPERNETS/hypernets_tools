@@ -45,7 +45,7 @@ if [ "$ID"  == "debian" ]; then
 
 	sudo apt install python3-pip tk make gcc python3-tk rsync python3-pysolar python3-crcmod \
 			python3-serial python3-matplotlib python3-geopy net-tools ffmpeg sshfs python3-pyudev \
-			python-is-python3 vnstat
+			python-is-python3 vnstat jq
 
 	# pipx is not available on older Debian releases
 	if [[ $(apt-cache search -n -q -q pipx | wc -l) -eq 0 ]]; then
@@ -66,7 +66,7 @@ elif [ "$ID"  == "manjaro" ]; then
 
 	sudo pacman -Syu python python-pip tk make gcc python-pipx python-crcmod python-pyserial \
 			python-matplotlib python-geopy net-tools python-pyudev python-pyftdi gnu-netcat \
-			vnstat
+			vnstat jq
 
 	sudo -u $user python -m pip install pysolar --break-system-packages
 	sudo -u $user python -m pip install yoctopuce --break-system-packages
