@@ -65,8 +65,6 @@ done
 
 
 disk_usage() {
-    logNameBase=$1
-
     echo "[INFO]  Disk usage information:" 
     df -h -text4
 	journalctl --disk-usage
@@ -82,6 +80,50 @@ disk_usage() {
 	echo -n "$(date +"%Y-%m-%d-%H%M") " >> $diskUsageOuput
     echo "$dfOutput" | sed 1d >> $diskUsageOuput
 }
+
+
+net_traffic() {
+	## Parse vnstat jsonversion 2
+	net_db=$(vnstat --json)
+
+	if [[ $(jq '.jsonversion' <<< $net_db | sed -e 's/"//g') != "2" ]]; then 
+		echo "[ERROR]  Cannot parse vnstat JSON version $(jq '.jsonversion' <<< $net_db). Only version 2 is supported"
+		return
+	fi
+
+	echo "[INFO]  Network traffic: (interface Tx / Rx MiB)"
+
+	readarray -t interfaces < <(jq '.interfaces[].name' <<< $net_db | sed -e 's/"//g')
+
+	readarray -t month_tx < <(jq '.interfaces[].traffic.month | last .tx' <<< $net_db)
+	readarray -t month_rx < <(jq '.interfaces[].traffic.month | last .rx' <<< $net_db)
+	ym=$(paste -d "-" <(jq '.interfaces | first .traffic.month | last .date.year' <<< $net_db) \
+			<(jq '.interfaces | first .traffic.month | last .date.month' <<< $net_db))
+
+	readarray -t day_tx < <(jq '.interfaces[].traffic.day | last .tx' <<< $net_db)
+	readarray -t day_rx < <(jq '.interfaces[].traffic.day | last .rx' <<< $net_db)
+	ymd=$(paste -d "-" <(jq '.interfaces | first .traffic.day | last .date.year' <<< $net_db) \
+			<(jq '.interfaces | first .traffic.day | last .date.month' <<< $net_db) \
+			<(jq '.interfaces | first .traffic.day | last .date.day' <<< $net_db))
+
+	monthly="$ym:"
+	daily="$ymd:"
+
+	## Loop over interfaces
+	for i in "${!interfaces[@]}"; do 
+		tx_mib=$(printf "%.1f" $(bc <<< "(${month_tx[$i]}) / (1024 * 1024)"))
+		rx_mib=$(printf "%.1f" $(bc <<< "(${month_rx[$i]}) / (1024 * 1024)"))
+		monthly="$monthly ${interfaces[$i]} $tx_mib / $rx_mib;"
+
+		tx_mib=$(printf "%.1f" $(bc <<< "(${day_tx[$i]}) / (1024 * 1024)"))
+		rx_mib=$(printf "%.1f" $(bc <<< "(${day_rx[$i]}) / (1024 * 1024)"))
+		daily="$daily ${interfaces[$i]} $tx_mib / $rx_mib;"
+	done
+
+    echo "[INFO]  $monthly"
+    echo "[INFO]  $daily"
+}
+
 
 make_log() {
 	logNameBase=$1
@@ -136,7 +178,8 @@ make_log $logNameBase sequence
 make_log $logNameBase hello
 make_log $logNameBase access ssh sshd
 make_log $logNameBase webcam
-disk_usage $logNameBase
+disk_usage
+net_traffic
 
 # Read config file :
 source utils/configparser.sh

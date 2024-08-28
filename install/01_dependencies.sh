@@ -45,7 +45,7 @@ if [ "$ID"  == "debian" ]; then
 
 	sudo apt install python3-pip tk make gcc python3-tk rsync python3-pysolar python3-crcmod \
 			python3-serial python3-matplotlib python3-geopy net-tools ffmpeg sshfs python3-pyudev \
-			python-is-python3
+			python-is-python3 vnstat
 
 	# pipx is not available on older Debian releases
 	if [[ $(apt-cache search -n -q -q pipx | wc -l) -eq 0 ]]; then
@@ -65,7 +65,8 @@ elif [ "$ID"  == "manjaro" ]; then
 	fi
 
 	sudo pacman -Syu python python-pip tk make gcc python-pipx python-crcmod python-pyserial \
-			python-matplotlib python-geopy net-tools python-pyudev python-pyftdi gnu-netcat
+			python-matplotlib python-geopy net-tools python-pyudev python-pyftdi gnu-netcat \
+			vnstat
 
 	sudo -u $user python -m pip install pysolar --break-system-packages
 	sudo -u $user python -m pip install yoctopuce --break-system-packages
@@ -83,3 +84,5 @@ elif [ "$ID"  == "manjaro" ]; then
 	fi
 fi
 
+systemctl enable vnstat.service
+systemctl start vnstat.service

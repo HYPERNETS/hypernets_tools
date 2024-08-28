@@ -138,11 +138,6 @@ shutdown_sequence() {
 		fi # log next scheduled yocto wakeup if yocto command line API is installed
     fi # [[ "$bypassYocto" != "yes" ]] && [[ "$startSequence" == "yes" ]]
 
-	## Log network traffic
-	## interface1 Rx Tx,interface2 Rx Tx,....
-	traffic=$(grep : /proc/net/dev | sed -e 's/^[[:space:]]\+//;s/[[:space:]]\+/ /g;s/://g'| cut -d " " -f 1,2,10 | paste -sd ",")
-	log_info "Network traffic:$traffic"
-
 	# check minimum uptime
     if [[ "$keepPc" == "off" ]]; then
 		uptime=$(sed -e 's/\..*//' /proc/uptime)
