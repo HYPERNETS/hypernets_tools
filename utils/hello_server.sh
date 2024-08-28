@@ -122,6 +122,14 @@ net_traffic() {
 
     echo "[INFO]  $monthly"
     echo "[INFO]  $daily"
+
+	## Warn if wwan interface is missing from vnstat, but it is available and radio is enabled
+	if [[ $(jq '.interfaces[].name' <<< $net_db | grep -c -e wwa -e wwp) -eq 0 ]] && \
+			[[ $(nmcli -t radio wwan | grep -c enabled) -ne 0 ]] && \
+			[[ $(vnstat --iflist 1 | grep -c -e wwa -e wwp) -ne 0 ]]; then
+		echo "[WARNING]  WWAN interface seems to be missing from the vnstat logs." \
+				"Available interfaces are: $(vnstat --iflist 1 | tr '\n' ' ')"
+	fi
 }
 
 
