@@ -6,7 +6,7 @@ from time import time, sleep
 from os import mkdir, replace, path
 from pathlib import Path
 from shutil import copy
-from threading import Thread
+import threading
 
 from hypernets.abstract.protocol import Protocol
 from hypernets.abstract.create_metadata import parse_config_metadata
@@ -25,6 +25,13 @@ from hypernets.geometry.pan_tilt import move_to_geometry, move_to
 
 from hypernets.yocto.lightsensor_logger import start_lightsensor_thread, terminate_lightsensor_thread
 from hypernets.yocto.relay import set_state_relay
+from hypernets.yocto.sleep_monitor import getPoweroffCountdown
+
+
+yoctoWDTflag = threading.Event()
+
+class yoctoWathdogTimeout(Exception):
+    pass
 
 
 def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
@@ -151,7 +158,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         # power-on that we have to switch relay in a background thread after
         # a short delay, otherwise we always get the timeout
         if not instrument_standalone:
-            relay_thread = Thread(target = relay3_delayed_on)
+            relay_thread = threading.Thread(target = relay3_delayed_on)
             relay_thread.start()
 
         try:
@@ -187,6 +194,17 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     mdfile = open(path.join(seq_path, "metadata.txt"), "w")
     mdfile.write(parse_config_metadata(sequence_file = sequence_file, 
                                        instrument_sn = instrument_sn, vm_sn = vm_sn))
+
+    # Start yocto watchdog timeout monitor thread
+    # Exit if yocto watchdog timer expires in less than timeout_s seconds
+    # timeout_s should be long enough for finishing any pending pan-tilt movements 
+    # and parking the radiometer to nadir
+    if not instrument_standalone:
+        timeout_s = 120
+        yoctoWDTwatcher = threading.Thread(target=yoctoTimeoutWatch, 
+                                           args=(timeout_s, ), daemon=True)
+        yoctoWDTwatcher.start()
+        threading.excepthook = threadingExceptionHook
 
     # Enabling SWIR TEC for the whole sequence is a tradeoff between
     # current consumption and execution time.
@@ -256,6 +274,11 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             logger = getLogger()
             old_loglevel = logger.level
             for i in range(2):
+                # if yocto watchdog timeout is imminent
+                # wait here for threadingExceptionHook exit instead of moving pan-tilt
+                if yoctoWDTflag.is_set():
+                    yoctoWDTwatcher.join()
+
                 try:
                     pan_real, tilt_real = move_to_geometry(geometry, wait=True)
                     pan_real = float(pan_real) / 100
@@ -283,6 +306,12 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             logger.setLevel(old_loglevel)
 
         for request in requests:
+            if not instrument_standalone:
+                # if yocto watchdog timeout is imminent
+                # wait here for threadingExceptionHook exit instead of sending radiometer request 
+                if yoctoWDTflag.is_set():
+                    yoctoWDTwatcher.join()
+
             iter_line += 1
 
             block_position = geometry.create_block_position_name(iter_line)
@@ -410,7 +439,14 @@ def park_to_nadir():
 
     # park radiometer to nadir 
     info("Parking radiometer to nadir")
-    move_to(ser=None, tilt=park.tilt_abs, wait=True)
+    import serial
+    while True:
+        try:
+            move_to(ser=None, tilt=park.tilt_abs, wait=True)
+            break
+        except serial.serialutil.SerialException:
+            debug("Previous pan-tilt move in progress. Waiting...")
+            sleep(1)
 
 
 def relay3_delayed_on():
@@ -430,6 +466,26 @@ def force_log_info(msg):
     else:
         info(msg)
 
+
+def yoctoTimeoutWatch(timeout_s):
+    while True:
+        poweroff_countdown = getPoweroffCountdown()
+
+        if poweroff_countdown != 0 and poweroff_countdown < timeout_s:
+            raise yoctoWathdogTimeout(poweroff_countdown)
+
+        sleep(10)
+
+
+def threadingExceptionHook(exc):
+    if exc.exc_type is yoctoWathdogTimeout:
+        import os
+        yoctoWDTflag.set()
+        error(f"Aborting sequence due to Yocto watchdog timeout in {exc.exc_value} seconds")
+        park_to_nadir()
+        os._exit(98) # exit code 98
+    else:
+        error(f"Caught unhandled threading exception: {exc}")
 
 
 if __name__ == '__main__':

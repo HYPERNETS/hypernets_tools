@@ -282,7 +282,10 @@ def open_serial():
     debug(f"Initialization serial port communication on: {pantilt_port}...")
     ser = Serial(port=pantilt_port, baudrate=2400, bytesize=8,
                  parity='N', stopbits=1, timeout=.2, xonxoff=False,
-                 rtscts=False, dsrdtr=False)
+                 rtscts=False, dsrdtr=False, exclusive=True)
+
+    if(ser.isOpen() == False):
+        ser.open()
 
     return ser
 
