@@ -66,7 +66,7 @@ elif [ "$ID"  == "manjaro" ]; then
 
 	sudo pacman -Syu python python-pip tk make gcc python-pipx python-crcmod python-pyserial \
 			python-matplotlib python-geopy net-tools python-pyudev python-pyftdi gnu-netcat \
-			vnstat jq
+			vnstat jq sshfs
 
 	sudo -u $user python -m pip install pysolar --break-system-packages
 	sudo -u $user python -m pip install yoctopuce --break-system-packages
