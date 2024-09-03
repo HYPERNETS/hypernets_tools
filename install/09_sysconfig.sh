@@ -140,3 +140,13 @@ do
 done
 if [[ "$added_groups" == 1 ]]; then echo -e "${XHL}\nLog out and back in for the change to take effect!${RESET_HL}"; fi
 
+
+## Workaround for debian bug where occasionally the gsm modem interface has wwx* name with x being random mac address
+if [[ $(vnstat --dbiflist 1 | grep -c -e wwa -e wwp) -eq 0 ]] && [[ $(vnstat --iflist 1 | grep -c -e wwa -e wwp) -ne 0 ]]; then
+	readarray -t iflist < <(vnstat --iflist 1)
+	for interface in "${iflist[@]}"; do
+		if [[ $interface =~ ^wwa ]] || [[ $interface =~ ^wwp ]]; then
+			vnstat --add $interface
+		fi
+	done
+fi

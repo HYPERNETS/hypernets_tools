@@ -4,6 +4,18 @@ from configparser import ConfigParser
 
 from logging import debug
 
+def getPoweroffCountdown():
+    from urllib.request import urlopen
+
+    url_base = "/".join([get_url_base(), "api", "wakeUpMonitor", "sleepCountdown"])
+    url = urlopen(url_base)
+    countdown = int(url.read())
+    if countdown == 0:
+        debug(f"Yocto auto-power-off is disabled")
+    else:
+        debug(f"Yocto auto-power-off in {countdown} seconds")
+    return countdown
+
 
 if __name__ == '__main__':
     parser = ArgumentParser()

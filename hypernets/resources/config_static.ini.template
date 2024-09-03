@@ -46,11 +46,13 @@ remote_ssh_port = 20213
 # The reverse ssh tunnel client logs are stored in access.log by hypernets-access.service
 ssh_loglevel = ERROR
 
-# backup_ssh_interface - the interface for local ssh backup access in case the network is
-# unavailable and the reverse ssh tunnel to the network server can not be created
-# Allowed values: enp1s0 (eth port 1)
-#                 enp2s0 (eth port 2)
-#                 wlp12s0 (wifi)
+# backup_ssh_interface - the network interface for local ssh backup access in case the Internet
+# connection is unavailable and the reverse ssh tunnel to the network server can not be created.
+# Allowed values are the Ethernet (enp*) and Wifi (wlp*) network devices of the PC. The 
+# device names depend on the PC hardware configuration, usually the names are:
+#   enp1s0 (eth port 1)
+#   enp2s0 (eth port 2)
+#   wlp12s0 (wifi)
 backup_ssh_interface = wlp12s0
 
 # backup_ssh_ip - static IP address of the backup_ssh_interface

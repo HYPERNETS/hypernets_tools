@@ -138,18 +138,16 @@ shutdown_sequence() {
 		fi # log next scheduled yocto wakeup if yocto command line API is installed
     fi # [[ "$bypassYocto" != "yes" ]] && [[ "$startSequence" == "yes" ]]
 
-	## Log network traffic
-	## interface1 Rx Tx,interface2 Rx Tx,....
-	traffic=$(grep : /proc/net/dev | sed -e 's/^[[:space:]]\+//;s/[[:space:]]\+/ /g;s/://g'| cut -d " " -f 1,2,10 | paste -sd ",")
-	log_info "Network traffic:$traffic"
-
 	# check minimum uptime
     if [[ "$keepPc" == "off" ]]; then
 		uptime=$(sed -e 's/\..*//' /proc/uptime)
 
-		## minimum allowed uptime is 2 minutes for successful sequence (exit code 0)
-		## and rain (exit code 88), and 5 minutes for all other failed sequences
-		if [[ "$return_value" == "0" ]] || [[ "$return_value" == "88" ]] ; then
+		## minimum allowed uptime is 2 minutes for:
+		##   - successful sequence (exit code 0)
+		##   - rain (exit code 88)
+		##   - imminent yocto watchdog timeout (exit code 98)
+		## and 5 minutes for all other failed sequences
+		if [[ "$return_value" == "0" ]] || [[ "$return_value" == "88" ]] || [[ "$return_value" == "98" ]]; then
 			min_uptime=120
 		else
 			min_uptime=300
@@ -497,7 +495,9 @@ exit_actions() {
 		# 30 - sequence file not found
 		# 40 - failed to get instrument instance (no hypstar_port device)
 		# 88 - rainig
-		if [ $return_value -ne 30 ] && [ $return_value -ne 40 ] && [ $return_value -ne 88 ]; then
+		# 98 - Yocto watchdog timeout is imminent
+		if [ $return_value -ne 30 ] && [ $return_value -ne 40 ] && \
+				[ $return_value -ne 88 ] && [ $return_value -ne 98 ]; then
 			sleep 1
 			## VM stabilisation failed
 			## power cycle, otherwise the second attempt fails as well
