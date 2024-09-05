@@ -1,6 +1,7 @@
 Version 2.2.1: (2024-09-03)
 	- Ignore auto-generated metadata fields in config_dynamic.ini
 	- Warn if keep_pc = on and Yocto WDT is configured
+	- Reduce webcam timeout
 
 Version 2.2.0: (2024-09-03)
 	- Park to nadir and shut down gracefully 2 minutes before Yocto 

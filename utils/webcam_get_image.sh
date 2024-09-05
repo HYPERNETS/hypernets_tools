@@ -56,8 +56,8 @@ function take_picture(){
 function wait_up(){
 
 	# Ping the camera until it starts
-	# Timeout : 2 min 30 s
-	timeout=150
+	# Timeout : 1 min
+	timeout=60
 
 	if [ "$VERBOSE" -eq 1 ] ; then
 		echo "[DEBUG]  Waiting for $IP_ADDRESS..."
@@ -67,7 +67,7 @@ function wait_up(){
 	while [[ $p -ne 0 ]] && [[ $i -le $timeout ]]
 	do
 		set +e # Non zero exit expected
-		ping -q -c1 -W1 -q "$IP_ADDRESS" > /dev/null 2>&1
+		ping -q -c1 -W1 "$IP_ADDRESS" > /dev/null 2>&1
 		p=$?
 		set -e
 		if [ "$VERBOSE" -eq 1 ] ; then
