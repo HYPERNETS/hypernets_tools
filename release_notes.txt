@@ -3,6 +3,8 @@ Version 2.2.2: (2024-09-30)
 	- schedule command line shortcut shows SZA at the beginning of the 
 	  first and last scheduled sequence as of the current date
 	- Check connection to network server instead of google in access.service
+	- Probe rtsp port of webcam instead of pinging when waiting for 
+	  the webcam to boot
 
 Version 2.2.1: (2024-09-03)
 	- Ignore auto-generated metadata fields in config_dynamic.ini

@@ -1539,8 +1539,8 @@ webpic() (
 	set +e
 	set pipefail
 	export AV_LOG_FORCE_COLOR=1
-	echo "utils/webcam_get_image.sh -v -c $webcam_credent -i $webcam_ip -d OTHER/WEBCAM_${cam^^}/$YMFolder 2>&1 | tee /dev/fd/2"
-	cap_out=$(utils/webcam_get_image.sh -v -c "$webcam_credent" -i "$webcam_ip" -d "OTHER/WEBCAM_${cam^^}/$YMFolder" 2>&1 | tee /dev/fd/2)
+	echo "utils/webcam_get_image.sh -w -v -c $webcam_credent -i $webcam_ip -d OTHER/WEBCAM_${cam^^}/$YMFolder 2>&1 | tee /dev/fd/2"
+	cap_out=$(utils/webcam_get_image.sh -w -v -c "$webcam_credent" -i "$webcam_ip" -d "OTHER/WEBCAM_${cam^^}/$YMFolder" 2>&1 | tee /dev/fd/2)
 	cap_retcode=$?
 
 	if [[ "$cap_retcode" -ne 0 ]]; then
