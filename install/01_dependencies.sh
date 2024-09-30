@@ -79,7 +79,7 @@ elif [ "$ID"  == "manjaro" ]; then
 			echo -e "\n----------------------------------------------------\n"
 			echo -e "WARNING!!!!\n"
 			echo "Manjaro has been upgraded from version '${old_os_ver:-}' to '${DISTRIB_RELEASE:-}'"
-			echo -e "You should re-install libhypstar and rain sensor\n"
+			echo -e "You should re-install libhypstar and rain sensor and re-configure ports\n"
 		fi
 	fi
 fi

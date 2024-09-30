@@ -1,3 +1,6 @@
+Version 2.2.2: (2024-09-30)
+	- Recommend re-configuring ports in case of Manjaro release update
+
 Version 2.2.1: (2024-09-03)
 	- Ignore auto-generated metadata fields in config_dynamic.ini
 	- Warn if keep_pc = on and Yocto WDT is configured
