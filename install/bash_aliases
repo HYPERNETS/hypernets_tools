@@ -677,8 +677,7 @@ schedule() (
 		echo "All inactive is equivalent to all set for a single field"
 		echo "All inactive for all fields disables the schedule"
 
-		for n_sched in 1 2;
-		do
+		for n_sched in 1 2; do
 			echo "----------------------------------------------------------"
 			echo "   ${HL}Schedule $n_sched${RESET_HL}"
 			echo -e -n "Months:\t\t"
@@ -702,7 +701,11 @@ schedule() (
 
 			echo -e -n "Weekdays:\t"
 			YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$n_sched" get_weekDays
-			
+			first_h=""
+			first_m=""			
+			last_h=""
+			last_m=""
+
 			hours=$(YWakeUpSchedule -f '[result]' -r 127.0.0.1 "$yoctowifibrd".wakeUpSchedule"$n_sched" get_hours)
 			if [[ "$hours" =~ ^\[\.*\]$ ]]; then
 				echo -e "Hours:\t\t$hours"
@@ -711,6 +714,12 @@ schedule() (
 				for ((i = 0; i < 24; i++)); do
 				    if [[ "${hours:i+1:1}" != "." ]]; then
 					    echo -n "$i "
+
+						## store for SZA calculation
+						if [[ "$first_h" == "" ]]; then
+							first_h="$i"
+						fi
+						last_h="$i"
 					else
 					    echo -n ". "
 					fi
@@ -726,13 +735,45 @@ schedule() (
 			for ((i = (($length - 1)), j=0; i >= 0; i--, j++)); do
 			    if [[ "${minutes_bin:i:1}" == "1" ]]; then
 				    echo -n "$j,"
+
+					## store for SZA calculation
+					if [[ "$first_m" == "" ]]; then
+						first_m="$j"
+					fi
+					last_m="$j"
 				fi
 			done
 			if [[ $minutes_dec != "0" ]]; then
 				tput cub 1
+			else
+				first_m=0
+				last_m=59
 			fi
 			echo "]"
-		done
+
+			## calculate SZA
+			if [[ "$first_h" != "" ]]; then
+				tz_offset_h=$(printf "%+d" $(("$yocto_offset" / 3600)))
+				tz_offset_m=$(printf "%+d" $(( ("$yocto_offset" - 3600 * "$tz_offset_h" ) / 60)))
+				first_timestr=$(printf "%sT%02d:%02d%+03d:%02d" $(date '+%Y-%m-%d') "$first_h" "$first_m" "$tz_offset_h" "$tz_offset_m")
+				last_timestr=$(printf "%sT%02d:%02d%+03d:%02d" $(date '+%Y-%m-%d') "$last_h" "$last_m" "$tz_offset_h" "$tz_offset_m")
+	
+	        	python_script=$(cat << EOF
+import datetime
+from hypernets.geometry.spa_hypernets import spa_from_datetime
+
+timestamp = datetime.datetime.fromisoformat("$first_timestr")
+first_azimuth_sun, first_zenith_sun = spa_from_datetime(timestamp)
+timestamp = datetime.datetime.fromisoformat("$last_timestr")
+last_azimuth_sun, last_zenith_sun = spa_from_datetime(timestamp)
+
+print(f"SZA at the beginning of the first and last sequence as of today: {first_zenith_sun:.1f}, {last_zenith_sun:.1f}")
+EOF
+        		)
+
+				python -c "$python_script"
+			fi # if [[ "$first_h" == "" ]]
+		done # n_sched in 1 2
 
 		echo "----------------------------------------------------------"
 		echo -n "Rugged PC date & time:  "
