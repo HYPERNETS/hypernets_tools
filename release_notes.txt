@@ -2,6 +2,7 @@ Version 2.2.2: (2024-09-30)
 	- Recommend re-configuring ports in case of Manjaro release update
 	- schedule command line shortcut shows SZA at the beginning of the 
 	  first and last scheduled sequence as of the current date
+	- Check connection to network server instead of google in access.service
 
 Version 2.2.1: (2024-09-03)
 	- Ignore auto-generated metadata fields in config_dynamic.ini
