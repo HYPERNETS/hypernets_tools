@@ -767,7 +767,9 @@ first_azimuth_sun, first_zenith_sun = spa_from_datetime(timestamp)
 timestamp = datetime.datetime.fromisoformat("$last_timestr")
 last_azimuth_sun, last_zenith_sun = spa_from_datetime(timestamp)
 
-print(f"SZA at the beginning of the first and last sequence as of today: {first_zenith_sun:.1f}, {last_zenith_sun:.1f}")
+first_el_sun = 90 - first_zenith_sun
+last_el_sun = 90 - last_zenith_sun
+print(f"Sun elevation at the beginning of the first and last sequence as of today: {first_el_sun:.1f}, {last_el_sun:.1f}")
 EOF
         		)
 
