@@ -1,11 +1,7 @@
-<<<<<<< HEAD
-Version 2.2.2: (2024-10-07)
-=======
 Version 2.3.0: (2024-10-23)
 	- Log also systemd-timesyncd messages in hello.log
 
-Version 2.2.2: (2024-09-30)
->>>>>>> 67cf4a3 (Ver. 2.3.0, log also systemd-timesyncd messages in hello.log)
+Version 2.2.2: (2024-10-07)
 	- Recommend re-configuring ports in case of Manjaro release update
 	- schedule command line shortcut shows Sun elevation at the beginning of the 
 	  first and last scheduled sequence as of the current date
