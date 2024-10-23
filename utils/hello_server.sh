@@ -183,7 +183,7 @@ remove_old_backups_from_archive() {
 }
 
 make_log $logNameBase sequence
-make_log $logNameBase hello
+make_log $logNameBase hello systemd-timesyncd
 make_log $logNameBase access ssh sshd
 make_log $logNameBase webcam
 disk_usage
