@@ -54,30 +54,32 @@ function take_picture(){
 }
 
 function wait_up(){
-
-	# Ping the camera until it starts
-	# Timeout : 2 min 30 s
-	timeout=150
+	# Wait for the camera to accept rtsp requests
+	# Timeout : 1 min
+	timeout=60
 
 	if [ "$VERBOSE" -eq 1 ] ; then
-		echo "[DEBUG]  Waiting for $IP_ADDRESS..."
+		echo "[DEBUG]  Waiting for $IP_ADDRESS port 554..."
 	fi
 
+	the_end=$(($(date '+%s')+$timeout))
+
 	p=1 ; i=1
-	while [[ $p -ne 0 ]] && [[ $i -le $timeout ]]
+	while [[ $p -ne 0 ]] && [[ $(date '+%s') -le $the_end ]]
 	do
 		set +e # Non zero exit expected
-		ping -q -c1 -W1 -q "$IP_ADDRESS" > /dev/null 2>&1
+		nc -znw1 "$IP_ADDRESS" 554 > /dev/null 2>&1
 		p=$?
 		set -e
 		if [ "$VERBOSE" -eq 1 ] ; then
 			echo "[DEBUG]  Sending ping $i"
 		fi
 		i=$(($i+1))
+		sleep 1
 	done
 
 	if [ $p -ne 0 ] ; then
-		echo "[ERROR]  Timeout : $IP_ADDRESS is unreachable."
+		echo "[ERROR]  Timeout : $IP_ADDRESS port 554 is unreachable."
 		exit 1
 	else
 		if [ "$VERBOSE" -eq 1 ] ; then

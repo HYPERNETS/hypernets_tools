@@ -41,7 +41,13 @@ def parse_config_metadata(sequence_file, config_file="config_dynamic.ini",
     # copy user-defined metadata from config file
     str_metadata = "[Metadata]\n"
     for field in metadata_section.keys():
-        str_metadata += f"{field} = {metadata_section[field]}\n"
+        if field in ["hypernets_tools_version", "datetime", "hypstar_sn", "led_sn",
+                     "protocol_file_name", "latitude", "longitude", "offset_pan",
+                     "offset_tilt", "azimuth_switch"]:
+            warning(f"metadata:{field} is auto-generated and should be removed "
+                    "from the [metadata] section of config_dynamic.ini")
+        else:
+            str_metadata += f"{field} = {metadata_section[field]}\n"
 
     # populate auto-generated metadata
     str_metadata += f"hypernets_tools_version = {__version__}\n"

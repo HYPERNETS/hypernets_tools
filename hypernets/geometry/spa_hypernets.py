@@ -2,7 +2,7 @@ from pysolar.solar import get_altitude, get_azimuth
 from datetime import datetime, timezone
 import warnings
 
-from logging import info, debug
+from logging import info, debug, error
 
 
 def spa_from_datetime(now=None):
@@ -41,7 +41,10 @@ def spa_from_datetime(now=None):
 def spa_from_gps():
     from hypernets.yocto.gps import get_gps
     latitude, longitude, now = get_gps()
-    # TODO : test the gps trame
+
+    if (now == b'N/A'):
+        raise Exception("No GPS fix")
+
     now = datetime.strptime(now, '%Y/%m/%d %H:%M:%S')
     now.replace(tzinfo=timezone.utc) # GPS = utc
 
@@ -59,9 +62,12 @@ def spa_from_gps():
 if __name__ == '__main__':
     print("From datetime + fixed coords in config_dynamic.ini : ")
     azimuth_sun, zenith_sun = spa_from_datetime()
-    print(f"Azimuth Sun  : {azimuth_sun} ; Zenith Sun : {zenith_sun}")
-    print("From GPS")
-    azimuth_sun, zenith_sun = spa_from_gps()
-    print(f"Azimuth Sun  : {azimuth_sun} ; Zenith Sun : {zenith_sun}")
+    print(f"Azimuth Sun  : {azimuth_sun:.3f} ; Zenith Sun : {zenith_sun:.3f}")
 
+    try:
+        print("From GPS")
+        azimuth_sun, zenith_sun = spa_from_gps()
+        print(f"Azimuth Sun  : {azimuth_sun:.3f} ; Zenith Sun : {zenith_sun:.3f}")
+    except Exception as e:
+        error(f"{e}")
 

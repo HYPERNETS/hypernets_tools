@@ -1,6 +1,22 @@
+Version 2.3.0: (2024-10-23)
+	- Log also systemd-timesyncd messages in hello.log
+
+Version 2.2.2: (2024-10-07)
+	- Recommend re-configuring ports in case of Manjaro release update
+	- schedule command line shortcut shows Sun elevation at the beginning of the 
+	  first and last scheduled sequence as of the current date
+	- Check connection to network server instead of google in access.service
+	- Probe rtsp port of webcam instead of pinging when waiting for 
+	  the webcam to boot
+
+Version 2.2.1: (2024-09-03)
+	- Ignore auto-generated metadata fields in config_dynamic.ini
+	- Warn if keep_pc = on and Yocto WDT is configured
+	- Reduce webcam timeout
+
 Version 2.2.0: (2024-09-03)
 	- Park to nadir and shut down gracefully 2 minutes before Yocto 
-      Watchdog Timer hard power off
+	  Watchdog Timer hard power off
 
 Version 2.1.0: (2024-08-28)
 	- Move network traffic from sequecnce.log to hello.log
