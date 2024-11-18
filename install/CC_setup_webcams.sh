@@ -27,6 +27,7 @@ sed -i '/User=$/s/$/'$user'/' $service_file
 sed -i '/ExecStart=$/s/$/'$path_to_service'/' $service_file
 sed -i '/WorkingDirectory=$/s/$/'$path_to_h_tools'\//' $service_file
 
+chmod 644 $service_file
+
 systemctl enable hypernets-webcam
 systemctl start hypernets-webcam
-journalctl --follow -u hypernets-webcam

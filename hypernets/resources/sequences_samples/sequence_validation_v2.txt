@@ -1,4 +1,0 @@
-HypernetsProtocol v2.0
-
-# Measurement of the Light source
-@[ 0.0, abs, 198.0, abs ] + 1.validation

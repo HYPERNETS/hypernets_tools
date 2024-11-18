@@ -49,7 +49,7 @@ class Geometry(object):
     def __str__(self):
         ref_pan, ref_tilt = Geometry.int_to_reference(self.reference)
         str_output = f"{self.pan:.2f} ({ref_pan}) ; {self.tilt:.2f} ({ref_tilt})" # noqa
-        str_output += f" --> [{self.pan_abs:.2f} ; {self.tilt_abs:.2f}]"
+        str_output += f" --> [{self.pan_abs:.2f} ; {self.tilt_abs:.2f}] (abs)"
         str_output += f" -- {self.flags}"
         return str_output
 
@@ -106,23 +106,21 @@ class Geometry(object):
             config_file = "config_dynamic.ini"
             config = ConfigParser()
             config.read(config_file)
-            offset_pan = int(config["pantilt"]["offset_pan"])
-            offset_tilt = int(config["pantilt"]["offset_tilt"])
-            reverse_tilt = config["pantilt"]["reverse_tilt"] == "yes"
-            azimuth_switch = int(config["pantilt"]["azimuth_switch"])
+            offset_pan = float(config["pantilt"]["offset_pan"])
+            offset_tilt = float(config["pantilt"]["offset_tilt"])
+            azimuth_switch = float(config["pantilt"]["azimuth_switch"])
 
         except KeyError as key:
             warning(f" {key} default values loaded")
             # Default values :
             # offset_tilt = 0
-            offset_pan, reverse_tilt = 0, False
+            offset_pan = 0
             azimuth_switch = 360
 
         except Exception as e:
             error(f"Config Error : {e}")
 
         from operator import neg, pos
-        reverse_tilt = {True: neg, False: pos}[reverse_tilt]
 
         self.pan_abs, self.tilt_abs = self.pan, self.tilt
         pan_ref, tilt_ref = Geometry.int_to_reference(self.reference)
@@ -130,7 +128,7 @@ class Geometry(object):
 
         # Get sun position
         if 'sun' in [pan_ref, tilt_ref]:  # pickle me :
-            from hypernets.geometry.spa.spa_hypernets import spa_from_datetime
+            from hypernets.geometry.spa_hypernets import spa_from_datetime
             azimuth_sun, zenith_sun = spa_from_datetime(now=now)
             zenith_sun = 180 - zenith_sun
 
@@ -168,15 +166,10 @@ class Geometry(object):
         if 'sun' in [pan_ref, tilt_ref] or 'hyp' in [pan_ref, tilt_ref]:
             # Orientation
             if pan_ref in ['sun', 'hyp']:
-                self.pan_abs -= reverse_tilt(offset_pan)
-                # self.pan_abs -= offset_pan
+                self.pan_abs -= offset_pan
 
             if tilt_ref in ['sun', 'hyp']:
-                self.tilt_abs -= reverse_tilt(offset_tilt)
-
-        self.tilt_abs = reverse_tilt(self.tilt_abs)
-        if reverse_tilt is neg:
-            self.pan_abs = self.pan_abs + 180
+                self.tilt_abs -= offset_tilt
 
         # force to [0...360] range
         self.pan_abs = self.pan_abs % 360

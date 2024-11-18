@@ -1,29 +1,18 @@
 
 from hypernets import __version__
-from datetime import datetime
+from datetime import datetime, timezone
 from configparser import ConfigParser, ExtendedInterpolation
 from configparser import MissingSectionHeaderError
+from re import split
 
-from logging import warning
-
-# TODO : Dump data from pickle for lat:lon
-
-
-def special_value(value):
-    if value == "{datetime}":
-        return datetime.utcnow().strftime("%Y%m%dT%H%M%S")
-    elif value == "{v_hypernets_tools}":
-        return __version__
-    else:
-        return "N/A"
+from logging import debug, info, warning  # noqa
 
 
 def metadata_header_base(protocol_file="placeholder.csv", now=None,
                          PI="Hypernets Virtual",
                          site_name="Virtual Site"):
     if now is None:
-        from datetime import datetime
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
     return ("[Metadata]\n"
             f"datetime = {now.strftime('%Y%m%dT%H%M%S')}\n"
@@ -32,7 +21,11 @@ def metadata_header_base(protocol_file="placeholder.csv", now=None,
             f"protocol_filename = {protocol_file}\n")
 
 
-def parse_config_metadata(config_file="config_dynamic.ini"):
+def parse_config_metadata(sequence_file, config_file="config_dynamic.ini",
+                          instrument_sn=0, vm_sn=0):
+    globals()["instrument_sn"] = instrument_sn
+    globals()["vm_sn"] = vm_sn
+    globals()["sequence_file"] = sequence_file
 
     config = ConfigParser(interpolation=ExtendedInterpolation())
 
@@ -45,19 +38,51 @@ def parse_config_metadata(config_file="config_dynamic.ini"):
         str_metadata = metadata_header_base()
         return str_metadata
 
+    # copy user-defined metadata from config file
     str_metadata = "[Metadata]\n"
     for field in metadata_section.keys():
-        if '{' and '}' in metadata_section[field]:
-            special = special_value(metadata_section[field])
-            str_metadata += f"{field} = {special}\n"
+        if field in ["hypernets_tools_version", "datetime", "hypstar_sn", "led_sn",
+                     "protocol_file_name", "latitude", "longitude", "offset_pan",
+                     "offset_tilt", "azimuth_switch"]:
+            warning(f"metadata:{field} is auto-generated and should be removed "
+                    "from the [metadata] section of config_dynamic.ini")
         else:
             str_metadata += f"{field} = {metadata_section[field]}\n"
+
+    # populate auto-generated metadata
+    str_metadata += f"hypernets_tools_version = {__version__}\n"
+    now = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+    str_metadata += f"datetime = {now}\n"
+    str_metadata += f"hypstar_sn = {instrument_sn}\n"
+    str_metadata += f"led_sn = {vm_sn}\n"
+    str_metadata += f"protocol_file_name = {sequence_file}\n"
+
+    # populate metadata from other config file sections
+    meta_fields = {"latitude": "GPS:latitude", "longitude": "GPS:longitude", 
+                   "offset_pan": "pantilt:offset_pan", "offset_tilt": "pantilt:offset_tilt",
+                   "azimuth_switch": "pantilt:azimuth_switch"}
+
+    for key in meta_fields:
+        try:
+            conf_sec, conf_parm = split(":", meta_fields[key])
+            str_metadata += f"{key} = {config[conf_sec][conf_parm]}\n"
+
+        except (KeyError) as e:
+            warning(f"{e} not found in '{config_file}' while parsing '{meta_fields[key]}'")
+
     return str_metadata
 
 
-def create_metadata():
-    pass
-
 
 if __name__ == '__main__':
-    print(parse_config_metadata())
+    from argparse import ArgumentParser
+    parser = ArgumentParser()
+    parser.add_argument("-f", "--filename", type=str, required=True,
+                        help="Select a protocol file (txt, csv)")
+
+    from logging import basicConfig, DEBUG
+    log_fmt = '[%(levelname)-7s %(asctime)s] (%(module)s) %(message)s'
+    dt_fmt = '%H:%M:%S'
+    basicConfig(level=DEBUG, format=log_fmt, datefmt=dt_fmt)
+    args = parser.parse_args()
+    info("\n" + parse_config_metadata(args.filename))

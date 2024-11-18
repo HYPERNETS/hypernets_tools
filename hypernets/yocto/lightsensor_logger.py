@@ -1,7 +1,7 @@
 from hypernets.yocto.init import get_url_base_prefixed
 from urllib.request import urlopen
 from time import sleep
-from datetime import datetime
+from datetime import datetime, timezone
 from threading import Thread, Event
 from logging import info, debug
 
@@ -22,7 +22,7 @@ def lightsensor_thread(event, path):
             # record to file until event is set
             while 1:
                 light = float(urlopen(url).read())
-                now_str = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
+                now_str = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
                 monitor_pd.write(f"{now_str}\t{light}\n")
                 monitor_pd.flush()
                 

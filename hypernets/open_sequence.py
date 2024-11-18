@@ -1,61 +1,71 @@
 
 from argparse import ArgumentParser
 
-from datetime import datetime
-from time import time
+from datetime import datetime, timezone
+from time import time, sleep
 from os import mkdir, replace, path
+from pathlib import Path
 from shutil import copy
+import threading
 
 from hypernets.abstract.protocol import Protocol
 from hypernets.abstract.create_metadata import parse_config_metadata
+from hypernets.abstract.request import InstrumentAction
 
 from hypernets.hypstar.handler import HypstarHandler
 from hypernets.hypstar.libhypstar.python.hypstar_wrapper import HypstarLogLevel
-from hypernets.hypstar.libhypstar.python.data_structs.environment_log import EnvironmentLogEntry, get_csv_header
+from hypernets.hypstar.libhypstar.python.data_structs.environment_log import get_csv_header
 
-from logging import debug, info, warning, error # noqa
+from logging import debug, info, warning, error, getLogger, INFO
 
-from hypernets.rain_sensor.rain_sensor_python import RainSensor
+from hypernets.rain_sensor import RainSensor
 
 from hypernets.abstract.geometry import Geometry
 from hypernets.geometry.pan_tilt import move_to_geometry, move_to
 
 from hypernets.yocto.lightsensor_logger import start_lightsensor_thread, terminate_lightsensor_thread
+from hypernets.yocto.relay import set_state_relay
+from hypernets.yocto.sleep_monitor import getPoweroffCountdown
+
+
+yoctoWDTflag = threading.Event()
+
+class yoctoWathdogTimeout(Exception):
+    pass
 
 
 def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                       instrument_loglvl, instrument_boot_timeout,
                       instrument_standalone=False,
                       instrument_swir_tec=0,
-                      dump_environment_logs=False,
                       DATA_DIR="DATA",
                       check_rain=False):
 
     # Check if it is raining
-    if check_rain:
+    if not instrument_standalone and check_rain:
         try:
-            debug("Checking rain sensor")
             rain_sensor = RainSensor()
-            if rain_sensor.read_value() == 1:
+            if is_raining(rain_sensor):
                 warning("Skipping sequence due to rain")
-
-                # get the absolute position of nadir
-                reference = Geometry.reference_to_int("hyper", "hyper")
-                park = Geometry(reference, tilt=0)
-                park.get_absolute_pan_tilt()
-
-                # park radiometer to nadir 
-                # just in case it wasn't parked at the end of the last sequence
-                info("Parking radiometer to nadir")
-                move_to(ser=None, tilt=park.tilt_abs, wait=True)
-
+                park_to_nadir()
                 exit(88) # exit code 88 
         except Exception as e:
-            print(e)
+            error(f"{e}")
             error("Disabling further rain sensor checks")
             check_rain = False
 
-    protocol = Protocol(sequence_file)
+    try:
+        protocol = Protocol(sequence_file)
+    except FileNotFoundError as e:
+        error(f"{e}")
+        error(f"Failed to open sequence file '{sequence_file}'")
+        exit(30) # exit code 30
+    except Exception as e:
+        error(f"{e}")
+        error(f"Failed to read sequence file '{sequence_file}")
+        error("Wrong syntax in sequence file?")
+        exit(1)
+
     info(protocol)
 
     # check if this protocol wants to use instrument
@@ -64,21 +74,29 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     # we should check if any of the lines want to use SWIR and enable TEC :
     swir_is_requested = protocol.check_if_swir_requested()
 
+    # just print out info about presence or not of VM request
+    protocol.check_if_vm_requested()
+
     if not path.exists(DATA_DIR):  # TODO move management of output folder
-        mkdir(DATA_DIR)
+        mkdir(DATA_DIR, mode=0o755)
 
     start_time = time()  # for ellapsed time
     flags_dict = {}
 
-    start = datetime.utcnow()  # start = datetime.now()
+    start = datetime.now(timezone.utc)
     seq_name = Protocol.create_seq_name(now=start, prefix="CUR")
+
+    # Creating the directory tree
+    dir_branch = Path(start.strftime("%Y/%m/%d"))
+    DATA_DIR = Path(path.join(DATA_DIR, dir_branch))
+    DATA_DIR.mkdir(parents=True, exist_ok=True, mode=0o755)
 
     seq_path = path.join(DATA_DIR, seq_name)
     final_seq_path = path.join(DATA_DIR, Protocol.create_seq_name(now=start))
 
     suffix = ""
 
-    n = 0
+    n = 0  # In case of RTC issue, the folder may already exists
     while path.isdir(seq_path + suffix) or path.isdir(final_seq_path + suffix):
         n += 1
         error(f"Directory [{seq_path+suffix} or "
@@ -92,12 +110,12 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     final_seq_path = path.join(DATA_DIR, Protocol.create_seq_name(now=start,
                                suffix=suffix))
 
-    info(f"Creating directories: {seq_path} and {filepath}...")
+    info(f"Creating directories: {seq_path} and {filepath}")
 
-    mkdir(seq_path)
-    mkdir(filepath)
+    mkdir(seq_path, mode=0o755)
+    mkdir(filepath, mode=0o755)
 
-    # XXX Add option to copy
+    # copy acquisition protocol file to sequence folder
     copy(sequence_file, path.join(seq_path, path.basename(sequence_file)))
 
     if not instrument_standalone:
@@ -125,20 +143,68 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         except_boot = False
 
     if instrument_is_requested:
-        instrument_instance = HypstarHandler(instrument_loglevel=instrument_loglvl,  # noqa
-                                             instrument_baudrate=instrument_br,
-                                             instrument_port=instrument_port,
-                                             expect_boot_packet=except_boot,
-                                             boot_timeout=instrument_boot_timeout)   # noqa
+        # log usb-serial converter serial number
+        from pyudev import Context, Devices
+        try:
+            context = Context()
+            device = Devices.from_device_file(context, instrument_port)
+            info(f"USB-RS85 board: {device.get('ID_SERIAL')}")
 
-        instrument, visible, swir = instrument_instance.get_serials()
-        debug(f"SN : * instrument -> {instrument}")
-        debug(f"     * visible    -> {visible}")
-        if swir != 0:
-            debug(f"     * swir       -> {swir}")
+        except Exception as e:
+            error(f"{e}")
+            error(f"Failed to read USB-RS485 converter serial number for radiometer port {instrument_port}")
+
+        # The latest FW revisions return BOOTED packet so quickly after
+        # power-on that we have to switch relay in a background thread after
+        # a short delay, otherwise we always get the timeout
+        if not instrument_standalone:
+            relay_thread = threading.Thread(target = relay3_delayed_on)
+            relay_thread.start()
+
+        try:
+            instrument_instance = HypstarHandler(instrument_loglevel=instrument_loglvl,  # noqa
+                                                 instrument_baudrate=instrument_br,
+                                                 instrument_port=instrument_port,
+                                                 expect_boot_packet=except_boot,
+                                                 boot_timeout=instrument_boot_timeout)   # noqa
+
+        except Exception as e:
+            error(f"{e}")
+
+        if not instrument_standalone:
+            relay_thread.join()
+
+        instrument_sn, visible_sn, swir_sn, vm_sn = instrument_instance.get_serials()
+        debug(f"SN : * instrument -> {instrument_sn}")
+        debug(f"     * visible    -> {visible_sn}")
+        if swir_sn != 0:
+            debug(f"     * swir       -> {swir_sn}")
+        if vm_sn != 0:
+            debug(f"     * vm         -> {vm_sn}")
+            
+        (instrument_FW_major, instrument_FW_minor, instrument_FW_rev, 
+         vm_FW_major, vm_FW_minor, vm_FW_rev) = instrument_instance.get_firmware_versions()
+        debug(f"FW : * instrument -> {instrument_FW_major}.{instrument_FW_minor}.{instrument_FW_rev}")
+        if vm_sn != 0:
+            debug(f"     * vm         -> {vm_FW_major}.{vm_FW_minor}.{vm_FW_rev}")        
+    else:
+        instrument_sn = "N/A"
+        vm_sn = "N/A"
 
     mdfile = open(path.join(seq_path, "metadata.txt"), "w")
-    mdfile.write(parse_config_metadata())
+    mdfile.write(parse_config_metadata(sequence_file = sequence_file, 
+                                       instrument_sn = instrument_sn, vm_sn = vm_sn))
+
+    # Start yocto watchdog timeout monitor thread
+    # Exit if yocto watchdog timer expires in less than timeout_s seconds
+    # timeout_s should be long enough for finishing any pending pan-tilt movements 
+    # and parking the radiometer to nadir
+    if not instrument_standalone:
+        timeout_s = 120
+        yoctoWDTwatcher = threading.Thread(target=yoctoTimeoutWatch, 
+                                           args=(timeout_s, ), daemon=True)
+        yoctoWDTwatcher.start()
+        threading.excepthook = threadingExceptionHook
 
     # Enabling SWIR TEC for the whole sequence is a tradeoff between
     # current consumption and execution time.
@@ -151,8 +217,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         info("Done!")
 
     # print env log header
-    if dump_environment_logs:
-        info(get_csv_header())
+    info(get_csv_header())
 
     iter_line, nb_error = 0, 0
     for i, (geometry, requests) in enumerate(protocol, start=1):
@@ -170,23 +235,12 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         # Check if it is raining
         if check_rain:
             try:
-                debug("Checking rain sensor")
-                if rain_sensor.read_value() == 1:
+                if is_raining(rain_sensor):
                     warning("Aborting sequence due to rain")
-
-                    # get the absolute position of nadir
-                    reference = Geometry.reference_to_int("hyper", "hyper")
-                    park = Geometry(reference, tilt=0)
-                    park.get_absolute_pan_tilt()
-
-                    # park radiometer to nadir
-                    info("Parking radiometer to nadir")
-                    move_to(ser=None, tilt=park.tilt_abs, wait=True)
-
+                    park_to_nadir()
                     exit(88) # exit code 88 
-
             except Exception as e:
-                print(e)
+                error(f"{e}")
                 error("Disabling further rain sensor checks")
                 check_rain = False
 
@@ -217,17 +271,21 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             info(f"--> Requested Position : {geometry}")
 
             # try up to 2 times moving the pan-tilt
-            from logging import getLogger
             logger = getLogger()
             old_loglevel = logger.level
             for i in range(2):
+                # if yocto watchdog timeout is imminent
+                # wait here for threadingExceptionHook exit instead of moving pan-tilt
+                if yoctoWDTflag.is_set():
+                    yoctoWDTwatcher.join()
+
                 try:
                     pan_real, tilt_real = move_to_geometry(geometry, wait=True)
                     pan_real = float(pan_real) / 100
                     tilt_real = float(tilt_real) / 100
 
-                    pan_delta = (pan_real + 360) % 360 - (geometry.pan_abs + 360) % 360
-                    tilt_delta = (tilt_real + 360) % 360 - (geometry.tilt_abs + 360) % 360
+                    pan_delta = ((pan_real - geometry.pan_abs) + 180) % 360 - 180
+                    tilt_delta = ((tilt_real - geometry.tilt_abs) + 180) % 360 - 180
 
                     if abs(pan_delta) > 1.0 or abs(tilt_delta) > 1.0:
                         warning(f"pan-tilt did not reach the requested position")
@@ -248,10 +306,16 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             logger.setLevel(old_loglevel)
 
         for request in requests:
+            if not instrument_standalone:
+                # if yocto watchdog timeout is imminent
+                # wait here for threadingExceptionHook exit instead of sending radiometer request 
+                if yoctoWDTflag.is_set():
+                    yoctoWDTwatcher.join()
+
             iter_line += 1
 
             block_position = geometry.create_block_position_name(iter_line)
-            now_str = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
+            now_str = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
 
             info(f"{iter_line}) {request} : {now_str}")
 
@@ -259,15 +323,26 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             output = path.join(filepath, filename)
 
             try:
-                if dump_environment_logs:
-                    # 0xFF returns live data, 0 returns last captured on FW > 0.15.24
-                    env = instrument_instance.get_env_log(0xff)
-                    info(env.get_csv_line())
+                # 0xFF returns live data, 0 returns last captured on FW > 0.15.24
+                if (instrument_FW_major, instrument_FW_minor, instrument_FW_rev) > (0, 15, 24):
+                    env_request = 0xff 
+                else:
+                    env_request = 0
+
+                env = instrument_instance.get_env_log(env_request)
+                # dump instrument environmental log at all log levels
+                force_log_info(env.get_csv_line())
                 instrument_instance.take_request(request, path_to_file=output)
 
             except Exception as e:
+                if request.action == InstrumentAction.VALIDATION:
+                    error("LED source measurement failed, aborting sequence")
+                    park_to_nadir()
+                    exit(78) # exit code 78
+
                 error(f"Error : {e}")
                 nb_error += 1
+
 
             flags_dict[f"$spectra_file{iter_line}.it_vnir"] = request.it_vnir
             flags_dict[f"$spectra_file{iter_line}.it_swir"] = request.it_swir
@@ -287,24 +362,130 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
     mdfile.close()
 
-    terminate_lightsensor_thread(monitor_pd_thread, monitor_pd_event)
+    if not instrument_standalone:
+        terminate_lightsensor_thread(monitor_pd_thread, monitor_pd_event)
+
+        # By the end of the sequence GPS has hopefully got a fix.
+        # Log GPS fix distance and bearing from location in config file. 
+        # Warning log record if distance is over 100 m, otherwise info.
+        try:
+            from configparser import ConfigParser
+            config = ConfigParser()
+            config.read("config_dynamic.ini")
+            config_latitude = config["GPS"]["latitude"]
+            config_longitude = config["GPS"]["longitude"]
+        except KeyError as key:
+            warning(f" {key} missing from config_dynamic.ini.")
+
+        except Exception as e:
+            error(f"Config Error: {e}.")
+
+        try:
+            from hypernets.yocto.gps import get_gps
+            gps_latitude, gps_longitude, gps_datetime = get_gps(return_float=True)
+
+            if gps_datetime is not None and gps_datetime != "" and gps_datetime != b'N/A':
+                from geopy.distance import geodesic
+                from geographiclib.geodesic import Geodesic
+                distance_m = geodesic((gps_latitude, gps_longitude), 
+                                      (config_latitude, config_longitude)).m
+                bearing = Geodesic.WGS84.Inverse(float(config_latitude), float(config_longitude), 
+                                                 gps_latitude, gps_longitude)['azi1'] % 360
+                msg = (f"GPS fix ({gps_latitude:.6f}, {gps_longitude:.6f}) is {distance_m:.1f} m "
+                      f"from location in config_dynamic.ini ({config_latitude}, {config_longitude}) "
+                      f"at bearing {bearing:.0f}")
+                if (distance_m > 100):
+                    warning(msg)
+                else:
+                    info(msg)
+
+        except Exception as e:
+            error(f"Error: {e}")
 
     replace(seq_path, final_seq_path)
-    info(f"Created sequence : {final_seq_path}")
 
-    if swir_is_requested is True:
-        instrument_instance.shutdown_SWIR_module_thermal_control()
+    # log the sequence name at all log levels
+    force_log_info(f"Created sequence : {final_seq_path}")
 
-    if instrument_is_requested:
-        del instrument_instance
+    try:
+        if swir_is_requested is True:
+            instrument_instance.shutdown_SWIR_module_thermal_control()
+    
+        if instrument_is_requested:
+            del instrument_instance
 
-#        if not instrument_standalone:
-#            if azimuth_sun <= 180:
-#                print(" -- Morning : +90 (=clockwise)")
-#                pan = azimuth_sun + pan  # clockwise
-#            else:
-#                print(" -- Afternoon : -90 (=counter-clockwise)")
-#                pan = azimuth_sun - pan  # clockwise
+    # The sequence has been successfully finished, graceful shutdown errors are not critical
+    except Exception as e:
+        error(f"Error: {e}")
+
+
+def is_raining(rain_sensor=None):
+    debug("Checking rain sensor")
+
+    if rain_sensor is None:
+        rain_sensor = RainSensor()
+
+    if rain_sensor.read_value() == 1:
+        return True
+    else:
+        return False
+
+
+def park_to_nadir():
+    # get the absolute position of nadir
+    reference = Geometry.reference_to_int("hyper", "hyper")
+    park = Geometry(reference, tilt=0)
+    park.get_absolute_pan_tilt()
+
+    # park radiometer to nadir 
+    info("Parking radiometer to nadir")
+    import serial
+    while True:
+        try:
+            move_to(ser=None, tilt=park.tilt_abs, wait=True)
+            break
+        except serial.serialutil.SerialException:
+            debug("Previous pan-tilt move in progress. Waiting...")
+            sleep(1)
+
+
+def relay3_delayed_on():
+    sleep(1)
+    info("Set relay #3 to ON.")
+    set_state_relay([3], "on")
+
+
+def force_log_info(msg):
+    logger = getLogger()
+    old_loglevel = logger.level
+
+    if old_loglevel > INFO:
+        logger.setLevel(INFO)
+        info(msg)
+        logger.setLevel(old_loglevel)
+    else:
+        info(msg)
+
+
+def yoctoTimeoutWatch(timeout_s):
+    while True:
+        poweroff_countdown = getPoweroffCountdown()
+
+        if poweroff_countdown != 0 and poweroff_countdown < timeout_s:
+            raise yoctoWathdogTimeout(poweroff_countdown)
+
+        sleep(10)
+
+
+def threadingExceptionHook(exc):
+    if exc.exc_type is yoctoWathdogTimeout:
+        import os
+        yoctoWDTflag.set()
+        error(f"Aborting sequence due to Yocto watchdog timeout in {exc.exc_value} seconds")
+        park_to_nadir()
+        os._exit(98) # exit code 98
+    else:
+        error(f"Caught unhandled threading exception: {exc}")
 
 
 if __name__ == '__main__':
@@ -313,10 +494,6 @@ if __name__ == '__main__':
 
     log_fmt = '[%(levelname)-7s %(asctime)s] (%(module)s) %(message)s'
     dt_fmt = '%Y-%m-%dT%H:%M:%S'
-
-    # from logging import CRITICAL
-    # log_levels = {"CRITICAL": CRITICAL, "ERROR": ERROR, "WARNING": WARNING,
-    #               "INFO": INFO, "DEBUG": DEBUG}
 
     log_levels = {"ERROR": ERROR, "WARNING": WARNING, "INFO": INFO,
                   "DEBUG": DEBUG}
@@ -344,7 +521,9 @@ if __name__ == '__main__':
 
     parser.add_argument("-l", "--loglevel", type=str,
                         help="Verbosity of the instrument driver log",
-                        choices=[HypstarLogLevel.ERROR.name,
+                        choices=[HypstarLogLevel.SILENT.name,
+                                 HypstarLogLevel.ERROR.name,
+                                 HypstarLogLevel.WARNING.name,
                                  HypstarLogLevel.INFO.name,
                                  HypstarLogLevel.DEBUG.name,
                                  HypstarLogLevel.TRACE.name], default="ERROR")
@@ -361,10 +540,6 @@ if __name__ == '__main__':
                         help="Thermoelectric Cooler Point for the SWIR module",
                         default=0)
 
-    parser.add_argument("-e", "--log-environment", action='store_true',
-                        help="Dumps instrument environmental logs to stdout",
-                        default=False)
-
     args = parser.parse_args()
 
     basicConfig(level=log_levels[args.verbosity], format=log_fmt, datefmt=dt_fmt) # noqa
@@ -377,5 +552,4 @@ if __name__ == '__main__':
                       instrument_boot_timeout=args.timeout,
                       instrument_standalone=args.noyocto,
                       instrument_swir_tec=args.swir_tec,
-                      dump_environment_logs=args.log_environment,
                       check_rain=args.check_rain)

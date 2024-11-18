@@ -1,13 +1,12 @@
-
+import re
 from re import split
 from operator import le, ge, lt, gt
 
 from hypernets.abstract.geometry import Geometry
-from hypernets.abstract.request import Request
-from hypernets.abstract.request import RadiometerExt, EntranceExt
-from hypernets.hypstar.libhypstar.python.data_structs.spectrum_raw import RadiometerType # noqa
+from hypernets.abstract.request import Request, InstrumentAction
+from hypernets.hypstar.libhypstar.python.data_structs.spectrum_raw import RadiometerType  # noqa
 
-from logging import debug, info, warning, error # noqa
+from logging import debug, info  # noqa
 
 
 class Protocol(list[(Geometry, list[Request])]):
@@ -21,10 +20,8 @@ class Protocol(list[(Geometry, list[Request])]):
                 first_line = fd.readline()
                 if first_line[:17] == "HypernetsProtocol":
                     self.version = first_line[18:-1]
-                    self.read_protocol_v2(fd.read())
-                else:
-                    self.version = "1"
-                    self.read_protocol_v1(fd.readlines())
+
+                self.read_protocol_v2(fd.read())
         else:
             self.name = "On the Fly Protocol"
 
@@ -53,32 +50,13 @@ class Protocol(list[(Geometry, list[Request])]):
         # variable, operator, value =
         self.flags[flag] = split_flag_definition(definition)
 
-    def read_protocol_v1(self, lines):
-
-        for line in lines:
-            line = [a.strip() for a in line.split(',')]
-            pan, ref, tilt, *measurement = line
-
-            if ref == 'sun' and pan == "-1" and tilt == "-1":
-                pan, ref, tilt = 0.0, 0, 0.0
-            elif ref == 'sun':
-                ref = 2
-            elif ref == 'abs' or ref == 'nor':
-                ref = 8
-            else:
-                ref = 4
-
-            request = Request.from_line(measurement)
-            info(request)
-            pan, tilt = float(pan), float(tilt)
-            self.append((Geometry(ref, pan=pan, tilt=tilt), [request]))
-
     def read_protocol_v2(self, lines):
-        # FIXME : special caracter in comment leads
-
-        # Some regex defintions :
+        # regexes get very complicated very fast
+        # especially if comment character is reused as a sequence metaprogramming var indicator
+        # I had it implemented in regexes and it took over 1k steps to process correctly
+        # In the end it's easier to maintain just python parser
         def split_lines(lines):
-            return [e for e in split(r"\+|\n|\t", lines) if e]
+            return lines.split("\n")
 
         def split_geometry(line):
             return [e for e in split(r"\[|\]|@|,", line) if e]
@@ -89,43 +67,63 @@ class Protocol(list[(Geometry, list[Request])]):
         def split_flag(line):
             return [e for e in split(r"~|:=", line) if e]
 
-        # Split line with '+' as separation character
-        for line in split_lines(lines):
-            debug(f"Parsing line : '{line}'")
-            # Ignore new lines
-            if line.isspace():
-                continue
+        def parse_chunk(line):
+            # New flag Definition
+            if not len(line):
+                return
+            if line[0] == "~":
+                self.add_flag(*split_flag(line))
 
-            # Print / Log Comments
-            elif line[0] == "#":
-                info(f"Comment : {line}")
+            # New Geometry
+            elif line[0] == "@":
+                pan, ref_p, tilt, ref_t, *flags = split_geometry(line)
+                reference = Geometry.reference_to_int(ref_p, ref_t)
+                cur_geo = Geometry(reference, pan, tilt, flags=flags)
+                self.append((cur_geo, list()))
 
+            # New Request : Measurement or Picture
             else:
-                # Remove spaces
+                request = Request.from_params(*split_measurement(line))
+                self[-1][1].append(request)
+
+
+        # scans in sequence can be 1 measurement per line or 1 complex scan per line
+        for line in split_lines(lines):
+            line = line.strip()     # remove leading/trailing whitespace
+            debug(f"Parsing line : '{line}'")
+
+            # Ignore empty lines
+            if not len(line):
+                continue
+            # Print / Log Comments
+            elif line.startswith("#"):
+                if not line.startswith("##"):
+                    # print comment lines starting with #
+                    # don't print double comment lines starting with ##
+                    info(f"Comment : {line}")
+            else:
                 line = line.replace(" ", "")
-
-                # New flag Definition
-                if line[0] == "~":
-                    self.add_flag(*split_flag(line))
-
-                # New Geometry
-                elif line[0] == "@":
-                    pan, ref_p, tilt, ref_t, *flags = split_geometry(line)
-                    reference = Geometry.reference_to_int(ref_p, ref_t)
-                    cur_geo = Geometry(reference, pan, tilt, flags=flags)
-                    self.append((cur_geo, list()))
-
-                # New Request : Measurement or Picture
+                # check if we have more than one scan in line
+                if line.count("+") > 0:
+                    # check if we have '#' in scan definition that is not a meta variable
+                    # meta variables are allowed within geometry definition's square brackets
+                    # str.find() does not use proper regexes, need re for that
+                    match = re.split("#(?!.*?\])", line)
+                    if match:
+                        # discard everything after comment sign
+                        line = match[0]
+                    chunks = line.split("+")
+                    for c in chunks:
+                        debug(f"chunk {c}")
+                        parse_chunk(c)
                 else:
-                    request = Request.from_params(*split_measurement(line))
-                    self[-1][1].append(request)
+                    debug(f"line {line}")
+                    parse_chunk(line)
 
     def check_if_instrument_requested(self):
         for _, request_list in self:
             for request in request_list:
-                if request.radiometer != RadiometerExt.NONE or\
-                        request.entrance == EntranceExt.PICTURE or\
-                        request.entrance == EntranceExt.VM:
+                if request.action != InstrumentAction.NONE:
                     info("This protocol requests instrument.")
                     return True
         info("This protocol doesn't request instrument.")
@@ -136,14 +134,20 @@ class Protocol(list[(Geometry, list[Request])]):
             for request in request_list:
                 if request.radiometer == RadiometerType.SWIR or\
                         request.radiometer == RadiometerType.BOTH:
-                    info("This protocol has SWIR request.\n")
+                    info("This protocol has SWIR request.")
                     return True
-        info("This protocol doesn't have SWIR request.\n")
+        info("This protocol doesn't have SWIR request.")
         return False
 
-    # TODO
+
     def check_if_vm_requested(self):
-        pass
+        for _, request_list in self:
+            for request in request_list:
+                if request.action == InstrumentAction.VALIDATION:
+                    info("This protocol requests validation.\n")
+                    return True
+        info("This protocol doesn't request validation.\n")
+        return False
 
 
     @staticmethod
