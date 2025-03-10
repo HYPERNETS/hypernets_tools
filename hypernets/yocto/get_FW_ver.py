@@ -22,7 +22,8 @@ def get_FW_ver():
     for url_base in [get_url_base(), get_url_base_prefixed(), get_url_gps()]:
         values.append((get_module_FW_ver(url_base)))
 
-    return values
+    # return only unique values
+    return list(set(values))
 
 if __name__ == "__main__":
     out="Yocto firmware versions: "

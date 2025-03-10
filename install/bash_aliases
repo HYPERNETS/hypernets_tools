@@ -60,6 +60,10 @@ now() (
 
 		source utils/configparser.sh
 		yocto=$(parse_config "yocto_prefix2" config_static.ini)
+		if [[ "$yocto" == "" ]]; then
+		# host system V4 or newer
+			yocto=$(parse_config "yocto_prefix3" config_static.ini)
+		fi
 	else
 		yocto_api_installed=0
 	fi
@@ -281,6 +285,10 @@ yapo() (
 	if [[ $(command -v YWakeUpMonitor) ]]; then
 		source utils/configparser.sh
 		yocto=$(parse_config "yocto_prefix2" config_static.ini)
+		if [[ "$yocto" == "" ]]; then
+		# host system V4 or newer
+			yocto=$(parse_config "yocto_prefix3" config_static.ini)
+		fi
 	else
 		echo "${XHL}Yocto API is not installed${RESET_HL}"
 		exit -1
@@ -658,6 +666,10 @@ schedule() (
 	if [[ $(command -v YWakeUpMonitor) ]]; then
 		source utils/configparser.sh
 		yoctowifibrd=$(parse_config "yocto_prefix2" config_static.ini)
+		if [[ "$yoctowifibrd" == "" ]]; then
+		# host system V4 or newer
+			yoctowifibrd=$(parse_config "yocto_prefix3" config_static.ini)
+		fi
 	else
 		echo "${XHL}Yocto API is not installed${RESET_HL}"
 		exit -1
@@ -677,7 +689,7 @@ schedule() (
 		echo "All inactive is equivalent to all set for a single field"
 		echo "All inactive for all fields disables the schedule"
 
-		for n_sched in 1 2; do
+		for n_sched in 1 2 3; do
 			echo "----------------------------------------------------------"
 			echo "   ${HL}Schedule $n_sched${RESET_HL}"
 			echo -e -n "Months:\t\t"
@@ -775,7 +787,7 @@ EOF
 
 				python -c "$python_script"
 			fi # if [[ "$first_h" == "" ]]
-		done # n_sched in 1 2
+		done # n_sched in 1 2 3
 
 		echo "----------------------------------------------------------"
 		echo -n "Rugged PC date & time:  "
@@ -855,9 +867,10 @@ EOF
 			
 			echo  "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 			echo -n "Enter option: ${HL}"
-			echo "1 - adjust schedule 1 "
-			echo "              2 - adjust schedule 2 (validation)"
-			echo "              3 - adjust Yocto time zone"
+			echo "1 - adjust schedule 1 (standard)"
+			echo "              2 - adjust schedule 2 (LED)"
+			echo "              3 - adjust schedule 3 (custom)"
+			echo "              4 - adjust Yocto time zone"
 			echo "              E - Exit"
 			echo "  any other key - Refresh ${RESET_HL}"
 			
@@ -896,13 +909,17 @@ EOF
 		
 		
 		#################### #Adjust schedule #######################################################
-		if [ "$ch" = "1" ] # Schedule 1
+		if [ "$ch" = "1" ] # Schedule 1 (standard)
 		then
 			schedy=1
 			ch=99
-		elif [ "$ch" = "2" ] # Schedule 2 (validation)
+		elif [ "$ch" = "2" ] # Schedule 2 (LED)
 		then
 			schedy=2
+			ch=99
+		elif [ "$ch" = "3" ] # Schedule 3 (custom)
+		then
+			schedy=3
 			ch=99
 		fi
 		
@@ -1400,7 +1417,7 @@ EOF
 
 
 		########### Yocto time zone adjustment ##############
-		if [ "$ch" = "3" ] # yocto time zone
+		if [ "$ch" = "4" ] # yocto time zone
 		then
 			clear
 			echo 
@@ -1473,7 +1490,7 @@ EOF
 
 				sleep 1
 			fi
-		fi # [ "$ch" = "3" ] # yocto time zone
+		fi # [ "$ch" = "4" ] # yocto time zone
 	
 
 		######### EXIT #########

@@ -64,7 +64,6 @@ function auto_config_yocto(){
 	echo "-- Auto-config for YoctoPictor..."
 	echo "------------------------------------------------"
 
-	# if [[ -f "config_static.ini" ]] || [[ -f "config_dynamic.ini" ]]; then
 	if [[ -f "config_static.ini" ]]; then
 		echo "Error: config_static.ini file found, please remove it first."
 		return
@@ -87,20 +86,47 @@ function auto_config_yocto(){
 
 	json_api=$(wget -O- http://127.0.0.1:4444/api.json 2> /dev/null)
 
-	yocto_id2=$(echo $json_api | python3 -c \
-		"import sys, json; print(json.load(sys.stdin)['services']['whitePages'][1]['serialNumber'])")
+	yocto_ver=$(echo $json_api | python3 -c \
+		"import sys, json; print(json.load(sys.stdin)['services']['whitePages'][1]['productName'])")
 
-	yocto_gps=$(echo $json_api | python3 -c \
-		"import sys, json; print(json.load(sys.stdin)['services']['yellowPages']['HubPort'][0]['logicalName'])")
+	if [[ "$yocto_ver" == "Yocto-Pictor-Wifi" ]]; then
+	# HYPSTAR host system V1-V3
+		yocto_id2=$(echo $json_api | python3 -c \
+			"import sys, json; print(json.load(sys.stdin)['services']['whitePages'][1]['serialNumber'])")
 
-	yocto_id1=$(echo $json_api | python3 -c \
-		"import sys, json; print(json.load(sys.stdin)['services']['yellowPages']['HubPort'][1]['logicalName'])")
+		yocto_gps=$(echo $json_api | python3 -c \
+			"import sys, json; print(json.load(sys.stdin)['services']['yellowPages']['HubPort'][0]['logicalName'])")
 
-	echo "Yocto IDs are : $yocto_id1, $yocto_id2 and $yocto_gps" 
+		yocto_id1=$(echo $json_api | python3 -c \
+			"import sys, json; print(json.load(sys.stdin)['services']['yellowPages']['HubPort'][1]['logicalName'])")
 
-	sudo -u $SUDO_USER sed -i -e '/OBSVLFR1/s/XXXXXX/'${yocto_id1:9:6}'/' config_static.ini
-	sudo -u $SUDO_USER sed -i -e '/OBSVLFR2/s/XXXXXX/'${yocto_id2:9:6}'/' config_static.ini
-	sudo -u $SUDO_USER sed -i -e '/YGNSSMK2/s/XXXXXX/'${yocto_gps:9:6}'/' config_static.ini
+		echo -e "\nFound host system V1-V3 using Yocto-Pictor-Wifi"
+		echo "Yocto IDs are : $yocto_id1, $yocto_id2 and $yocto_gps" 
+
+		sudo -u $SUDO_USER sed -i -e '/OBSVLFR1/s/XXXXXX/'${yocto_id1:9:6}'/' config_static.ini
+		sudo -u $SUDO_USER sed -i -e '/OBSVLFR2/s/XXXXXX/'${yocto_id2:9:6}'/' config_static.ini
+		sudo -u $SUDO_USER sed -i '/yocto_prefix3 [-=]/d' config_static.ini
+		sudo -u $SUDO_USER sed -i -e '/YGNSSMK2/s/XXXXXX/'${yocto_gps:9:6}'/' config_static.ini
+	elif [[ "$yocto_ver" == "Yocto-Pictor-GPS" ]]; then
+	# HYPSTAR host system V4-...
+		yocto_id3=$(echo $json_api | python3 -c \
+			"import sys, json; print(json.load(sys.stdin)['services']['whitePages'][1]['serialNumber'])")
+
+		yocto_id1=$(echo $json_api | python3 -c \
+			"import sys, json; print(json.load(sys.stdin)['services']['whitePages'][2]['serialNumber'])")
+
+		echo -e "\nFound host system V4 or newer using Yocto-Pictor-GPS"
+		echo "Yocto IDs are : $yocto_id1 and $yocto_id3" 
+
+		sudo -u $SUDO_USER sed -i -e '/OBSVLFR1/s/XXXXXX/'${yocto_id1:9:6}'/' config_static.ini
+		sudo -u $SUDO_USER sed -i '/yocto_prefix2 [-=]/d' config_static.ini
+		sudo -u $SUDO_USER sed -i -e '/OBSVLFR3/s/XXXXXX/'${yocto_id3:9:6}'/' config_static.ini
+		sudo -u $SUDO_USER sed -i '/yocto_gps [-=]/d' config_static.ini
+	else
+	# Something is wrong
+		echo -e "\nError : failed to autodetect the Yocto boards.\n"
+		exit 1
+	fi
 }
 
 function install_dependencies(){
