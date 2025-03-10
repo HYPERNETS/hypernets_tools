@@ -83,3 +83,7 @@ webcam_site = user:pass@ip_cam_site
 
 # webcam_sky - sky webcam (relay 6) credentials
 webcam_sky = user:pass@ip_cam_sky
+
+# Both PoE cameras are powered by relay 5 so relay switching logic is different for PoE cameras
+# Allowed values: yes/no
+poe_cameras = yes

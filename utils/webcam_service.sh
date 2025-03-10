@@ -30,38 +30,36 @@ IFS=$'\n\t'
 YMFolder=$(date +"%Y/%m/")
 VERBOSE="" # "-v"
 
-webcam_site()(
-	echo "[INFO]  site_cam: Sleeping 60s"
+# webcam_get_img "site" "$credent_site" "$ip_site" 5 $is_poe
+# webcam_get_img "sky" "$credent_sky" "$ip_sky" 6 $is_poe
+webcam_get_img()(
+	camname=$1
+	credent=$2
+	ip=$3
+	relay=$4
+	is_poe=$5
+
+	if [[ $is_poe -eq 0 ]]; then
+		echo "[INFO]  ${camname}_cam: Opening relay $relay"
+		python -m hypernets.yocto.relay -n$relay -son
+	fi
+
+	echo "[INFO]  ${camname}_cam: Sleeping 60s"
 	sleep 60 # empirical
 
 	set +e
-	./utils/webcam_get_image.sh -c "$credent_site" -i "$ip_site" -d "OTHER/WEBCAM_SITE/$YMFolder" -w $VERBOSE
+	./utils/webcam_get_image.sh -c "$credent" -i "$ip" -d "OTHER/WEBCAM_${camname^^}/$YMFolder" -w $VERBOSE
 	retcode=$?
 	set -e
 
 	if [[ $retcode -ne 0 ]] ; then
-		echo "[ERROR]  site_cam: image capture failed"
+		echo "[ERROR]  ${camname}_cam: image capture failed"
 	fi
 
-	python -m hypernets.yocto.relay -n5 -soff
-	echo "[INFO]  site_cam: Closing relay 5"
-)
-
-webcam_sky()(
-	echo "[INFO]  sky_cam: Sleeping 60s"
-	sleep 60 # empirical
-	
-	set +e
-	./utils/webcam_get_image.sh -c "$credent_sky" -i "$ip_sky" -d "OTHER/WEBCAM_SKY/$YMFolder" -w $VERBOSE
-	retcode=$?
-	set -e
-
-	if [[ $retcode -ne 0 ]] ; then
-		echo "[ERROR]  sky_cam: image capture failed"
+	if [[ $is_poe -eq 0 ]]; then
+		python -m hypernets.yocto.relay -n$relay -soff
+		echo "[INFO]  ${camname}_cam: Closing relay $relay"
 	fi
-
-	python -m hypernets.yocto.relay -n6 -soff
-	echo "[INFO]  sky_cam: Closing relay 6"
 )
 
 source utils/configparser.sh
@@ -69,12 +67,19 @@ source utils/configparser.sh
 config_site=$(parse_config "webcam_site" config_static.ini)
 credent_site=$(echo $config_site | cut -d "@" -f1)
 ip_site=$(echo $config_site | cut -d "@" -f2)
+poe_cameras=$(parse_config "poe_cameras" config_static.ini)
+
+if [[ "$poe_cameras" == "yes" ]]; then
+	is_poe=1
+    echo "[INFO]  PoE_cam: Opening relay 5"
+    python -m hypernets.yocto.relay -n5 -son
+else
+	is_poe=0
+fi
 
 # check if valid IP
 if [[ "$ip_site" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-	echo "[INFO]  site_cam: Opening relay 5"
-	python -m hypernets.yocto.relay -n5 -son
-	webcam_site &
+	webcam_get_img "site" "$credent_site" "$ip_site" 5 $is_poe
 	pid_site=$!
 else
 	if [[ $config_site != "" ]]; then
@@ -92,9 +97,7 @@ ip_sky=$(echo $config_sky | cut -d "@" -f2)
 
 # check if valid IP
 if [[ "$ip_sky" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-	echo "[INFO]  sky_cam: Opening relay 6"
-	python -m hypernets.yocto.relay -n6 -son
-	webcam_sky &
+	webcam_get_img "sky" "$credent_sky" "$ip_sky" 6 $is_poe
 	pid_sky=$!
 else
 	if [[ $config_sky != "" ]]; then
@@ -110,5 +113,12 @@ fi
 
 if [[ "$pid_site" -ne 0 ]]; then
 	wait $pid_site
+fi
+
+if [[ $is_poe -eq 1 ]]; then
+    echo "[INFO]  PoE_cam: Closing relay 5"
+    python -m hypernets.yocto.relay -n5 -soff
+else
+    is_poe=0
 fi
 

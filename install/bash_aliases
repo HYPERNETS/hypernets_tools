@@ -1544,6 +1544,7 @@ webpic() (
 	YMFolder=$(date +"%Y/%m/")
 
 	source utils/configparser.sh
+	poe_cameras=$(parse_config "poe_cameras" config_static.ini)
 	config=$(parse_config "webcam_$cam" config_static.ini)
 	
 	webcam_credent=$(echo "$config" | cut -d "@" -f1)
@@ -1554,7 +1555,7 @@ webpic() (
 		echo "${XHL}$cam camera IP '$webcam_ip' is invalid in config_static.ini${RESET_HL}"
 		exit -1
 	fi
-
+	
 	set +e
 	set pipefail
 	export AV_LOG_FORCE_COLOR=1
@@ -1564,7 +1565,7 @@ webpic() (
 
 	if [[ "$cap_retcode" -ne 0 ]]; then
 		echo
-		if [[ "$cam" == "site" ]]; then
+		if [[ "$cam" == "site" ]] || [[ "$poe_cameras" == "yes" ]]; then
 			camrelay=5
 		else
 			camrelay=6
