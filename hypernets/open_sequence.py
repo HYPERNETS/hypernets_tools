@@ -303,6 +303,11 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                     warning(f"Failed to read the final position from pan-tilt")
                     pan_real, tilt_real = -999, -999
 
+                except Exception as e:
+                    error(f"{e}")
+                    # Don't retry if this was the first attempt
+                    i = 1
+
             logger.setLevel(old_loglevel)
 
         for request in requests:
@@ -447,6 +452,9 @@ def park_to_nadir():
         except serial.serialutil.SerialException:
             debug("Previous pan-tilt move in progress. Waiting...")
             sleep(1)
+        except Exception as e:
+            error(f"{e}")
+            break
 
 
 def relay3_delayed_on():

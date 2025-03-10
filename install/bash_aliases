@@ -620,25 +620,29 @@ EOF
 		requested_abs_tilt=$(bc <<< "($requested_abs_tilt + 36000) % 360")
 	
 		printf "Moving to requested absolute position pan = %.1f, tilt = %.1f\n" "$requested_abs_pan" "$requested_abs_tilt"
-		python -m hypernets.geometry.pan_tilt -w -p "$requested_abs_pan" -t "$requested_abs_tilt" > /dev/null 2>&1
+		output=$(python -m hypernets.geometry.pan_tilt -w -p "$requested_abs_pan" -t "$requested_abs_tilt" 2>&1)
 
-		## read new abs positions
-		new_abs_pos=$(python -m hypernets.geometry.pan_tilt -g 2>&1 | grep -Eo '[0-9]+([.][0-9]+)?' | paste -s) # pan	tilt
-		new_abs_pan=$(cut -f 1 <<< $new_abs_pos)
-		new_abs_tilt=$(cut -f 2 <<< $new_abs_pos)
+		if [[ ! $output =~ "ERROR" ]]; then
+			## read new abs positions
+			new_abs_pos=$(python -m hypernets.geometry.pan_tilt -g 2>&1 | grep -Eo '[0-9]+([.][0-9]+)?' | paste -s) # pan	tilt
+			new_abs_pan=$(cut -f 1 <<< $new_abs_pos)
+			new_abs_tilt=$(cut -f 2 <<< $new_abs_pos)
+		
+			## calculate relative position
+			new_hyper_pan=$(printf "%.1f" $(bc <<< "(($new_abs_pan) + ($offset_pan) + 36000) % 360"))
+			new_hyper_tilt=$(printf "%.1f" $(bc <<< "(($new_abs_tilt) + ($offset_tilt) + 36000) % 360"))
 	
-		## calculate relative position
-		new_hyper_pan=$(printf "%.1f" $(bc <<< "(($new_abs_pan) + ($offset_pan) + 36000) % 360"))
-		new_hyper_tilt=$(printf "%.1f" $(bc <<< "(($new_abs_tilt) + ($offset_tilt) + 36000) % 360"))
-
-		## calculate residuals
-		residual_pan=$(bc <<< "$new_abs_pan - $requested_abs_pan")
-		residual_tilt=$(bc <<< "$new_abs_tilt - $requested_abs_tilt")
-
-		echo
-		echo "New positions"
-		printf "abs:   pan = %.1f, tilt = %.1f, residuals: pan = %.1f, tilt = %.1f\n" "$new_abs_pan" "$new_abs_tilt" "$residual_pan" "$residual_tilt"
-		printf "hyper: pan = %.1f, tilt = %.1f\n" "$new_hyper_pan" "$new_hyper_tilt"
+			## calculate residuals
+			residual_pan=$(bc <<< "$new_abs_pan - $requested_abs_pan")
+			residual_tilt=$(bc <<< "$new_abs_tilt - $requested_abs_tilt")
+	
+			echo
+			echo "New positions"
+			printf "abs:   pan = %.1f, tilt = %.1f, residuals: pan = %.1f, tilt = %.1f\n" "$new_abs_pan" "$new_abs_tilt" "$residual_pan" "$residual_tilt"
+			printf "hyper: pan = %.1f, tilt = %.1f\n" "$new_hyper_pan" "$new_hyper_tilt"
+		else
+			echo -e "\n${XHL}$output${RESET_HL}\n"
+		fi
 	fi
 ) # pt()
 

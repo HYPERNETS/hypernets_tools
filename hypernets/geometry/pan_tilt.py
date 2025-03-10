@@ -178,6 +178,10 @@ def move_to(ser, pan=None, tilt=None, wait=False):
 
     info(f"Requested Position :\t({pan}, {tilt})\t(10^-2 degrees)")
 
+    # Tilt no-go-zone: abs_deg (125.0, 181.0); abs_tilt (12500, 18100)
+    if tilt is not None and tilt > 12500 and tilt < 18010:
+        raise Exception(f"Requested absolute tilt position {tilt/100:.2f} is in no-go zone (125.0; 181.0)!")
+
     if wait:
         initial_position = query_position(ser)
         estimated_time = pt_time_estimation(initial_position, (pan, tilt))
@@ -343,6 +347,9 @@ if __name__ == '__main__':
     if args.get:
         print_position(ser)
     else:
-        print(move_to(ser, args.pan, args.tilt, wait=args.wait))
+        try:
+            print(move_to(ser, args.pan, args.tilt, wait=args.wait))
+        except Exception as e:
+            error(f"{e}")
   
     ser.close()
