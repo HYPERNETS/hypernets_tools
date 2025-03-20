@@ -315,7 +315,7 @@ fi
 echo "[INFO]  Running on ${PRETTY_NAME-}"
 
 
-## log hypernets_tools repo and branch
+## log hypernets_tools repo and branch and root folder
 set +e
 hn_tools_repo=$(git config --get remote.origin.url)
 if [[ $? -ne 0 ]] ; then
@@ -332,6 +332,7 @@ else
 	hn_tools_ver=$(python -c "import hypernets; print(hypernets.__version__)")
 
 	echo "[INFO]  Running hypernets_tools version $hn_tools_ver from $hn_tools_repo branch $hn_tools_branch commit $hn_tools_commit"
+	echo "[INFO]  hypernets_tools folder is $PWD"
 fi
 set -e
 
