@@ -1,4 +1,4 @@
-__version__ = "2.3.0"
+__version__ = "2.4.0"
 
 import sys
 MIN_PYTHON = (3, 9)
