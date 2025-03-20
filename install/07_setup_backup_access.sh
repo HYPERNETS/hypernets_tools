@@ -41,6 +41,7 @@ source utils/configparser.sh
 sshIf=$(parse_config "backup_ssh_interface" config_static.ini)
 sshIp=$(parse_config "backup_ssh_ip" config_static.ini)
 dhcpServer=$(parse_config "dhcp_server" config_static.ini)
+poe_cameras=$(parse_config "poe_cameras" config_static.ini)
 
 if [ -z $sshIf ] || [ -z $sshIp ] || [ -z $dhcpServer ]; then
 	echo "${XHL}Please define backup_ssh_interface, backup_ssh_ip, and dhcp_server"
@@ -76,12 +77,37 @@ if [[ "$sshIf" =~ ^enp ]]; then ## ethernet
 
 	## delete previous conf
 	rm -rf /etc/network/interfaces.d/ssh_backup_interface
-	nmcli radio wifi off
+
+	read -p "Disable WiFi (y/n) ?" -rn1
+	echo
+
+	if [[ $REPLY =~ ^[Yy]$ ]]; then 
+		nmcli radio wifi off
+	fi
+
 	if [[ $(nmcli connection show | grep ssh_backup_interface) ]]; then
 		nmcli connection delete ssh_backup_interface
 	fi
 
-	if [ "$ID"  == "debian" ]; then
+	## enp2s0 already configured for PoE cameras
+	if [[ "$sshIf" == "enp2s0" ]] && [[ $(nmcli connection show | grep poe_cam_interface | grep enp2s0) ]] || [[ $(grep -s enp2s0 /etc/network/interfaces.d/poe_cam_interface) ]] ; then
+		echo "${XHL}enp2s0 interface already configured for PoE cameras${RESET_HL}"
+		
+		## get IP from PoE config and warn if not the same as backup_ssh_ip in config
+		if [ "$ID"  == "debian" ]; then
+			poe_ip="$(grep address /etc/network/interfaces.d/poe_cam_interface | sed -e 's/.*address //;s/\/.*//')"
+		elif [ "$ID"  == "manjaro" ]; then
+			poe_ip="$(nmcli -g IP4 connection show poe_cam_interface | cut -d ":" -f 2 | sed -e 's/\/.*//')"
+		fi
+
+		if [[ "$poe_ip" != "$sshIp" ]]; then
+			echo
+			echo "${XHL}Warning!! Using $poe_ip from PoE camera configuration instead of backup_ssh_ip ($sshIp) from config_static.ini${RESET_HL}"
+			echo "${XHL}Set backup_ssh_ip = $poe_ip in config_static.ini or reconfigure PoE cameras to avoid confusion${RESET_HL}"
+			echo
+			sshIp="$poe_ip"
+		fi
+	elif [ "$ID"  == "debian" ]; then
 		cat << EOF > /etc/network/interfaces.d/ssh_backup_interface
 auto $sshIf
 iface $sshIf inet static

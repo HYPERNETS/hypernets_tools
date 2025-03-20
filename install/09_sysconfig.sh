@@ -150,3 +150,93 @@ if [[ $(vnstat --dbiflist 1 | grep -c -e wwa -e wwp) -eq 0 ]] && [[ $(vnstat --i
 		fi
 	done
 fi
+
+
+## configure ETH 2 interface enp2s0 for PoE cameras
+source utils/configparser.sh
+
+poe_cameras=$(parse_config "poe_cameras" config_static.ini)
+webcam_site=$(parse_config "webcam_site" config_static.ini)
+webcam_sky=$(parse_config "webcam_sky" config_static.ini)
+if [[ "$poe_cameras" == "yes" ]] && [[ "$webcam_site" != "" || "$webcam_sky" != "" ]]; then
+	webcam_site_ip=$(echo "$webcam_site" | cut -d "@" -f2)
+	webcam_sky_ip=$(echo "$webcam_sky" | cut -d "@" -f2)
+	
+	if [[ "$webcam_site" != "" ]] && [[ ! "$webcam_site_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+		echo "${XHL}SITE camera IP '$webcam_site_ip' is invalid in config_static.ini${RESET_HL}"
+	else
+		IFS=. read -r octet1 octet2 octet3 octet4 <<< "$webcam_site_ip"
+		site_subnet="$octet1.$octet2.$octet3"
+	fi
+
+	if [[ "$webcam_sky" != "" ]] && [[ ! "$webcam_sky_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+		echo "${XHL}SKY camera IP '$webcam_sky_ip' is invalid in config_static.ini${RESET_HL}"
+	else
+		IFS=. read -r octet1 octet2 octet3 octet4 <<< "$webcam_sky_ip"
+		sky_subnet="$octet1.$octet2.$octet3"
+	fi
+
+	if [[ "$webcam_site" == "" ]] || [[ "$webcam_sky" == "" ]] || [[ "$site_subnet" == "$sky_subnet" ]]; then
+		echo "${HL}Configuring interface enp2s0 (eth port 2) for PoE cameras${RESET_HL}"
+
+		## delete previous conf
+		rm -rf /etc/network/interfaces.d/poe_cam_interface
+
+		if [[ $(nmcli connection show | grep poe_cam_interface) ]]; then
+			nmcli connection delete poe_cam_interface
+		fi
+
+		## define subnet 
+		if [[ $site_subnet != ".." ]]; then
+			subnet="$site_subnet"
+		else
+			subnet="$sky_subnet"
+		fi
+
+		## define IP
+		if [[ "$webcam_site_ip" != "$subnet.1" ]] && [[ "$webcam_sky_ip" != "$subnet.1" ]]; then
+			poe_ip="$subnet.1"
+		elif [[ "$webcam_site_ip" != "$subnet.100" ]] && [[ "$webcam_sky_ip" != "$subnet.100" ]]; then
+			poe_ip="$subnet.100"
+		else
+			poe_ip="$subnet.200"
+		fi
+
+		echo "${HL}enp2s0 (eth port 2) IP address is $poe_ip${RESET_HL}"
+
+		if [ "$ID"  == "debian" ]; then
+			cat << EOF > /etc/network/interfaces.d/poe_cam_interface
+auto enp2s0
+iface enp2s0 inet static
+	address $poe_ip/24
+EOF
+
+			## delete ssh_backup_interface if that is on the same interface
+			if [[ $(grep -s enp2s0 /etc/network/interfaces.d/ssh_backup_interface) ]] ; then 
+				echo "${XHL}Removing ssh_backup_interface profile that is using the same interface enp2s0${RESET_HL}"
+				rm -f /etc/network/interfaces.d/ssh_backup_interface
+			fi
+				
+			systemctl restart networking.service
+		elif [ "$ID"  == "manjaro" ]; then
+
+			## delete ssh_backup_interface if that is on the same interface
+		    if [[ $(nmcli connection show | grep ssh_backup_interface | grep enp2s0) ]]; then
+				echo "${XHL}Removing ssh_backup_interface profile that is using the same interface enp2s0${RESET_HL}"
+		        nmcli connection delete ssh_backup_interface
+    		fi
+
+			## configure network interface
+			nmcli connection add type ethernet ifname enp2s0 con-name poe_cam_interface ip4 $poe_ip/24 ipv4.method manual autoconnect yes
+			nmcli connection up poe_cam_interface
+		fi
+	else
+		echo "${XHL}Can not automatically configure enp2s0 interface for PoE cameras${RESET_HL}"
+		echo "${XHL}SITE and SKY camera IPs are in different subnets${RESET_HL}"
+		echo "site_subnet = '$site_subnet'"
+		echo "sky_subnet = '$sky_subnet'"
+	fi
+fi # "$poe_cameras" == "yes"
+
+echo 
+
