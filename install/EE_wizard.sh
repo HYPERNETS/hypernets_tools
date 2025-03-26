@@ -122,6 +122,11 @@ function auto_config_yocto(){
 		sudo -u $SUDO_USER sed -i '/yocto_prefix2 [-=]/d' config_static.ini
 		sudo -u $SUDO_USER sed -i -e '/OBSVLFR3/s/XXXXXX/'${yocto_id3:9:6}'/' config_static.ini
 		sudo -u $SUDO_USER sed -i '/yocto_gps [-=]/d' config_static.ini
+
+		echo
+		echo "You should now edit the configuration files before continuing with the configuration."
+		echo
+
 	else
 	# Something is wrong
 		echo -e "\nError : failed to autodetect the Yocto boards.\n"
