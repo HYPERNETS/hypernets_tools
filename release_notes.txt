@@ -1,3 +1,13 @@
+Version 2.4.0: (2025-03-27)
+	- Integrate yocto-pictor-gps
+	- Integrate PoE cameras
+	- Tilt no-go-zone to avoid crashing into tilt limiter
+	- Network configuration for PoE cameras
+	- Log hypernets_tools folder
+	- use invalid default value of remote_ssh_port in config_static.ini.template
+	- disable Xfce display compositing in sysconfig script
+	- bugfix: remove unnecessary gpiod python module import for rain sensor
+
 Version 2.3.0: (2024-10-23)
 	- Log also systemd-timesyncd messages in hello.log
 

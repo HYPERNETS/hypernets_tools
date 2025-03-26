@@ -462,7 +462,7 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 		sleep_countdown=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yoctoPrefix get_sleepCountdown)
 		if ([[ "${testRun:-}" == "yes" ]] && [[ "$keepPcInConf" == "on" ]] && [[ $sleep_countdown -ne 0 ]]) || \
 				([[ "${testRun:-}" != "yes" ]] && [[ "$keepPc" == "on" ]] && [[ $sleep_countdown -ne 0 ]]); then
-			log_warning "Shutdown in inhibited by keep_pc = on in config_dynamic.ini, but Yocto watchdog is configured to power off the system!"
+			log_warning "Shutdown is inhibited by keep_pc = on in config_dynamic.ini, but Yocto watchdog is configured to power off the system!"
 		fi
 	fi
 fi # bypassYocto != yes

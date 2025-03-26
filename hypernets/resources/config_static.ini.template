@@ -47,7 +47,7 @@ ssh_port = 22
 #
 # remote ssh port must be unused on the network server and unique for each site 
 # connected to the same server
-remote_ssh_port = 20213
+remote_ssh_port = unique_for_each_site
 
 # ssh_loglevel - the verbosity of the reverse ssh tunnel client
 # Allowed values: ERROR, DEBUG, DEBUG2, DEBUG3
@@ -77,6 +77,9 @@ dhcp_server = yes
 # comment out the respective webcam_... parameter
 #
 # ip_cam_... must be an IPv4 address
+# 
+# Note that for PoE cameras the first address of the camera subnet (i.e. X.Y.Z.1) is reserved 
+# for rugged PC enp2s0 interface (eth port 2)
 
 # webcam_site - site webcam (relay 5) credentials
 webcam_site = user:pass@ip_cam_site
@@ -86,4 +89,4 @@ webcam_sky = user:pass@ip_cam_sky
 
 # Both PoE cameras are powered by relay 5 so relay switching logic is different for PoE cameras
 # Allowed values: yes/no
-poe_cameras = yes
+poe_cameras = no

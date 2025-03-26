@@ -79,7 +79,7 @@ fi
 
 # check if valid IP
 if [[ "$ip_site" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-	webcam_get_img "site" "$credent_site" "$ip_site" 5 $is_poe
+	webcam_get_img "site" "$credent_site" "$ip_site" 5 $is_poe &
 	pid_site=$!
 else
 	if [[ $config_site != "" ]]; then
@@ -97,7 +97,7 @@ ip_sky=$(echo $config_sky | cut -d "@" -f2)
 
 # check if valid IP
 if [[ "$ip_sky" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-	webcam_get_img "sky" "$credent_sky" "$ip_sky" 6 $is_poe
+	webcam_get_img "sky" "$credent_sky" "$ip_sky" 6 $is_poe &
 	pid_sky=$!
 else
 	if [[ $config_sky != "" ]]; then

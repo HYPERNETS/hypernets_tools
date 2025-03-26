@@ -152,6 +152,14 @@ if [[ $(vnstat --dbiflist 1 | grep -c -e wwa -e wwp) -eq 0 ]] && [[ $(vnstat --i
 fi
 
 
+# Disable Xfce display compositing
+if [[ $(command -v xfconf-query) ]]; then
+	echo
+	echo "${HL}Disabling Xfce display compositing that can cause display lagging${RESET_HL}"
+	xfconf-query -c xfwm4 -p /general/use_compositing -t bool -s false
+fi
+
+
 ## configure ETH 2 interface enp2s0 for PoE cameras
 source utils/configparser.sh
 
@@ -164,6 +172,7 @@ if [[ "$poe_cameras" == "yes" ]] && [[ "$webcam_site" != "" || "$webcam_sky" != 
 	
 	if [[ "$webcam_site" != "" ]] && [[ ! "$webcam_site_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 		echo "${XHL}SITE camera IP '$webcam_site_ip' is invalid in config_static.ini${RESET_HL}"
+		site_subnet=""
 	else
 		IFS=. read -r octet1 octet2 octet3 octet4 <<< "$webcam_site_ip"
 		site_subnet="$octet1.$octet2.$octet3"
@@ -171,12 +180,21 @@ if [[ "$poe_cameras" == "yes" ]] && [[ "$webcam_site" != "" || "$webcam_sky" != 
 
 	if [[ "$webcam_sky" != "" ]] && [[ ! "$webcam_sky_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 		echo "${XHL}SKY camera IP '$webcam_sky_ip' is invalid in config_static.ini${RESET_HL}"
+		sky_subnet=""
 	else
 		IFS=. read -r octet1 octet2 octet3 octet4 <<< "$webcam_sky_ip"
 		sky_subnet="$octet1.$octet2.$octet3"
 	fi
 
-	if [[ "$webcam_site" == "" ]] || [[ "$webcam_sky" == "" ]] || [[ "$site_subnet" == "$sky_subnet" ]]; then
+	if [[ "$site_subnet" == "" ]] && [[ "$sky_subnet" == "" ]]; then
+		echo "${XHL}Can not automatically configure enp2s0 interface for PoE cameras${RESET_HL}"
+		echo "${XHL}No valid camera IP address found in config_static.ini${RESET_HL}"
+	elif [[ "$site_subnet" != "" ]] && [[ "$sky_subnet" != "" ]] && [[ "$site_subnet" != "$sky_subnet" ]]; then
+		echo "${XHL}Can not automatically configure enp2s0 interface for PoE cameras${RESET_HL}"
+		echo "${XHL}SITE and SKY camera IPs are in different subnets${RESET_HL}"
+		echo "site_subnet = '$site_subnet'"
+		echo "sky_subnet = '$sky_subnet'"
+	else
 		echo "${HL}Configuring interface enp2s0 (eth port 2) for PoE cameras${RESET_HL}"
 
 		## delete previous conf
@@ -186,20 +204,11 @@ if [[ "$poe_cameras" == "yes" ]] && [[ "$webcam_site" != "" || "$webcam_sky" != 
 			nmcli connection delete poe_cam_interface
 		fi
 
-		## define subnet 
-		if [[ $site_subnet != ".." ]]; then
-			subnet="$site_subnet"
+		## define enp2s0 interface IP, which is the fist address of the camera subnet
+		if [[ $site_subnet != "" ]]; then
+			poe_ip="$site_subnet.1"
 		else
-			subnet="$sky_subnet"
-		fi
-
-		## define IP
-		if [[ "$webcam_site_ip" != "$subnet.1" ]] && [[ "$webcam_sky_ip" != "$subnet.1" ]]; then
-			poe_ip="$subnet.1"
-		elif [[ "$webcam_site_ip" != "$subnet.100" ]] && [[ "$webcam_sky_ip" != "$subnet.100" ]]; then
-			poe_ip="$subnet.100"
-		else
-			poe_ip="$subnet.200"
+			poe_ip="$sky_subnet.1"
 		fi
 
 		echo "${HL}enp2s0 (eth port 2) IP address is $poe_ip${RESET_HL}"
@@ -230,13 +239,10 @@ EOF
 			nmcli connection add type ethernet ifname enp2s0 con-name poe_cam_interface ip4 $poe_ip/24 ipv4.method manual autoconnect yes
 			nmcli connection up poe_cam_interface
 		fi
-	else
-		echo "${XHL}Can not automatically configure enp2s0 interface for PoE cameras${RESET_HL}"
-		echo "${XHL}SITE and SKY camera IPs are in different subnets${RESET_HL}"
-		echo "site_subnet = '$site_subnet'"
-		echo "sky_subnet = '$sky_subnet'"
 	fi
 fi # "$poe_cameras" == "yes"
+
+
 
 echo 
 
