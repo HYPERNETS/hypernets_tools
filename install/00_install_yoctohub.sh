@@ -77,22 +77,24 @@ sudo apt install virtualhub
 sudo apt install yoctolib-cmdlines
 
 set +e
-# FIXME
-echo "Stop existing Virtualhub service (in case of update)"
-systemctl stop yvirtualhub.service
-systemctl disable yvirtualhub.service
+if [[ $(systemctl list-units --full -all | grep -F "yvirtualhub.service") ]]; then
+	echo
+	echo "Stop existing Virtualhub service"
+	systemctl stop yvirtualhub.service
+	systemctl disable yvirtualhub.service
+fi
 set -e
 
-echo "Creating user rules for all users.."
 echo 
+echo "Creating udev rules for all users.."
 
 cat > /etc/udev/rules.d/51-yoctopuce_all.rules << EOF
 # udev rules to allow write access to all users for Yoctopuce USB devices
 SUBSYSTEM=="usb", ATTR{idVendor}=="24e0", MODE="0666"
 EOF
 
-echo "Creating systemd startup script..."
 echo 
+echo "Creating systemd startup script..."
 
 cat > /etc/systemd/system/yvirtualhub.service  << EOF
 [Unit]
@@ -100,7 +102,7 @@ Description=Yoctopuce VirtualHub
 After=network.target
 
 [Service]
-ExecStart=/usr/sbin/VirtualHub -c /etc/vhub.byn
+ExecStart=/usr/sbin/VirtualHub -c /etc/vhub.byn -n 127.0.0.1
 Type=simple
 
 [Install]
@@ -111,5 +113,6 @@ systemctl daemon-reload
 systemctl start yvirtualhub.service
 systemctl enable yvirtualhub.service
 
+echo
 echo "Installation  VirtualHub done."
 echo "---------------------------------------------------------------"
