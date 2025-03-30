@@ -154,9 +154,9 @@ fi
 
 # Disable Xfce display compositing
 if [[ $(command -v xfconf-query) ]]; then
-	echo
 	echo "${HL}Disabling Xfce display compositing that can cause display lagging${RESET_HL}"
-	xfconf-query -c xfwm4 -p /general/use_compositing -t bool -s false
+	echo
+	sudo -u $user DISPLAY=:0 XAUTHORITY=/home/$user/.Xauthority DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u $user)/bus xfconf-query -c xfwm4 -p /general/use_compositing -t bool -s false
 fi
 
 
@@ -241,8 +241,6 @@ EOF
 		fi
 	fi
 fi # "$poe_cameras" == "yes"
-
-
 
 echo 
 

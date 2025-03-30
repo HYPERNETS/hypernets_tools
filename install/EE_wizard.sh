@@ -101,7 +101,7 @@ function auto_config_yocto(){
 			"import sys, json; print(json.load(sys.stdin)['services']['yellowPages']['HubPort'][1]['logicalName'])")
 
 		echo -e "\nFound host system V1-V3 using Yocto-Pictor-Wifi"
-		echo "Yocto IDs are : $yocto_id1, $yocto_id2 and $yocto_gps" 
+		echo -e "Yocto IDs are : $yocto_id1, $yocto_id2 and $yocto_gps\n"
 
 		sudo -u $SUDO_USER sed -i -e '/OBSVLFR1/s/XXXXXX/'${yocto_id1:9:6}'/' config_static.ini
 		sudo -u $SUDO_USER sed -i -e '/OBSVLFR2/s/XXXXXX/'${yocto_id2:9:6}'/' config_static.ini
@@ -116,22 +116,24 @@ function auto_config_yocto(){
 			"import sys, json; print(json.load(sys.stdin)['services']['whitePages'][2]['serialNumber'])")
 
 		echo -e "\nFound host system V4 or newer using Yocto-Pictor-GPS"
-		echo "Yocto IDs are : $yocto_id1 and $yocto_id3" 
+		echo -e "Yocto IDs are : $yocto_id1 and $yocto_id3\n"
 
 		sudo -u $SUDO_USER sed -i -e '/OBSVLFR1/s/XXXXXX/'${yocto_id1:9:6}'/' config_static.ini
 		sudo -u $SUDO_USER sed -i '/yocto_prefix2 [-=]/d' config_static.ini
 		sudo -u $SUDO_USER sed -i -e '/OBSVLFR3/s/XXXXXX/'${yocto_id3:9:6}'/' config_static.ini
 		sudo -u $SUDO_USER sed -i '/yocto_gps [-=]/d' config_static.ini
-
-		echo
-		echo "You should now edit the configuration files before continuing with the configuration."
-		echo
-
 	else
 	# Something is wrong
 		echo -e "\nError : failed to autodetect the Yocto boards.\n"
 		exit 1
 	fi
+
+	echo "Configuring Relay 1 (Rugged PC) to the on-state after power-on"
+	python -m hypernets.yocto.relay -p on -n 1 -f
+	echo
+
+	echo "****** You should now edit the configuration files before continuing with the configuration ******"
+	echo
 }
 
 function install_dependencies(){
