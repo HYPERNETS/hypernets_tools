@@ -24,11 +24,12 @@ if [[ ${PWD##*/} != "hypernets_tools"* ]]; then
 fi
 
 if [[ "${1-}" == "-h" ]] || [[ "${1-}" == "--help" ]]; then
-	echo "$0 [-h|--help] [--test-run]"
+	echo "$0 [-h|--help] [--test-run [n]]"
 	echo
 	echo "Without options run the fully automated sequence"
 	echo
 	echo "  --test-run   override config_dynamic.ini by keep_pc = on"
+	echo "    n          number of schedule to test (default 1)"
 	echo "  -h, --help   print this help"
 	echo 
 	exit 
@@ -70,19 +71,6 @@ if [[ "$yoctoPrefix" == "" ]]; then
     yoctoPrefix=$(parse_config "yocto_prefix3" config_static.ini)
 fi
 
-
-# Test run, don't send yocto to sleep and don't ignore the sequence
-if [[ "${1-}" == "--test-run" ]]; then
-	keepPc="on"
-	keepPcInConf=$(parse_config "keep_pc" config_dynamic.ini)
-	startSequence="yes"
-	startSequenceInConf=$(parse_config "start_sequence" config_dynamic.ini)
-	testRun="yes"
-else	
-	keepPc=$(parse_config "keep_pc" config_dynamic.ini)
-	startSequence=$(parse_config "start_sequence" config_dynamic.ini)
-fi
-
 case $verbosity in
   ERROR)
     numeric_verbosity=1
@@ -106,6 +94,32 @@ log_debug() { if [[ $numeric_verbosity -ge 4 ]]; then echo "[DEBUG]  $1"; fi }
 log_info() { if [[ $numeric_verbosity -ge 3 ]]; then echo "[INFO]  $1"; fi }
 log_warning() { if [[ $numeric_verbosity -ge 2 ]]; then echo "[WARNING]  $1"; fi }
 log_error() { if [[ $numeric_verbosity -ge 1 ]]; then echo "[ERROR]  $1"; fi }
+
+
+# Test run, don't send yocto to sleep and don't ignore the sequence
+if [[ "${1-}" == "--test-run" ]]; then
+	keepPc="on"
+	keepPcInConf=$(parse_config "keep_pc" config_dynamic.ini)
+	startSequence="yes"
+	startSequenceInConf=$(parse_config "start_sequence" config_dynamic.ini)
+	testRun="yes"
+	if [[ "${2-}" == "2" ]]; then
+		if [[ -n $sequence_file2 ]]; then
+			sequence_file=$sequence_file2
+		else
+			log_error "sequence_file_sched2 or sequence_file_alt is not defined in config_dynamic.ini !!"
+		fi
+	elif [[ "${2-}" == "3" ]]; then
+		if [[ -n $sequence_file3 ]]; then
+			sequence_file=$sequence_file3
+		else
+			log_error "sequence_file_sched3 is not defined in config_dynamic.ini !!"
+		fi
+	fi
+else
+	keepPc=$(parse_config "keep_pc" config_dynamic.ini)
+	startSequence=$(parse_config "start_sequence" config_dynamic.ini)
+fi
 
 shutdown_sequence() {
 	return_value="$1"
@@ -411,7 +425,7 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 	echo "[INFO]  Wake up reason is : $wakeupreason."
 
 	if [[ "${testRun-}" == "yes" ]] && [[ "$checkWakeUpReason" == "yes" ]] ; then
-		echo "[WARNING]  Wake up reason check is disabled for test run. Using standard sequence file $sequence_file"
+		echo "[WARNING]  Wake up reason check is disabled for test run. Using sequence file $sequence_file"
 	elif [[ "$checkWakeUpReason" == "yes" ]] ; then
 		if [[ "$wakeupreason" != "SCHEDULE"* ]]; then
 			echo "[WARNING]  $wakeupreason is not a reason to start the sequence."

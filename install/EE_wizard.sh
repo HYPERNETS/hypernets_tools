@@ -94,6 +94,8 @@ function auto_config_yocto(){
 		yocto_id2=$(echo $json_api | python3 -c \
 			"import sys, json; print(json.load(sys.stdin)['services']['whitePages'][1]['serialNumber'])")
 
+		yocto_rtc_id="$yocto_id2"
+
 		yocto_gps=$(echo $json_api | python3 -c \
 			"import sys, json; print(json.load(sys.stdin)['services']['yellowPages']['HubPort'][0]['logicalName'])")
 
@@ -112,6 +114,8 @@ function auto_config_yocto(){
 		yocto_id3=$(echo $json_api | python3 -c \
 			"import sys, json; print(json.load(sys.stdin)['services']['whitePages'][1]['serialNumber'])")
 
+		yocto_rtc_id="$yocto_id3"
+
 		yocto_id1=$(echo $json_api | python3 -c \
 			"import sys, json; print(json.load(sys.stdin)['services']['whitePages'][2]['serialNumber'])")
 
@@ -129,8 +133,14 @@ function auto_config_yocto(){
 	fi
 
 	echo "Configuring Relay 1 (Rugged PC) to the on-state after power-on"
-	python -m hypernets.yocto.relay -p on -n 1 -f
+	sudo -u $(logname) python -m hypernets.yocto.relay -p on -n 1 -f
 	echo
+
+	if [[ $(command -v YRealTimeClock) ]]; then
+		echo "Enabling Yocto clock synchronisation from PC if no GPS time is available"
+		YRealTimeClock -s -r 127.0.0.1 $yocto_rtc_id set_disableHostSync FALSE
+		echo
+	fi
 
 	echo "****** You should now edit the configuration files before continuing with the configuration ******"
 	echo

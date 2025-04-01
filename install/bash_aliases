@@ -43,7 +43,7 @@ commands() (
 	echo "${HL} webpic 	${RESET_HL}take webcam photo    webpic -h for help"
 	echo "${HL} hypypic  	${RESET_HL}take photo from hypstar camera"
 	#echo "${HL} cp2server	 ${RESET_HL}                 ./utils/hello_server.sh   copy sequence data back to NPL server "
-	echo "${HL} runseq	 	${RESET_HL}utils/run_service.sh    run a sequence"
+	echo "${HL} runseq	 	${RESET_HL}utils/run_service.sh --test-run   run a sequence"
 	echo "${HL} yapo		${RESET_HL}yocto auto-power-off. yapo stop to disable, yapo -h for help"
 	echo "${HL} goto-sleep	${RESET_HL}power off and send yocto to sleep if wakeup is scheduled"
 	echo
@@ -1666,11 +1666,16 @@ portal()(
 	fi
 ) # portal()
 
+
+runseq()(
+	cd "$HYPERNETS_TOOLS"
+	./utils/run_service.sh --test-run $@
+) # runseq()
+
 alias kill-service="sudo systemctl kill --signal=SIGKILL hypernets-sequence"
 alias journal="journalctl -b -u hypernets-sequence -e"
 alias status="sudo systemctl status hypernets-sequence"
 alias gui="(cd \"$HYPERNETS_TOOLS\" && python -m hypernets.gui)"
-alias runseq="(cd \"$HYPERNETS_TOOLS\" && ./utils/run_service.sh --test-run)"
 
 # print the help
 commands
