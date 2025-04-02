@@ -136,12 +136,6 @@ function auto_config_yocto(){
 	sudo -u $(logname) python -m hypernets.yocto.relay -p on -n 1 -f
 	echo
 
-	if [[ $(command -v YRealTimeClock) ]]; then
-		echo "Enabling Yocto clock synchronisation from PC if no GPS time is available"
-		YRealTimeClock -s -r 127.0.0.1 $yocto_rtc_id set_disableHostSync FALSE
-		echo
-	fi
-
 	echo "****** You should now edit the configuration files before continuing with the configuration ******"
 	echo
 }

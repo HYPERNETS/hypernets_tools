@@ -7,8 +7,9 @@ Version 2.4.0: (2025-03-27)
 	- use invalid default value of remote_ssh_port in config_static.ini.template
 	- disable Xfce display compositing in sysconfig script
 	- set relay 1 to on-state after power-on in yocto autoconfig script
-	- enable Yocto clock sync from PC if no GPS time is available
 	- add schedule number parameter to runseq shortcut
+	- schedule shortcut syncs yocto clock from PC if not set
+	- add brief parameter to yapo shortcut and print yapo status at login
 	- bugfix: remove unnecessary gpiod python module import for rain sensor
 
 Version 2.3.0: (2024-10-23)

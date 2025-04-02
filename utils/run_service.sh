@@ -442,7 +442,7 @@ if [[ "$bypassYocto" != "yes" ]] ; then
                 echo "[WARNING]  No sequence file for Schedule 2 is defined."
                 echo "[WARNING]  $sequence_file will be run instead."
             else
-                echo "[INFO] $sequence_file2 as alternative sequence file is defined."
+                echo "[INFO]  $sequence_file2 as alternative sequence file is defined."
                 sequence_file=$sequence_file2
             fi 
         fi
@@ -452,7 +452,7 @@ if [[ "$bypassYocto" != "yes" ]] ; then
                 echo "[WARNING]  No sequence file for Schedule 3 is defined."
                 echo "[WARNING]  $sequence_file will be run instead."
             else
-                echo "[INFO] $sequence_file3 as alternative sequence file is defined."
+                echo "[INFO]  $sequence_file3 as alternative sequence file is defined."
                 sequence_file=$sequence_file3
             fi 
         fi
