@@ -10,6 +10,7 @@ Version 2.4.0: (2025-03-27)
 	- add schedule number parameter to runseq shortcut
 	- schedule shortcut syncs yocto clock from PC if not set
 	- add brief parameter to yapo shortcut and print yapo status at login
+	- read_binary() is deprecated in python 3.11, replace with read_bytes()
 	- bugfix: remove unnecessary gpiod python module import for rain sensor
 
 Version 2.3.0: (2024-10-23)
