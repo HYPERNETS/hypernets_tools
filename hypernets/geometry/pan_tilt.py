@@ -140,7 +140,7 @@ def print_position(ser):
         print("Failed to read current position from pan-tilt!")
 
 
-def move_to(ser, pan=None, tilt=None, wait=False):
+def move_to(ser, pan=None, tilt=None, wait=False, tilt_limiter=True):
 
     if ser is None:
         ser = open_serial()
@@ -178,9 +178,9 @@ def move_to(ser, pan=None, tilt=None, wait=False):
 
     info(f"Requested Position :\t({pan}, {tilt})\t(10^-2 degrees)")
 
-    # Tilt no-go-zone: abs_deg (125.0, 181.0); abs_tilt (12500, 18100)
-    if tilt is not None and tilt > 12500 and tilt < 18010:
-        raise Exception(f"Requested absolute tilt position {tilt/100:.2f} is in no-go zone (125.0; 181.0)!")
+    # Tilt no-go-zone: abs_deg (130.0, 181.0); abs_tilt (13000, 18100)
+    if tilt_limiter is True and tilt is not None and tilt > 13000 and tilt < 18010:
+        raise Exception(f"Requested absolute tilt position {tilt/100:.2f} is in no-go zone (130.0, 181.0) !!")
 
     if wait:
         initial_position = query_position(ser)
@@ -263,8 +263,8 @@ def move_to(ser, pan=None, tilt=None, wait=False):
         return position_1
 
 
-def move_to_geometry(geometry, wait=False):
-    return move_to(None, geometry.pan_abs, geometry.tilt_abs, wait=wait)
+def move_to_geometry(geometry, wait=False, tilt_limiter=True):
+    return move_to(None, geometry.pan_abs, geometry.tilt_abs, wait=wait, tilt_limiter=True)
 
 
 def open_serial():

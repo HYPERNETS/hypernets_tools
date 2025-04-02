@@ -1,3 +1,4 @@
+#########################################################################
 [yoctopuce]
 # HYPSTAR host systems V1-V3 use Yocto-Pictor-Wifi and need 
 # yocto_prefix1, yocto_prefix2, and yocto_gps parameters
@@ -28,6 +29,7 @@ bypass_yocto = no
 debug_yocto = no
 
 
+#########################################################################
 [network]
 # credentials - the ssh credentials of the network server
 credentials = user@server
@@ -72,6 +74,7 @@ backup_ssh_ip = 10.42.0.1
 dhcp_server = yes
 
 
+#########################################################################
 [webcam]
 # For disabling either webcam and suppressing warnings about inaccessible or invalid IP
 # comment out the respective webcam_... parameter
@@ -90,3 +93,14 @@ webcam_sky = user:pass@ip_cam_sky
 # Both PoE cameras are powered by relay 5 so relay switching logic is different for PoE cameras
 # Allowed values: yes/no
 poe_cameras = no
+
+
+#########################################################################
+[pantilt]
+# If the mechanical tilt axis limiter is installed, tilt movement commands into 
+# (130.0, 181.0) absolute position no-go zone are rejected.
+#
+# NB!! The tilt axis gearbox can be damaged when driven into the limiter at full speed!
+#
+# Allowed values: yes/no
+tilt_limiter = no

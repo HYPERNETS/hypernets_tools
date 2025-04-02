@@ -6,6 +6,8 @@ from tkinter import Label, LabelFrame, Spinbox
 from tkinter import Tk, Button
 from tkinter.ttk import Combobox
 
+from logging import error
+
 from hypernets.abstract.geometry import Geometry
 from hypernets.geometry.pan_tilt import move_to_geometry
 
@@ -56,7 +58,10 @@ class FramePanTilt(LabelFrame):
 
         geometry = Geometry(pan=pan, tilt=tilt, reference=reference)
         geometry.get_absolute_pan_tilt()
-        move_to_geometry(geometry)
+        try:
+            move_to_geometry(geometry)
+        except Exception as e:
+            error(f"{e}")
 
 
 if __name__ == '__main__':

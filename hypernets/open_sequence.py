@@ -29,6 +29,7 @@ from hypernets.yocto.sleep_monitor import getPoweroffCountdown
 
 
 yoctoWDTflag = threading.Event()
+tilt_limiter = True
 
 class yoctoWathdogTimeout(Exception):
     pass
@@ -40,6 +41,33 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                       instrument_swir_tec=0,
                       DATA_DIR="DATA",
                       check_rain=False):
+
+    ## check tilt limiter
+    ## if key is missing, defaults False
+    ## if key exists and is not "no", defaults True
+    ##
+    ## use global variable because we need to access it in park_to_nadir()
+    global tilt_limiter
+
+    if instrument_standalone:
+        tilt_limiter = False
+        debug("Standalone mode, tilt_limiter = no")
+    else:
+        try:
+            from configparser import ConfigParser
+            config = ConfigParser()
+            config.read("config_static.ini")
+            config_value = config["pantilt"]["tilt_limiter"]
+            if config_value == "no":
+                tilt_limiter = False
+                debug("tilt_limiter = no in config_static.ini")
+            else:
+                tilt_limiter = True
+                debug("tilt_limiter = yes because not explicitly disabled in config_static.ini")
+        except KeyError as key:
+            tilt_limiter = False
+            debug("pantilt/tilt_limiter not found in config_static.ini, defaults to tilt_limiter = no")
+
 
     # Check if it is raining
     if not instrument_standalone and check_rain:
@@ -280,7 +308,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                     yoctoWDTwatcher.join()
 
                 try:
-                    pan_real, tilt_real = move_to_geometry(geometry, wait=True)
+                    pan_real, tilt_real = move_to_geometry(geometry, wait=True, tilt_limiter=tilt_limiter)
                     pan_real = float(pan_real) / 100
                     tilt_real = float(tilt_real) / 100
 
@@ -447,7 +475,7 @@ def park_to_nadir():
     import serial
     while True:
         try:
-            move_to(ser=None, tilt=park.tilt_abs, wait=True)
+            move_to(ser=None, tilt=park.tilt_abs, wait=True, tilt_limiter=tilt_limiter)
             break
         except serial.serialutil.SerialException:
             debug("Previous pan-tilt move in progress. Waiting...")
