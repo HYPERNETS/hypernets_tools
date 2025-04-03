@@ -1,14 +1,16 @@
-Version 2.4.0: (2025-03-27)
+Version 3.0.0: (2025-04-03)
 	- Integrate yocto-pictor-gps
 	- Integrate PoE cameras
 	- Tilt no-go-zone to avoid crashing into tilt limiter
 	- Network configuration for PoE cameras
 	- Log hypernets_tools folder
 	- use invalid default value of remote_ssh_port in config_static.ini.template
-	- disable Xfce display compositing in sysconfig script
+	  so that the operator is forced to update it
+	- disable Xfce display compositing in sysconfig script that can cause
+	  display lagging
 	- set relay 1 to on-state after power-on in yocto autoconfig script
 	- add schedule number parameter to runseq shortcut
-	- schedule shortcut syncs yocto clock from PC if not set
+	- schedule shortcut syncs yocto clock from PC if yocto clock was not set
 	- add brief parameter to yapo shortcut and print yapo status at login
 	- read_binary() is deprecated in python 3.11, replace with read_bytes()
 	- bugfix: remove unnecessary gpiod python module import for rain sensor
