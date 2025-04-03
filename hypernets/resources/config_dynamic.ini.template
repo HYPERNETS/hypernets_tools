@@ -1,3 +1,4 @@
+##########################################################################
 [general]
 
 # keep_pc - control the system status after the end of the automated sequence
@@ -32,7 +33,6 @@ check_wakeup_reason = yes
 # sequence_file_sched1 - the default sequence that is executed 
 # For backwards compatibility sequence_file is also accepted as the parameter name
 # 
-# runseq shortcut always executes the default sequence
 # Yocto Schedule1 always executes the default sequence
 # Yocto Schedule2 executes the default sequence if check_wakeup_reason = no
 # Yocto Schedule3 executes the default sequence if check_wakeup_reason = no
@@ -42,7 +42,7 @@ check_wakeup_reason = yes
 # avoid git conflicts in the future.
 sequence_file_sched1 = hypernets/resources/sequences_samples/your_sequence.txt
 
-# sequence_file_sched2 - the alternative sequence that is executed, typically LED source
+# sequence_file_sched2 - the alternative sequence that is executed, typically LED source measurement
 # For backwards compatibility sequence_file_alt is also accepted as the parameter name
 # 
 # Yocto Schedule1 executes the alternative sequence if Yocto deep sleep mode is disabled
@@ -87,6 +87,7 @@ auto_update = no
 verbosity = INFO
 
 
+##########################################################################
 [GPS] 
 # The geographic coordinates of the system which are used for calculating the Sun angles
 # and copied to the metadata.txt of each sequence
@@ -105,6 +106,7 @@ latitude = 0.0
 longitude = 0.0
 
 
+##########################################################################
 [SPA]
 # elevation - elevation of the HYPSTAR in meters from WGS-84 ellipsoid used for 
 # calculating the Sun angles
@@ -115,6 +117,7 @@ longitude = 0.0
 elevation = 0
 
 
+##########################################################################
 [pantilt]
 # offset_pan - the offset from geographic north in degrees when HYPSTAR is pointing 
 # at pan(abs) = 0, tilt(hyper) = 90
@@ -147,6 +150,7 @@ pantilt_port = /dev/ttyS0
 azimuth_switch = 0
 
 
+##########################################################################
 [hypstar]
 # pantilt_port - link to the radiometer serial port device file
 # 
@@ -183,6 +187,7 @@ loglevel = INFO
 swir_tec = 0
 
 
+##########################################################################
 [metadata]
 # The fields in the [metadata] section are directly copied into metadata.txt of each sequence.
 # In addition, the following fields are automatically populated in metadata.txt: 
@@ -190,3 +195,4 @@ swir_tec = 0
 # offset_tilt, azimuth_switch
 principal_investigator = Investigator Name
 site_id = A Site ID
+

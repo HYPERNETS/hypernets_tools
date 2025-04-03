@@ -1694,6 +1694,21 @@ portal()(
 
 runseq()(
 	cd "$HYPERNETS_TOOLS"
+
+	if [[ "${1-}" == "-h" ]] || [[ "${1-}" == "--help" ]]
+	then
+		echo
+		echo "runseq [-h|--help] [1|2|3]"
+		echo
+		echo "Test run a sequence without shutting down in the end"
+		echo 
+		echo "runseq         no or invalid option - run the standard sequence (Schedule1)"
+		echo "runseq 2       run alternative sequence (Schedule2) if defined in config_dynamic.ini"
+		echo "runseq 3       run custom sequence (Schedule3) if defined in config_dynamic.ini"
+		echo 
+		exit
+	fi
+
 	./utils/run_service.sh --test-run $@
 ) # runseq()
 
