@@ -67,6 +67,11 @@ source utils/configparser.sh
 
 # Check if yocto is accessible
 yocto=$(parse_config "yocto_prefix2" config_static.ini)
+if [[ "$yocto" == "" ]]; then
+# host system V4 or newer
+    yocto=$(parse_config "yocto_prefix3" config_static.ini)
+fi
+
 set +e
 wget -O- "http://127.0.0.1:4444/bySerial/$yocto/api.txt" > /dev/null 2>&1
 retcode=$?

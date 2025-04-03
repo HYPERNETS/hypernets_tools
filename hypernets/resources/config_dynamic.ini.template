@@ -1,3 +1,4 @@
+##########################################################################
 [general]
 
 # keep_pc - control the system status after the end of the automated sequence
@@ -18,35 +19,50 @@ start_sequence = no
 # Allowed values: yes/no - do/don't check the Yocto wakeup reason
 #
 # If the wakeup reason check is enabled, the sequence is chosen as follows:
-# SCHEDULE1 - run default sequence (sequence_file)
-# SCHEDULE2 - run alternative sequence (sequence_file_alt)
+# SCHEDULE1 - run default sequence (sequence_file or sequence_file_sched1)
+# SCHEDULE2 - run LED measurement sequence (sequence_file_alt or sequence_file_sched2)
+# SCHEDULE3 - run custom sequence (sequence_file_sched3
+#             available only on host units V4 and newer)
 # Any other wakeup reason - don't start the sequence
 #
-# If Yocto deep sleep mode is disabled, then both wakeup schedules report the
-# wakeup reason as SCHEDULE2 and the alternative sequence is started. This is
-# caused by a bug in the Yocto firmware.
+# If Yocto deep sleep mode is disabled, then all wakeup schedules report the
+# wakeup reason as SCHEDULE2 and the sequence defined by sequence_file_alt or
+# sequence_file_sched2 is started. This is caused by a bug in the Yocto firmware.
 check_wakeup_reason = yes
 
-# sequence_file - the default sequence that is executed 
+# sequence_file_sched1 - the default sequence that is executed 
+# For backwards compatibility sequence_file is also accepted as the parameter name
 # 
-# runseq shortcut always executes the default sequence
 # Yocto Schedule1 always executes the default sequence
 # Yocto Schedule2 executes the default sequence if check_wakeup_reason = no
+# Yocto Schedule3 executes the default sequence if check_wakeup_reason = no
 # 
 # If any modifications are made to the sample sequence file it is strongly
 # recommended to edit a copy instead of the original sample file in order to 
 # avoid git conflicts in the future.
-sequence_file = hypernets/resources/sequences_samples/your_sequence.txt
+sequence_file_sched1 = hypernets/resources/sequences_samples/your_sequence.txt
 
-# sequence_file_alt - the alternative sequence that is executed
+# sequence_file_sched2 - the alternative sequence that is executed, typically LED source measurement
+# For backwards compatibility sequence_file_alt is also accepted as the parameter name
 # 
 # Yocto Schedule1 executes the alternative sequence if Yocto deep sleep mode is disabled
 # Yocto Schedule2 executes the alternative sequence if check_wakeup_reason = yes
+# Yocto Schedule3 executes the alternative sequence if Yocto deep sleep mode is disabled
 # 
 # If any modifications are made to the sample sequence file it is strongly
 # recommended to edit a copy instead of the original sample file in order to 
 # avoid git conflicts in the future.
-sequence_file_alt = hypernets/resources/sequences_samples/your_validation_sequence.txt
+sequence_file_sched2 = hypernets/resources/sequences_samples/your_validation_sequence.txt
+
+# sequence_file_sched3 - another alternative sequence, e.g site-specific custom acquisition
+# Yocto Schedule3 is available on host units V4 and newer with Yocto-Pictor-GPS boards
+# 
+# Yocto Schedule3 executes the sequence_file_sched3 sequence if check_wakeup_reason = yes
+# 
+# If any modifications are made to the sample sequence file it is strongly
+# recommended to edit a copy instead of the original sample file in order to 
+# avoid git conflicts in the future.
+sequence_file_sched3 = hypernets/resources/sequences_samples/your_custom_sequence.txt
 
 # check_rain - check the rain sensor and skip or abort the sequence if rain is detected
 # Allowed values: yes/no
@@ -71,6 +87,7 @@ auto_update = no
 verbosity = INFO
 
 
+##########################################################################
 [GPS] 
 # The geographic coordinates of the system which are used for calculating the Sun angles
 # and copied to the metadata.txt of each sequence
@@ -89,6 +106,7 @@ latitude = 0.0
 longitude = 0.0
 
 
+##########################################################################
 [SPA]
 # elevation - elevation of the HYPSTAR in meters from WGS-84 ellipsoid used for 
 # calculating the Sun angles
@@ -99,6 +117,7 @@ longitude = 0.0
 elevation = 0
 
 
+##########################################################################
 [pantilt]
 # offset_pan - the offset from geographic north in degrees when HYPSTAR is pointing 
 # at pan(abs) = 0, tilt(hyper) = 90
@@ -131,6 +150,7 @@ pantilt_port = /dev/ttyS0
 azimuth_switch = 0
 
 
+##########################################################################
 [hypstar]
 # pantilt_port - link to the radiometer serial port device file
 # 
@@ -167,6 +187,7 @@ loglevel = INFO
 swir_tec = 0
 
 
+##########################################################################
 [metadata]
 # The fields in the [metadata] section are directly copied into metadata.txt of each sequence.
 # In addition, the following fields are automatically populated in metadata.txt: 
@@ -174,3 +195,4 @@ swir_tec = 0
 # offset_tilt, azimuth_switch
 principal_investigator = Investigator Name
 site_id = A Site ID
+

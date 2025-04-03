@@ -2,7 +2,6 @@ from argparse import ArgumentTypeError, ArgumentParser
 from logging import basicConfig, getLogger, info, error  # noqa
 from time import sleep
 from .rain_sensor import RainSensor
-import gpiod
 
 
 if __name__ == '__main__':
