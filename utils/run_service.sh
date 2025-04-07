@@ -24,11 +24,12 @@ if [[ ${PWD##*/} != "hypernets_tools"* ]]; then
 fi
 
 if [[ "${1-}" == "-h" ]] || [[ "${1-}" == "--help" ]]; then
-	echo "$0 [-h|--help] [--test-run]"
+	echo "$0 [-h|--help] [--test-run [n]]"
 	echo
 	echo "Without options run the fully automated sequence"
 	echo
 	echo "  --test-run   override config_dynamic.ini by keep_pc = on"
+	echo "    n          number of schedule to test (default 1)"
 	echo "  -h, --help   print this help"
 	echo 
 	exit 
@@ -49,25 +50,25 @@ swirTec=$(parse_config "swir_tec" config_dynamic.ini)
 verbosity=$(parse_config "verbosity" config_dynamic.ini)
 
 # Starting Conditions:
-sequence_file=$(parse_config "sequence_file" config_dynamic.ini)
-sequence_file_alt=$(parse_config "sequence_file_alt" config_dynamic.ini)
+sequence_file=$(parse_config "sequence_file_sched1" config_dynamic.ini)
+if [[ "$sequence_file" == "" ]]; then
+	sequence_file=$(parse_config "sequence_file" config_dynamic.ini)
+fi
+
+sequence_file2=$(parse_config "sequence_file_sched2" config_dynamic.ini)
+if [[ "$sequence_file2" == "" ]]; then
+	sequence_file2=$(parse_config "sequence_file_alt" config_dynamic.ini)
+fi
+
+sequence_file3=$(parse_config "sequence_file_sched3" config_dynamic.ini)
 
 checkWakeUpReason=$(parse_config "check_wakeup_reason" config_dynamic.ini)
 checkRain=$(parse_config "check_rain" config_dynamic.ini)
 debugYocto=$(parse_config "debug_yocto" config_static.ini)
-yoctoPrefix2=$(parse_config "yocto_prefix2" config_static.ini)
-
-
-# Test run, don't send yocto to sleep and don't ignore the sequence
-if [[ "${1-}" == "--test-run" ]]; then
-	keepPc="on"
-	keepPcInConf=$(parse_config "keep_pc" config_dynamic.ini)
-	startSequence="yes"
-	startSequenceInConf=$(parse_config "start_sequence" config_dynamic.ini)
-	testRun="yes"
-else	
-	keepPc=$(parse_config "keep_pc" config_dynamic.ini)
-	startSequence=$(parse_config "start_sequence" config_dynamic.ini)
+yoctoPrefix=$(parse_config "yocto_prefix2" config_static.ini)
+if [[ "$yoctoPrefix" == "" ]]; then
+# host system V4 or newer
+    yoctoPrefix=$(parse_config "yocto_prefix3" config_static.ini)
 fi
 
 case $verbosity in
@@ -94,6 +95,32 @@ log_info() { if [[ $numeric_verbosity -ge 3 ]]; then echo "[INFO]  $1"; fi }
 log_warning() { if [[ $numeric_verbosity -ge 2 ]]; then echo "[WARNING]  $1"; fi }
 log_error() { if [[ $numeric_verbosity -ge 1 ]]; then echo "[ERROR]  $1"; fi }
 
+
+# Test run, don't send yocto to sleep and don't ignore the sequence
+if [[ "${1-}" == "--test-run" ]]; then
+	keepPc="on"
+	keepPcInConf=$(parse_config "keep_pc" config_dynamic.ini)
+	startSequence="yes"
+	startSequenceInConf=$(parse_config "start_sequence" config_dynamic.ini)
+	testRun="yes"
+	if [[ "${2-}" == "2" ]]; then
+		if [[ -n $sequence_file2 ]]; then
+			sequence_file=$sequence_file2
+		else
+			log_error "sequence_file_sched2 or sequence_file_alt is not defined in config_dynamic.ini !!"
+		fi
+	elif [[ "${2-}" == "3" ]]; then
+		if [[ -n $sequence_file3 ]]; then
+			sequence_file=$sequence_file3
+		else
+			log_error "sequence_file_sched3 is not defined in config_dynamic.ini !!"
+		fi
+	fi
+else
+	keepPc=$(parse_config "keep_pc" config_dynamic.ini)
+	startSequence=$(parse_config "start_sequence" config_dynamic.ini)
+fi
+
 shutdown_sequence() {
 	return_value="$1"
 
@@ -118,9 +145,9 @@ shutdown_sequence() {
 
 		# log next scheduled yocto wakeup if yocto command line API is installed
 		if [[ $(command -v YWakeUpMonitor) ]]; then
-			yocto_time=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yoctoPrefix2 get_dateTime)
-			next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yoctoPrefix2 get_nextWakeUp|sed -e 's/[[:space:]].*//')
-			yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yoctoPrefix2 get_utcOffset)
+			yocto_time=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yoctoPrefix get_dateTime)
+			next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yoctoPrefix get_nextWakeUp|sed -e 's/[[:space:]].*//')
+			yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yoctoPrefix get_utcOffset)
 
 			if [ "$yocto_offset" = 0 ]; then
 				utc_offset=""
@@ -234,7 +261,7 @@ debug_yocto(){
     echo "[DEBUG]  Check if Yocto-Pictor is in (pseudo) deep-sleep mode..."
     set +e
     yoctoState=$(wget -O- \
-        'http://127.0.0.1:4444/bySerial/$yoctoPrefix2/api/wakeUpMonitor/wakeUpState' \
+        'http://127.0.0.1:4444/bySerial/$yoctoPrefix/api/wakeUpMonitor/wakeUpState' \
         2> /dev/null)
 
     if [[ ! $? -eq 0 ]] ; then
@@ -247,7 +274,7 @@ debug_yocto(){
     if [[ $yoctoState == "SLEEPING" ]] ; then
         echo "[DEBUG]  Awaking Yocto-Pictor..."
         yoctoState=$(wget -O- \
-            'http://127.0.0.1:4444/bySerial/$yoctoPrefix2/api/wakeUpMonitor?wakeUpState=1' \
+            'http://127.0.0.1:4444/bySerial/$yoctoPrefix/api/wakeUpMonitor?wakeUpState=1' \
             2> /dev/null)
                     if [[ ! $? -eq 0 ]] ; then
                         echo "[DEBUG]  Fail to wake-up the Yocto-Pictor !"
@@ -272,10 +299,10 @@ debug_yocto(){
 
     echo "[DEBUG]  Getting LOGS.txt and API.txt (prefix: $logNameBase)..."
 
-    wget -O- 'http://127.0.0.1:4444/bySerial/$yoctoPrefix2/api.txt' > \
+    wget -O- 'http://127.0.0.1:4444/bySerial/$yoctoPrefix/api.txt' > \
         "OTHER/$logNameBase-api.txt" 2> /dev/null
 
-    wget -O- 'http://127.0.0.1:4444/bySerial/$yoctoPrefix2/logs.txt' > \
+    wget -O- 'http://127.0.0.1:4444/bySerial/$yoctoPrefix/logs.txt' > \
         "OTHER/$logNameBase-log.txt" 2> /dev/null
 
     set -e
@@ -302,7 +329,7 @@ fi
 echo "[INFO]  Running on ${PRETTY_NAME-}"
 
 
-## log hypernets_tools repo and branch
+## log hypernets_tools repo and branch and root folder
 set +e
 hn_tools_repo=$(git config --get remote.origin.url)
 if [[ $? -ne 0 ]] ; then
@@ -319,6 +346,7 @@ else
 	hn_tools_ver=$(python -c "import hypernets; print(hypernets.__version__)")
 
 	echo "[INFO]  Running hypernets_tools version $hn_tools_ver from $hn_tools_repo branch $hn_tools_branch commit $hn_tools_commit"
+	echo "[INFO]  hypernets_tools folder is $PWD"
 fi
 set -e
 
@@ -353,7 +381,7 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 
 	# Check if yocto is accessible
 	set +e
-	wget -O- "http://127.0.0.1:4444/bySerial/$yoctoPrefix2/api.txt" > /dev/null 2>&1
+	wget -O- "http://127.0.0.1:4444/bySerial/$yoctoPrefix/api.txt" > /dev/null 2>&1
 	retcode=$?
 	if [[ $retcode == 0 ]]; then
 		log_info "Found Yocto"
@@ -361,7 +389,7 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 		log_info "$yoctoFW"
 	elif [[ $retcode == 8 ]]; then 
 		# Server issued an error response. Probably 404 not found.
-		log_error "Yocto '$yoctoPrefix2' is not accessible !!"
+		log_error "Yocto '$yoctoPrefix' is not accessible !!"
 
 		# list modules if command line API is installed
 		if [[ $(command -v YModule) ]]; then
@@ -381,7 +409,7 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 
 	# log uptimes
 	if [[ $(command -v YModule) ]]; then
-		yocto_uptime_millisec=$(YModule -f '[result]' -r 127.0.0.1 $yoctoPrefix2 get_upTime | awk '{print $1}')
+		yocto_uptime_millisec=$(YModule -f '[result]' -r 127.0.0.1 $yoctoPrefix get_upTime | awk '{print $1}')
 		sys_uptime_sec=$(awk '{print $1}' /proc/uptime)
 		log_info "$(printf "yocto uptime is %.1f min, system uptime is %.1f min\n" $(bc -l <<< "$yocto_uptime_millisec / 60000") $(bc -l <<< "$sys_uptime_sec / 60"))"
 	fi
@@ -397,7 +425,7 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 	echo "[INFO]  Wake up reason is : $wakeupreason."
 
 	if [[ "${testRun-}" == "yes" ]] && [[ "$checkWakeUpReason" == "yes" ]] ; then
-		echo "[WARNING]  Wake up reason check is disabled for test run. Using standard sequence file $sequence_file"
+		echo "[WARNING]  Wake up reason check is disabled for test run. Using sequence file $sequence_file"
 	elif [[ "$checkWakeUpReason" == "yes" ]] ; then
 		if [[ "$wakeupreason" != "SCHEDULE"* ]]; then
 			echo "[WARNING]  $wakeupreason is not a reason to start the sequence."
@@ -410,12 +438,22 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 		fi
 
 		if [[ "$wakeupreason" == "SCHEDULE2" ]]; then
-            if [[ ! -n $sequence_file_alt ]] ; then
-                echo "[WARNING]  No alternative sequence file is defined."
+            if [[ ! -n $sequence_file2 ]] ; then
+                echo "[WARNING]  No sequence file for Schedule 2 is defined."
                 echo "[WARNING]  $sequence_file will be run instead."
             else
-                echo "[INFO] $sequence_file_alt as alternative sequence file is defined."
-                sequence_file=$sequence_file_alt
+                echo "[INFO]  $sequence_file2 as alternative sequence file is defined."
+                sequence_file=$sequence_file2
+            fi 
+        fi
+
+		if [[ "$wakeupreason" == "SCHEDULE3" ]]; then
+            if [[ ! -n $sequence_file3 ]] ; then
+                echo "[WARNING]  No sequence file for Schedule 3 is defined."
+                echo "[WARNING]  $sequence_file will be run instead."
+            else
+                echo "[INFO]  $sequence_file3 as alternative sequence file is defined."
+                sequence_file=$sequence_file3
             fi 
         fi
 	fi # checkWakeUpReason
@@ -435,10 +473,10 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 
 	# Warn if keep_pc == on and Yocto Watchdog is enabled
 	if [[ $(command -v YWakeUpMonitor) ]]; then
-		sleep_countdown=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yoctoPrefix2 get_sleepCountdown)
+		sleep_countdown=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yoctoPrefix get_sleepCountdown)
 		if ([[ "${testRun:-}" == "yes" ]] && [[ "$keepPcInConf" == "on" ]] && [[ $sleep_countdown -ne 0 ]]) || \
 				([[ "${testRun:-}" != "yes" ]] && [[ "$keepPc" == "on" ]] && [[ $sleep_countdown -ne 0 ]]); then
-			log_warning "Shutdown in inhibited by keep_pc = on in config_dynamic.ini, but Yocto watchdog is configured to power off the system!"
+			log_warning "Shutdown is inhibited by keep_pc = on in config_dynamic.ini, but Yocto watchdog is configured to power off the system!"
 		fi
 	fi
 fi # bypassYocto != yes

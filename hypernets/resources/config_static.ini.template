@@ -1,11 +1,21 @@
+#########################################################################
 [yoctopuce]
+# HYPSTAR host systems V1-V3 use Yocto-Pictor-Wifi and need 
+# yocto_prefix1, yocto_prefix2, and yocto_gps parameters
+# 
+# HYPSTAR host systems from V4 onward use Yocto-Pictor-GPS and need
+# yocto_prefix1 and yocto_prefix3 parameters
+
 # yocto_prefix1 - Yocto-Pictor (relay board) serial number
 yocto_prefix1 = OBSVLFR1-XXXXXX
 
-# yocto_prefix2 - Yocto-Pictor-Wifi (upper board) serial number
+# yocto_prefix2 - Yocto-Pictor-Wifi (upper board up to V3) serial number
 yocto_prefix2 = OBSVLFR2-XXXXXX
 
-# yocto_gps - Yocto-GPS-V2 (gps board) serial number
+# yocto_prefix3 - Yocto-Pictor-GPS (upper board from V4 onward) serial number
+yocto_prefix3 = OBSVLFR3-XXXXXX
+
+# yocto_gps - Yocto-GPS-V2 (gps board up to V3) serial number
 yocto_gps = YGNSSMK2-XXXXXX
 
 # bypass_yocto - disable all Yocto functionality 
@@ -19,6 +29,7 @@ bypass_yocto = no
 debug_yocto = no
 
 
+#########################################################################
 [network]
 # credentials - the ssh credentials of the network server
 credentials = user@server
@@ -38,7 +49,7 @@ ssh_port = 22
 #
 # remote ssh port must be unused on the network server and unique for each site 
 # connected to the same server
-remote_ssh_port = 20213
+remote_ssh_port = unique_for_each_site
 
 # ssh_loglevel - the verbosity of the reverse ssh tunnel client
 # Allowed values: ERROR, DEBUG, DEBUG2, DEBUG3
@@ -63,14 +74,33 @@ backup_ssh_ip = 10.42.0.1
 dhcp_server = yes
 
 
+#########################################################################
 [webcam]
 # For disabling either webcam and suppressing warnings about inaccessible or invalid IP
 # comment out the respective webcam_... parameter
 #
 # ip_cam_... must be an IPv4 address
+# 
+# Note that for PoE cameras the first address of the camera subnet (i.e. X.Y.Z.1) is reserved 
+# for rugged PC enp2s0 interface (eth port 2)
 
 # webcam_site - site webcam (relay 5) credentials
 webcam_site = user:pass@ip_cam_site
 
 # webcam_sky - sky webcam (relay 6) credentials
 webcam_sky = user:pass@ip_cam_sky
+
+# Both PoE cameras are powered by relay 5 so relay switching logic is different for PoE cameras
+# Allowed values: yes/no
+poe_cameras = no
+
+
+#########################################################################
+[pantilt]
+# If the mechanical tilt axis limiter is installed, tilt movement commands into 
+# (130.0, 181.0) absolute position no-go zone are rejected.
+#
+# NB!! The tilt axis gearbox can be damaged when driven into the limiter at full speed!
+#
+# Allowed values: yes/no
+tilt_limiter = no

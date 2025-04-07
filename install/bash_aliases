@@ -43,7 +43,7 @@ commands() (
 	echo "${HL} webpic 	${RESET_HL}take webcam photo    webpic -h for help"
 	echo "${HL} hypypic  	${RESET_HL}take photo from hypstar camera"
 	#echo "${HL} cp2server	 ${RESET_HL}                 ./utils/hello_server.sh   copy sequence data back to NPL server "
-	echo "${HL} runseq	 	${RESET_HL}utils/run_service.sh    run a sequence"
+	echo "${HL} runseq	 	${RESET_HL}utils/run_service.sh --test-run   run a sequence"
 	echo "${HL} yapo		${RESET_HL}yocto auto-power-off. yapo stop to disable, yapo -h for help"
 	echo "${HL} goto-sleep	${RESET_HL}power off and send yocto to sleep if wakeup is scheduled"
 	echo
@@ -60,6 +60,10 @@ now() (
 
 		source utils/configparser.sh
 		yocto=$(parse_config "yocto_prefix2" config_static.ini)
+		if [[ "$yocto" == "" ]]; then
+		# host system V4 or newer
+			yocto=$(parse_config "yocto_prefix3" config_static.ini)
+		fi
 	else
 		yocto_api_installed=0
 	fi
@@ -281,8 +285,14 @@ yapo() (
 	if [[ $(command -v YWakeUpMonitor) ]]; then
 		source utils/configparser.sh
 		yocto=$(parse_config "yocto_prefix2" config_static.ini)
+		if [[ "$yocto" == "" ]]; then
+		# host system V4 or newer
+			yocto=$(parse_config "yocto_prefix3" config_static.ini)
+		fi
 	else
-		echo "${XHL}Yocto API is not installed${RESET_HL}"
+		if [[ "${yoption-}" != "brief" ]]; then
+			echo "${XHL}Yocto API is not installed${RESET_HL}"
+		fi
 		exit -1
 	fi
 
@@ -294,14 +304,27 @@ yapo() (
 		echo "     stop             prevents yocto powering off for   infinity..."
 		echo "     restore          restores last used yocto max run time"
 		echo "     reset            resets the yocto power-off countdown timer"
+		echo "     brief            print one-liner status"
 		echo "eg:  yapo set 720      yapo stop       yapo reset"
 		echo
 		exit 
 	fi
 	
 	max_wakeup_time=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_powerDuration)
-	next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_nextWakeUp|sed -e 's/[[:space:]].*//')
 	sleep_countdown=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_sleepCountdown)
+
+	## print one-liner status and exit if brief option is given
+	if [[ "${yoption-}" == "brief" ]]; then
+		if [[ "$max_wakeup_time" -eq "0" ]]; then
+			echo "${HL}Yocto Auto-Power-Off is ${XHL}disabled! ${HL}PC will run for ${XHL}infinity...${RESET_HL}"
+		else
+			echo "${HL}Yocto Auto-Power-Off set to $max_wakeup_time s, ${XHL}powering off in $sleep_countdown s${RESET_HL}"
+		fi
+
+		exit 0
+	fi
+
+	next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_nextWakeUp|sed -e 's/[[:space:]].*//')
 	yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yocto get_utcOffset)
 		
 	if [[ "${yoption-}" == "" ]]; then ######## display yocto-auto-power-off status ###############
@@ -612,25 +635,29 @@ EOF
 		requested_abs_tilt=$(bc <<< "($requested_abs_tilt + 36000) % 360")
 	
 		printf "Moving to requested absolute position pan = %.1f, tilt = %.1f\n" "$requested_abs_pan" "$requested_abs_tilt"
-		python -m hypernets.geometry.pan_tilt -w -p "$requested_abs_pan" -t "$requested_abs_tilt" > /dev/null 2>&1
+		output=$(python -m hypernets.geometry.pan_tilt -w -p "$requested_abs_pan" -t "$requested_abs_tilt" 2>&1)
 
-		## read new abs positions
-		new_abs_pos=$(python -m hypernets.geometry.pan_tilt -g 2>&1 | grep -Eo '[0-9]+([.][0-9]+)?' | paste -s) # pan	tilt
-		new_abs_pan=$(cut -f 1 <<< $new_abs_pos)
-		new_abs_tilt=$(cut -f 2 <<< $new_abs_pos)
+		if [[ ! $output =~ "ERROR" ]]; then
+			## read new abs positions
+			new_abs_pos=$(python -m hypernets.geometry.pan_tilt -g 2>&1 | grep -Eo '[0-9]+([.][0-9]+)?' | paste -s) # pan	tilt
+			new_abs_pan=$(cut -f 1 <<< $new_abs_pos)
+			new_abs_tilt=$(cut -f 2 <<< $new_abs_pos)
+		
+			## calculate relative position
+			new_hyper_pan=$(printf "%.1f" $(bc <<< "(($new_abs_pan) + ($offset_pan) + 36000) % 360"))
+			new_hyper_tilt=$(printf "%.1f" $(bc <<< "(($new_abs_tilt) + ($offset_tilt) + 36000) % 360"))
 	
-		## calculate relative position
-		new_hyper_pan=$(printf "%.1f" $(bc <<< "(($new_abs_pan) + ($offset_pan) + 36000) % 360"))
-		new_hyper_tilt=$(printf "%.1f" $(bc <<< "(($new_abs_tilt) + ($offset_tilt) + 36000) % 360"))
-
-		## calculate residuals
-		residual_pan=$(bc <<< "$new_abs_pan - $requested_abs_pan")
-		residual_tilt=$(bc <<< "$new_abs_tilt - $requested_abs_tilt")
-
-		echo
-		echo "New positions"
-		printf "abs:   pan = %.1f, tilt = %.1f, residuals: pan = %.1f, tilt = %.1f\n" "$new_abs_pan" "$new_abs_tilt" "$residual_pan" "$residual_tilt"
-		printf "hyper: pan = %.1f, tilt = %.1f\n" "$new_hyper_pan" "$new_hyper_tilt"
+			## calculate residuals
+			residual_pan=$(bc <<< "$new_abs_pan - $requested_abs_pan")
+			residual_tilt=$(bc <<< "$new_abs_tilt - $requested_abs_tilt")
+	
+			echo
+			echo "New positions"
+			printf "abs:   pan = %.1f, tilt = %.1f, residuals: pan = %.1f, tilt = %.1f\n" "$new_abs_pan" "$new_abs_tilt" "$residual_pan" "$residual_tilt"
+			printf "hyper: pan = %.1f, tilt = %.1f\n" "$new_hyper_pan" "$new_hyper_tilt"
+		else
+			echo -e "\n${XHL}$output${RESET_HL}\n"
+		fi
 	fi
 ) # pt()
 
@@ -658,6 +685,10 @@ schedule() (
 	if [[ $(command -v YWakeUpMonitor) ]]; then
 		source utils/configparser.sh
 		yoctowifibrd=$(parse_config "yocto_prefix2" config_static.ini)
+		if [[ "$yoctowifibrd" == "" ]]; then
+		# host system V4 or newer
+			yoctowifibrd=$(parse_config "yocto_prefix3" config_static.ini)
+		fi
 	else
 		echo "${XHL}Yocto API is not installed${RESET_HL}"
 		exit -1
@@ -670,6 +701,16 @@ schedule() (
 		utc_offset=$(printf "%+d" $(("$yocto_offset" / 3600)))
 	fi
 
+	## set yocyo clock if it is not set
+	yocto_time=$(YRealTimeClock -f '[result]' -r 127.0.0.1 "$yoctowifibrd" get_dateTime)
+
+	if [ "$yocto_time" = "" ]; then
+		echo
+		echo "Yocto clock is not set. Setting now from PC clock..."
+		YRealTimeClock -r 127.0.0.1 "$yoctowifibrd" set_unixTime $(( $(date '+%s') + ($yocto_offset) ))> /dev/null 2>&1
+		echo
+	fi
+
 	## print current schedules and exit
 	if [[ "${1-}" == "" ]]
 	then
@@ -677,7 +718,7 @@ schedule() (
 		echo "All inactive is equivalent to all set for a single field"
 		echo "All inactive for all fields disables the schedule"
 
-		for n_sched in 1 2; do
+		for n_sched in 1 2 3; do
 			echo "----------------------------------------------------------"
 			echo "   ${HL}Schedule $n_sched${RESET_HL}"
 			echo -e -n "Months:\t\t"
@@ -775,7 +816,7 @@ EOF
 
 				python -c "$python_script"
 			fi # if [[ "$first_h" == "" ]]
-		done # n_sched in 1 2
+		done # n_sched in 1 2 3
 
 		echo "----------------------------------------------------------"
 		echo -n "Rugged PC date & time:  "
@@ -855,9 +896,10 @@ EOF
 			
 			echo  "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 			echo -n "Enter option: ${HL}"
-			echo "1 - adjust schedule 1 "
-			echo "              2 - adjust schedule 2 (validation)"
-			echo "              3 - adjust Yocto time zone"
+			echo "1 - adjust schedule 1 (standard)"
+			echo "              2 - adjust schedule 2 (LED)"
+			echo "              3 - adjust schedule 3 (custom)"
+			echo "              4 - adjust Yocto time zone"
 			echo "              E - Exit"
 			echo "  any other key - Refresh ${RESET_HL}"
 			
@@ -896,13 +938,17 @@ EOF
 		
 		
 		#################### #Adjust schedule #######################################################
-		if [ "$ch" = "1" ] # Schedule 1
+		if [ "$ch" = "1" ] # Schedule 1 (standard)
 		then
 			schedy=1
 			ch=99
-		elif [ "$ch" = "2" ] # Schedule 2 (validation)
+		elif [ "$ch" = "2" ] # Schedule 2 (LED)
 		then
 			schedy=2
+			ch=99
+		elif [ "$ch" = "3" ] # Schedule 3 (custom)
+		then
+			schedy=3
 			ch=99
 		fi
 		
@@ -1400,7 +1446,7 @@ EOF
 
 
 		########### Yocto time zone adjustment ##############
-		if [ "$ch" = "3" ] # yocto time zone
+		if [ "$ch" = "4" ] # yocto time zone
 		then
 			clear
 			echo 
@@ -1473,7 +1519,7 @@ EOF
 
 				sleep 1
 			fi
-		fi # [ "$ch" = "3" ] # yocto time zone
+		fi # [ "$ch" = "4" ] # yocto time zone
 	
 
 		######### EXIT #########
@@ -1527,6 +1573,7 @@ webpic() (
 	YMFolder=$(date +"%Y/%m/")
 
 	source utils/configparser.sh
+	poe_cameras=$(parse_config "poe_cameras" config_static.ini)
 	config=$(parse_config "webcam_$cam" config_static.ini)
 	
 	webcam_credent=$(echo "$config" | cut -d "@" -f1)
@@ -1537,7 +1584,7 @@ webpic() (
 		echo "${XHL}$cam camera IP '$webcam_ip' is invalid in config_static.ini${RESET_HL}"
 		exit -1
 	fi
-
+	
 	set +e
 	set pipefail
 	export AV_LOG_FORCE_COLOR=1
@@ -1547,7 +1594,7 @@ webpic() (
 
 	if [[ "$cap_retcode" -ne 0 ]]; then
 		echo
-		if [[ "$cam" == "site" ]]; then
+		if [[ "$cam" == "site" ]] || [[ "$poe_cameras" == "yes" ]]; then
 			camrelay=5
 		else
 			camrelay=6
@@ -1644,11 +1691,35 @@ portal()(
 	fi
 ) # portal()
 
+
+runseq()(
+	cd "$HYPERNETS_TOOLS"
+
+	if [[ "${1-}" == "-h" ]] || [[ "${1-}" == "--help" ]]
+	then
+		echo
+		echo "runseq [-h|--help] [1|2|3]"
+		echo
+		echo "Test run a sequence without shutting down in the end"
+		echo 
+		echo "runseq         no or invalid option - run the standard sequence (Schedule1)"
+		echo "runseq 2       run alternative sequence (Schedule2) if defined in config_dynamic.ini"
+		echo "runseq 3       run custom sequence (Schedule3) if defined in config_dynamic.ini"
+		echo 
+		exit
+	fi
+
+	./utils/run_service.sh --test-run $@
+) # runseq()
+
 alias kill-service="sudo systemctl kill --signal=SIGKILL hypernets-sequence"
 alias journal="journalctl -b -u hypernets-sequence -e"
 alias status="sudo systemctl status hypernets-sequence"
 alias gui="(cd \"$HYPERNETS_TOOLS\" && python -m hypernets.gui)"
-alias runseq="(cd \"$HYPERNETS_TOOLS\" && ./utils/run_service.sh --test-run)"
 
 # print the help
 commands
+
+# print the yapo status
+yapo brief
+echo

@@ -266,6 +266,11 @@ do
 	# If yocto API is installed, write next scheduled wakeup time into 'system_is_up' file on server
 	if [[ $(command -v YWakeUpMonitor) ]]; then
 		yocto=$(parse_config "yocto_prefix2" config_static.ini)
+		if [[ "$yocto" == "" ]]; then
+		# host system V4 or newer
+		    yocto=$(parse_config "yocto_prefix3" config_static.ini)
+		fi
+
 		next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_nextWakeUp|sed -e 's/[[:space:]].*//')
 		yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yocto get_utcOffset)
 
