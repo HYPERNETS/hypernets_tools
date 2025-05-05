@@ -66,6 +66,7 @@ checkWakeUpReason=$(parse_config "check_wakeup_reason" config_dynamic.ini)
 checkRain=$(parse_config "check_rain" config_dynamic.ini)
 debugYocto=$(parse_config "debug_yocto" config_static.ini)
 yoctoPrefix=$(parse_config "yocto_prefix2" config_static.ini)
+yoctoRelayBoard=$(parse_config "yocto_prefix1" config_static.ini)
 if [[ "$yoctoPrefix" == "" ]]; then
 # host system V4 or newer
     yoctoPrefix=$(parse_config "yocto_prefix3" config_static.ini)
@@ -381,19 +382,58 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 
 	# Check if yocto is accessible
 	set +e
+	wget -O- "http://127.0.0.1:4444/bySerial/$yoctoRelayBoard/api.txt" > /dev/null 2>&1
+	retcode1=$?
 	wget -O- "http://127.0.0.1:4444/bySerial/$yoctoPrefix/api.txt" > /dev/null 2>&1
-	retcode=$?
-	if [[ $retcode == 0 ]]; then
+	retcode2=$?
+	if [[ $retcode1 == 0 && $retcode2 == 0 ]]; then
 		log_info "Found Yocto"
 		yoctoFW=$(python -m hypernets.yocto.get_FW_ver)
 		log_info "$yoctoFW"
-	elif [[ $retcode == 8 ]]; then 
+	elif [[ $retcode1 == 8 || $retcode2 == 8 ]]; then 
 		# Server issued an error response. Probably 404 not found.
-		log_error "Yocto '$yoctoPrefix' is not accessible !!"
+		if [[ $retcode1 == 8 ]]; then
+			log_error "Yocto '$yoctoRelayBoard' is not accessible !!"
+		fi
+		if [[ $retcode2 == 8 ]]; then
+			log_error "Yocto '$yoctoPrefix' is not accessible !!"
+		fi
 
 		# list modules if command line API is installed
 		if [[ $(command -v YModule) ]]; then
 			inventory=$(YModule -r 127.0.0.1 inventory)
+
+			## both boards failed
+			if [[ $retcode1 == 8 && $retcode2 == 8 ]]; then
+				## if another Yocto found, then serial may be wrong in config
+				if grep -e OBSVLFR -q <<< $inventory ; then
+					log_error "Found another Yocto board, check the Yocto S/N in config_static.ini"
+				else
+					log_error "Check the Yocto USB connection"
+					log_error "Is PC powered by relay override switch and Yocto is sleeping?"
+				fi
+			elif [[ $retcode1 == 8 ]]; then
+			## only lower board failed
+				if grep -e OBSVLFR1 -q <<< $inventory ; then
+					log_error "Found another Yocto board, check the '$yoctoRelayBoard' S/N in config_static.ini"
+				else
+					log_error "Check if brown-out protection is triggered"
+
+					# log brownout protection state
+					brownout=$(python -m hypernets.yocto.voltage -b)
+					log_error "$brownout"
+
+					# log supply voltage
+					voltage=$(python -m hypernets.yocto.voltage)
+					log_error "Supply voltage: $voltage V"
+				fi
+			else
+			## only uuper board failed
+				if grep -e OBSVLFR2 -e OBSVLFR3 -q <<< $inventory ; then
+					log_error "Found another Yocto board, check the Yocto S/N in config_static.ini"
+				fi
+			fi
+
 			log_error "The list of modules found:"
 			echo "$inventory"
 		fi

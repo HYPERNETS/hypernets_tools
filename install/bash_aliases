@@ -688,6 +688,8 @@ schedule() (
 		if [[ "$yoctowifibrd" == "" ]]; then
 		# host system V4 or newer
 			yoctowifibrd=$(parse_config "yocto_prefix3" config_static.ini)
+		else
+			is_yocto_pictor_wifi=1
 		fi
 	else
 		echo "${XHL}Yocto API is not installed${RESET_HL}"
@@ -719,6 +721,11 @@ schedule() (
 		echo "All inactive for all fields disables the schedule"
 
 		for n_sched in 1 2 3; do
+			## Yocto-Pictor-Wifi has only two schedules
+			if [[ ${is_yocto_pictor_wifi-} == 1 && $n_sched == 3 ]]; then
+				break
+			fi
+
 			echo "----------------------------------------------------------"
 			echo "   ${HL}Schedule $n_sched${RESET_HL}"
 			echo -e -n "Months:\t\t"
@@ -898,8 +905,11 @@ EOF
 			echo -n "Enter option: ${HL}"
 			echo "1 - adjust schedule 1 (standard)"
 			echo "              2 - adjust schedule 2 (LED)"
-			echo "              3 - adjust schedule 3 (custom)"
-			echo "              4 - adjust Yocto time zone"
+			## Yocto-Pictor-Wifi has only two schedules
+			if [[ ${is_yocto_pictor_wifi-} != 1 ]]; then
+				echo "              3 - adjust schedule 3 (custom)"
+			fi
+			echo "              Z - adjust Yocto time zone"
 			echo "              E - Exit"
 			echo "  any other key - Refresh ${RESET_HL}"
 			
@@ -946,7 +956,7 @@ EOF
 		then
 			schedy=2
 			ch=99
-		elif [ "$ch" = "3" ] # Schedule 3 (custom)
+		elif [[ "$ch" = "3" && ${is_yocto_pictor_wifi-} != 1 ]] # Schedule 3 (custom)
 		then
 			schedy=3
 			ch=99
@@ -1446,7 +1456,7 @@ EOF
 
 
 		########### Yocto time zone adjustment ##############
-		if [ "$ch" = "4" ] # yocto time zone
+		if [[ "$ch" =~ ^([zZ])$ ]] # yocto time zone
 		then
 			clear
 			echo 
@@ -1519,7 +1529,7 @@ EOF
 
 				sleep 1
 			fi
-		fi # [ "$ch" = "4" ] # yocto time zone
+		fi # [[ "$ch" =~ ^([zZ])$ ]] # yocto time zone
 	
 
 		######### EXIT #########
