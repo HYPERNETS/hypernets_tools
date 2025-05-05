@@ -1,70 +1,104 @@
 HypernetsProtocol v2.1
 
-# First line has to be as above, version number might change. Empty lines are ignored
-# "#" Is comment indicator. Every line (or part of it) that begins with "#" is ignored until newline character (\n) is reached
-# only exceptions to above are :
-    # flag definitions with prepended "~ #";
-    # and flag usage in geometry definition, where flag is considered from "#" until closing geometry bracket "]"
-# Comment lines are printed to system log during sequence execution. Use double comment "##" for suppressing the print
-# Whitespace characters (space, tab) are ignored, newline is used for end of valid line (including comment) detection
+# First line has to be as above, version number might change.
+# Empty lines are ignored. 
+# "#" is comment indicator. Every line (or part of it) that begins with "#" is
+# ignored until newline character (\n) is reached.
+# Only exceptions to above are:
+#   - flag definitions with prepended "~ #";
+#   - flag usage in geometry definition, where flag is considered
+#     from "#" until closing geometry bracket "]"
+# Comment lines are printed to system log during sequence execution.
+# Use double comment "##" for suppressing the print.
+# Whitespace characters (space, tab) are ignored, newline is used for end of
+# valid line (including comment) detection
 
-# Flag definitions :
-
+# Flag definitions:
 ~ #firstLessThanFourSec := $spectra_file1.it_vnir <= 4096
 ~ #sequenceWasFastEnough := $elapsed_time < 120
 
+# Geometry is described in square brackets ("[]") prepended with an "@".
+# Geometry format is as follows:
+# @[ pan_angle, pan_reference, tilt_angle, tilt_reference ]
+#   pan_angle and tilt_angle are in degrees
+#   reference frame options:
+#     "hyper" - the radiometer reference frame where the optical entrance of
+#               the radiometer is pointing to nadir in the case of 0' tilt, 
+#               to zenith in the case of 180' tilt, and to true north in the 
+#               case of 0'/90' pan/tilt
+#     "abs"   - the pan-tilt reference frame which is determined by the internal
+#               position sensors of the pan-tilt unit
+#     "sun"   - the solar reference frame which is relative to the current
+#               position of the sun 
 
-# Geometry is described in square brackets ("[]") prepended with an "@". Each geometry has a set of actions to be performed
 # 1. Irradiance Sky (Ed)
 @[ 10.0, sun, 180.0, hyper ]
 
+# Each geometry has a set of actions to be performed.
 # Actions are prepended with a "+". Action format is as follows:
-# for spectra scan: "count.radiometer.entrance.exposure_time_vnir_ms.exposure_time_swir_ms"
-# for images: count.picture
-# for validation measurement: "count.validation.radiometer.entrance.exposure_time_vnir_ms.exposure_time_swir_ms.vm_current_in_mA"
-# radiometer options: VIS_NIR = "vis, vnir", SWIR = "swi, swir", VNIR+SWIR = "bot, both"
-# optical entrance options: RADIANCE = "rad", IRRADIANCE = "irr", DARK = "dark, dar, bla"
-    # note, that there are forbidden configurations - both entrances can not be used at the same time
-# 0 integration time setting will force instrument to find most suitable (highest peak value up to 80% of saturation) integration time automatically
-# integration time is ignored, if radiometer selection does not include given radiometer. e.g.
-    # 3.vnir.irr.0.128 will perform auto-adjustment, since vnir_exposure_time field is 0
-    # 3.swir.rad.128.0 will perform auto-adjustment, since swir_exposure_time field is 0
-    # 3.both.rad.0.1024 will perform auto adjustment for VIS_NIR, but use fixed 1024 for SWIR
-# validation current setting is limited both in driver and firmware to 2000 mA max for visible and 100mA for SWIR.
-# validation current setting is optional parameter and defaults to 1000 mA if omitted
-# validation request with dark optical entrance will yield an error, since it does not make much sense
-# Note, that SWIR light is not implemented yet
+#   - for spectra scan:
+#     "count.radiometer.entrance.exposure_time_vnir_ms.exposure_time_swir_ms"
+#   - for images: "count.picture"
+#   - for LED source measurement:
+#   "count.validation.radiometer.entrance.exposure_time_vnir_ms.
+#      exposure_time_swir_ms.vm_current_in_mA"
+# radiometer options: 
+#   VNIR = "vnir"
+#   SWIR = "swir"
+#   VNIR+SWIR = "both"
+# optical entrance options:
+#   RADIANCE = "rad"
+#   IRRADIANCE = "irr"
+#   DARK = "dark"
+# 0 integration time setting will force instrument to find most suitable
+# (highest peak value up to 80% of saturation) integration time automatically.
+# 0 dark integration time setting will reuse the last radiance or irradiance
+# measurement integration time.
+# Integration time is ignored, if radiometer selection does not include given
+# radiometer, e.g.
+#   3.vnir.irr.0.128 will perform auto-adjustment, since vnir_exposure_time field is 0
+#   3.swir.rad.128.0 will perform auto-adjustment, since swir_exposure_time field is 0
+#   3.both.rad.0.1024 will perform auto-adjustment for VNIR, but use fixed 1024 for SWIR
+# Validation current setting is limited both in driver and firmware to
+# 2000 mA max for visible and 100 mA for SWIR.
+# LED current setting is optional parameter and defaults to 1000 mA if omitted.
+# Validation request with dark optical entrance will yield an error, since it
+# does not make much sense.
+# Note, that SWIR light is not implemented yet.
+
     + 3.vnir.irr.128.0
-	+ 3.vnir.dark.128.0
-	+ 1.picture
-	+ 3.validation.vnir.irr.0.0.1200
+    + 3.vnir.dark.128.0
+    + 1.picture
+    + 3.validation.vnir.irr.0.0.1200
 
 # 2. Radiance Sky (Ld)
-@[ 20.0, sun, 140.0, hyper ]
-	+ 3.vnir.rad.128.0
-	+ 3.vnir.dark.128.0
+@[ 90.0, sun, 140.0, hyper ]
+    + 3.vnir.rad.128.0
+    + 3.vnir.dark.128.0
 #	+ 1.picture
-            + 3.validation.vnir.irr.0.0.1200    # amount of whitespace does not matter. This line is NOT commented out though
+     #    + 3.validation.vnir.irr.0.0.1200   # amount of whitespace does not matter
+          + 3.validation.vnir.irr.0.0.1200   # This line is NOT commented out though
 
-# or have everything inline. Both are equivalent
-@[ 20.0, sun, 140.0, hyper] + 3.vnir.rad.128.0 + 3.vnir.dark.128.0 #+ 1.picture + 3.validation.vnir.rad.100.0 # here everything after "#+ 1.picture" will be ignored
+# Or have everything inline. Both are equivalent.
+# here everything starting from "#+1.picture" will be ignored
+@[20.0,sun,140.0,hyper]+3.vnir.rad.128.0+3.vnir.dark.128.0#+1.picture+1.vnir.irr.0.0
 
-# 3. VM request (not sure about pan-tilt positioning)
-@[ 30.0, sun, 140.0, hyper ]
+# 3. VM request
+@[ 30.0, sun, 210.0, abs ]
 	+ 3.validation.vnir.rad.128.0.800
 
 # dummy geometry with only pan-tilt movement but no radiometer action
 @[ 40.0, sun, 180.0, hyper ]
 #	+ 1.vnir.irr.0.0
 
-
 # Picture of the Sun only if sequence is < 2 minutes
-@[ 50.0, sun, 0.0, sun, #firstLessThanFourSec ]
+@[ 0.0, sun, 0.0, sun, #sequenceWasFastEnough ]
         ### # random comment here
 	+ 1.picture
 
 # Park only if first integration time is less than 4 second :
-#@[ 0.0, sun, 0.0, hyper, #sequenceWasFastEnough ]
+#@[ 0.0, sun, 0.0, hyper, #firstLessThanFourSec ]
 
-# dark validation is a nono and this sequence definition will throw an exception unless fixed:
+# dark validation is a no-no and this sequence definition will throw an
+# exception unless fixed:
 @[ 70.0, sun, 040.0, hyper] + 3.validation.vnir.dark.0.0
