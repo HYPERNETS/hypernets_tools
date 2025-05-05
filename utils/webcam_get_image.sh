@@ -45,8 +45,9 @@ function take_picture(){
 	else
 		loglevel=24
 	fi
-	ffmpeg -v $loglevel -y -i rtsp://"$CREDENTIALS$IP_ADDRESS":554 -update 1 -frames:v 1 \
-		"$OUTPUT_DIR/$FILEPREFIX$DATE.jpg"
+
+	ffmpeg -v $loglevel -y -rtsp_transport tcp -i rtsp://"$CREDENTIALS$IP_ADDRESS":554 \
+		-update 1 -frames:v 10 -q:v 1 "$OUTPUT_DIR/$FILEPREFIX$DATE.jpg"
 
 	if [[ $? -eq 0 ]] ; then
 		echo "[INFO]  Output File is : '$OUTPUT_DIR/$FILEPREFIX$DATE.jpg'"

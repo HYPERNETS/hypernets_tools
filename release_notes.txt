@@ -5,6 +5,7 @@ Version 3.0.1: (2025-05-05)
 	- Improved error handling and logging for V4 systems if PC relay override
 	  is switched on and Yocto is sleeping or brown-out protection has
 	  triggered
+	- Impove surveillance camera image quality
 
 Version 3.0.0: (2025-04-03)
 	- Integrate yocto-pictor-gps
