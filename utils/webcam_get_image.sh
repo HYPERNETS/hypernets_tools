@@ -84,8 +84,10 @@ function wait_up(){
 		exit 1
 	else
 		if [ "$VERBOSE" -eq 1 ] ; then
-			echo "[DEBUG]  $IP_ADDRESS is up."
+			echo "[DEBUG]  $IP_ADDRESS is up. Sleeping 3 more seconds."
 		fi
+		# let the camera auto-adjust exposure
+		sleep 3
 	fi
 }
 
