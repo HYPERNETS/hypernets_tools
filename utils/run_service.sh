@@ -70,6 +70,9 @@ yoctoRelayBoard=$(parse_config "yocto_prefix1" config_static.ini)
 if [[ "$yoctoPrefix" == "" ]]; then
 # host system V4 or newer
     yoctoPrefix=$(parse_config "yocto_prefix3" config_static.ini)
+	is_yocto_pictor_wifi=0
+else
+	is_yocto_pictor_wifi=1
 fi
 
 case $verbosity in
@@ -382,10 +385,17 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 
 	# Check if yocto is accessible
 	set +e
-	wget -O- "http://127.0.0.1:4444/bySerial/$yoctoRelayBoard/api.txt" > /dev/null 2>&1
-	retcode1=$?
+	if [[ $is_yocto_pictor_wifi == 1 ]]; then
+		wget -O- "http://127.0.0.1:4444/bySerial/$yoctoPrefix/$yoctoRelayBoard/api.txt" > /dev/null 2>&1
+		retcode1=$?
+	else
+		wget -O- "http://127.0.0.1:4444/bySerial/$yoctoRelayBoard/api.txt" > /dev/null 2>&1
+		retcode1=$?
+	fi
+
 	wget -O- "http://127.0.0.1:4444/bySerial/$yoctoPrefix/api.txt" > /dev/null 2>&1
 	retcode2=$?
+
 	if [[ $retcode1 == 0 && $retcode2 == 0 ]]; then
 		log_info "Found Yocto"
 		yoctoFW=$(python -m hypernets.yocto.get_FW_ver)
