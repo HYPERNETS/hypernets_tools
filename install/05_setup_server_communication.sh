@@ -37,14 +37,16 @@ echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then 
 	echo
 	user="$SUDO_USER"
-	read -p "Copy ssh-id ? \n (NPL server : yes / RBINS server : no)" -rn1
+
+	if [[ ! -f "/home/$user/.ssh/id_rsa" ]]; then
+		sudo -u $user ssh-keygen -t rsa
+	fi
+
+	echo
+	read -p "Copy ssh-id ? \n (NPL server : yes / RBINS server : no): " -rn1
 	echo
 
 	if [[ $REPLY =~ ^[Yy]$ ]]; then 
-		if [[ ! -f "/home/$user/.ssh/id_rsa" ]]; then
-			sudo -u $user ssh-keygen -t rsa
-		fi
-
 		sudo -u $user ssh-copy-id -i /home/$user/.ssh/id_rsa \
 			-p $sshPort $credentials
 	fi

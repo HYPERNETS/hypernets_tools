@@ -7,6 +7,8 @@ Version 3.0.1: (2025-05-05)
 	  triggered
 	- Impove surveillance camera image quality
 	- Allow Yocto auto-confing with existing config_static.ini
+	- generate rsa key before asking whether to copy it when setting up
+	  hypernets-hello.service
 
 Version 3.0.0: (2025-04-03)
 	- Integrate yocto-pictor-gps
