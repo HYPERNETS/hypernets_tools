@@ -64,22 +64,20 @@ function auto_config_yocto(){
 	echo "-- Auto-config for YoctoPictor..."
 	echo "------------------------------------------------"
 
-	if [[ -f "config_static.ini" ]]; then
-		echo "Error: config_static.ini file found, please remove it first."
-		return
-	fi
-
 	echo "Please connect the Yocto-Pictor from the 'config port' and press
     'enter' to continue"
 	read
 
 	echo "Copying configuration files"
-	sudo -u $SUDO_USER cp hypernets/resources/config_static.ini.template config_static.ini
+	if [[ ! -f "config_static.ini" ]]; then
+        	echo "Copying the config_static.ini file as it does not exist"
+		sudo -u $SUDO_USER cp hypernets/resources/config_static.ini.template config_static.ini
+	fi
 
 	if [[ ! -f "config_dynamic.ini" ]]; then
-        echo "Copying the config_dynamic.ini file as it does not exist"
-        sudo -u $SUDO_USER cp hypernets/resources/config_dynamic.ini.template config_dynamic.ini
-    fi
+        	echo "Copying the config_dynamic.ini file as it does not exist"
+		sudo -u $SUDO_USER cp hypernets/resources/config_dynamic.ini.template config_dynamic.ini
+	fi
 
 	echo 
 	echo "Running auto config for config_static.ini..."
@@ -105,10 +103,10 @@ function auto_config_yocto(){
 		echo -e "\nFound host system V1-V3 using Yocto-Pictor-Wifi"
 		echo -e "Yocto IDs are : $yocto_id1, $yocto_id2 and $yocto_gps\n"
 
-		sudo -u $SUDO_USER sed -i -e '/OBSVLFR1/s/XXXXXX/'${yocto_id1:9:6}'/' config_static.ini
-		sudo -u $SUDO_USER sed -i -e '/OBSVLFR2/s/XXXXXX/'${yocto_id2:9:6}'/' config_static.ini
+		sudo -u $SUDO_USER sed -i -e '/^yocto_prefix1/s/OBSVLFR1-....../OBSVLFR1-'${yocto_id1:9:6}'/' config_static.ini
+		sudo -u $SUDO_USER sed -i -e '/^yocto_prefix2/s/OBSVLFR2-....../OBSVLFR2-/'${yocto_id2:9:6}'/' config_static.ini
 		sudo -u $SUDO_USER sed -i '/yocto_prefix3 [-=]/d' config_static.ini
-		sudo -u $SUDO_USER sed -i -e '/YGNSSMK2/s/XXXXXX/'${yocto_gps:9:6}'/' config_static.ini
+		sudo -u $SUDO_USER sed -i -e '/^yocto_gps/s/YGNSSMK2-....../YGNSSMK2-'${yocto_gps:9:6}'/' config_static.ini
 	elif [[ "$yocto_ver" == "Yocto-Pictor-GPS" ]]; then
 	# HYPSTAR host system V4-...
 		yocto_id3=$(echo $json_api | python3 -c \
@@ -122,9 +120,9 @@ function auto_config_yocto(){
 		echo -e "\nFound host system V4 or newer using Yocto-Pictor-GPS"
 		echo -e "Yocto IDs are : $yocto_id1 and $yocto_id3\n"
 
-		sudo -u $SUDO_USER sed -i -e '/OBSVLFR1/s/XXXXXX/'${yocto_id1:9:6}'/' config_static.ini
+		sudo -u $SUDO_USER sed -i -e '/^yocto_prefix1/s/OBSVLFR1-....../OBSVLFR1-'${yocto_id1:9:6}'/' config_static.ini
 		sudo -u $SUDO_USER sed -i '/yocto_prefix2 [-=]/d' config_static.ini
-		sudo -u $SUDO_USER sed -i -e '/OBSVLFR3/s/XXXXXX/'${yocto_id3:9:6}'/' config_static.ini
+		sudo -u $SUDO_USER sed -i -e '/^yocto_prefix3/s/OBSVLFR3-....../OBSVLFR3-'${yocto_id3:9:6}'/' config_static.ini
 		sudo -u $SUDO_USER sed -i '/yocto_gps [-=]/d' config_static.ini
 	else
 	# Something is wrong

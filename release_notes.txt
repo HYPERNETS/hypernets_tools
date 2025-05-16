@@ -6,6 +6,7 @@ Version 3.0.1: (2025-05-05)
 	  is switched on and Yocto is sleeping or brown-out protection has
 	  triggered
 	- Impove surveillance camera image quality
+	- Allow Yocto auto-confing with existing config_static.ini
 
 Version 3.0.0: (2025-04-03)
 	- Integrate yocto-pictor-gps
