@@ -596,9 +596,10 @@ exit_actions() {
 		if [ $return_value -ne 30 ] && [ $return_value -ne 40 ] && \
 				[ $return_value -ne 88 ] && [ $return_value -ne 98 ]; then
 			sleep 1
-			## VM stabilisation failed
+			## 6 - instrunent failed to init comms
+			## 78 - VM stabilisation failed
 			## power cycle, otherwise the second attempt fails as well
-			if [ $return_value -eq 78 ]; then
+			if [ $return_value -eq 6 ] || [ $return_value -eq 78 ]; then
 				echo "[INFO]  Power cycling the radiometer"
 				python -m hypernets.yocto.relay -soff -n3
 				sleep 10
