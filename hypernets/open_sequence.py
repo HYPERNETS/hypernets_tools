@@ -245,11 +245,11 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             instrument_instance.set_SWIR_module_temperature(instrument_swir_tec)
             info("Done!")
         except Exception as e:
-			# bail out instead of collecting bad data
+            # bail out instead of collecting bad data
             error(f"{e}")
             error("Failed to stabilise SWIR temperature. Aborting sequence.")
-			if not instrument_standalone:
-	            park_to_nadir()
+            if not instrument_standalone:
+                park_to_nadir()
             exit(33) # exit code 33
 
     # print env log header
@@ -379,7 +379,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                 if request.action == InstrumentAction.VALIDATION:
                     error("LED source measurement failed, aborting sequence")
                     if not instrument_standalone:
-						park_to_nadir()
+                        park_to_nadir()
                     exit(78) # exit code 78
 
                 error(f"Error : {e}")
