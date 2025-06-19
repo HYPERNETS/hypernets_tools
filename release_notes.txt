@@ -13,6 +13,7 @@ Version 3.0.1: (2025-06-12)
 	  failed to init comms)
 	- add correct labels for relay command on systems with PoE switch
 	- if SWIR TEC stabilisation fails then catch exception and exit
+	- add led option to pt command line tool
 
 Version 3.0.0: (2025-04-03)
 	- Integrate yocto-pictor-gps

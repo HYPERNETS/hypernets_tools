@@ -469,10 +469,11 @@ pt() (
 		echo "   abs new_pan new_tilt     move pan-tilt to absolute position"
 		echo "   sun new_pan new_tilt     move pan-tilt to position relative to the sun"
 		echo "   delta new_pan new_tilt   move pan-tilt relative to the current position"
+		echo "   led                      move tilt to LED irradiance measurement position"
 		echo
 		echo "pt sun  without arguments points to the sun"
 		echo "use x as new value for the axis that has to stay in the current position"
-		echo "eg: pt 270 90   pt abs 270 90   pt x 0   pt sun   pt delta x -5"
+		echo "eg: pt 270 90   pt abs 270 90   pt x 0   pt sun   pt delta x -5   pt led"
 		echo
 		exit 
 	fi
@@ -491,6 +492,24 @@ pt() (
 		sunpos=0
 		deltapos=0
 		shift 1
+	elif [[ "${1-}" == "led" ]]; then
+		abspos=1
+		sunpos=0
+		deltapos=0
+		shift 1
+
+		## retrieve LED sequence file name from config
+		set +e
+		led_tilt="$(python -m hypernets.abstract.get_led_tilt)"
+
+		if [ $? -ne 0 ]; then
+			echo "${XHL}$led_tilt${RESET_HL}"
+			exit -1
+		fi
+		set -e
+
+		## Replace positional parameters
+		set -- "x" "$led_tilt" 
 	elif [[ "${1-}" == "sun" ]]; then
 		abspos=0
 		sunpos=1
@@ -611,7 +630,7 @@ EOF
 		new_pan="${1#+}"
 		new_tilt="${2#+}"
 
-		if [[ "$new_pan" == "x" ]]; then ## use current
+		if [[ "$new_pan"  =~ ^([xX])$ ]]; then ## use current
 			requested_abs_pan=$current_abs_pan
 		elif [ "$abspos" = 1 ]; then ## requested abs
 			requested_abs_pan="$new_pan"
@@ -624,7 +643,7 @@ EOF
 			requested_abs_pan=$(printf "%.1f" $(bc <<< "(($new_pan) - ($offset_pan) + 36000) % 360"))
 		fi
 
-		if [[ "$new_tilt" == "x" ]]; then ## use current
+		if [[ "$new_tilt" =~ ^([xX])$ ]]; then ## use current
 			requested_abs_tilt=$current_abs_tilt
 		elif [ "$abspos" = 1 ]; then ## requested abs
 			requested_abs_tilt="$new_tilt"
@@ -641,8 +660,22 @@ EOF
 		requested_abs_pan=$(bc <<< "($requested_abs_pan + 36000) % 360")
 		requested_abs_tilt=$(bc <<< "($requested_abs_tilt + 36000) % 360")
 	
-		printf "Moving to requested absolute position pan = %.1f, tilt = %.1f\n" "$requested_abs_pan" "$requested_abs_tilt"
-		output=$(python -m hypernets.geometry.pan_tilt -w -p "$requested_abs_pan" -t "$requested_abs_tilt" 2>&1)
+		## don't move the axis with "x" position to avoid any full rotations due to 0/360 position uncertainty
+		if [[ "$new_pan" =~ ^([xX])$ ]] && [[ "$new_tilt" =~ ^([xX])$ ]]; then
+			printf "No movement requested, staying in current position:\n"
+			printf "abs:   pan = %.1f, tilt = %.1f\n" "$current_abs_pan" "$current_abs_tilt"
+			printf "hyper: pan = %.1f, tilt = %.1f\n" "$current_hyper_pan" "$current_hyper_tilt"
+			exit 0
+		elif [[ "$new_pan" =~ ^([xX])$ ]]; then
+			printf "Moving to requested absolute position tilt = %.1f\n" "$requested_abs_tilt"
+			output=$(python -m hypernets.geometry.pan_tilt -w -t "$requested_abs_tilt" 2>&1)
+		elif [[ "$new_tilt" =~ ^([xX])$ ]]; then
+			printf "Moving to requested absolute position pan = %.1f\n" "$requested_abs_pan"
+			output=$(python -m hypernets.geometry.pan_tilt -w -p "$requested_abs_pan" 2>&1)
+		else
+			printf "Moving to requested absolute position pan = %.1f, tilt = %.1f\n" "$requested_abs_pan" "$requested_abs_tilt"
+			output=$(python -m hypernets.geometry.pan_tilt -w -p "$requested_abs_pan" -t "$requested_abs_tilt" 2>&1)
+		fi
 
 		if [[ ! $output =~ "ERROR" ]]; then
 			## read new abs positions
