@@ -240,9 +240,17 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     # power, one has to remember, that during initial thermal regulation
     # TEC consumes 5x more current + does it for longer.
     if swir_is_requested:
-        info(f"Cooling SWIR module to {instrument_swir_tec}°C...")
-        instrument_instance.set_SWIR_module_temperature(instrument_swir_tec)
-        info("Done!")
+        try:
+            info(f"Cooling SWIR module to {instrument_swir_tec}°C...")
+            instrument_instance.set_SWIR_module_temperature(instrument_swir_tec)
+            info("Done!")
+        except Exception as e:
+			# bail out instead of collecting bad data
+            error(f"{e}")
+            error("Failed to stabilise SWIR temperature. Aborting sequence.")
+			if not instrument_standalone:
+	            park_to_nadir()
+            exit(33) # exit code 33
 
     # print env log header
     info(get_csv_header())
@@ -261,7 +269,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         #         print(f"\t- {key} : {value}")
 
         # Check if it is raining
-        if check_rain:
+        if not instrument_standalone and check_rain:
             try:
                 if is_raining(rain_sensor):
                     warning("Aborting sequence due to rain")
@@ -370,7 +378,8 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
             except Exception as e:
                 if request.action == InstrumentAction.VALIDATION:
                     error("LED source measurement failed, aborting sequence")
-                    park_to_nadir()
+                    if not instrument_standalone:
+						park_to_nadir()
                     exit(78) # exit code 78
 
                 error(f"Error : {e}")

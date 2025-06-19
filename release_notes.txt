@@ -11,6 +11,8 @@ Version 3.0.1: (2025-06-12)
 	  hypernets-hello.service
 	- power cycle radiometer for second attempt if exit code is 6 (instrunent 
 	  failed to init comms)
+	- add correct labels for relay command on systems with PoE switch
+	- if SWIR TEC stabilisation fails then catch exception and exit
 
 Version 3.0.0: (2025-04-03)
 	- Integrate yocto-pictor-gps

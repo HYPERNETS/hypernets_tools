@@ -258,7 +258,7 @@ while true; do
 	OPT7="Setup rain sensor"
 	OPT8="Operating system configuration"
 	OPT9="Configure ssh server as backup access"
-	OPT10="Setup shortcut commands for convenience"
+	OPT10="Setup command line tools"
 	OPT11="Configure Hypernets startup services"
  	OPT12="Quit"
 	options=(
@@ -319,7 +319,7 @@ while true; do
 				setup_backdoor
 				break
 				;;
-			"$OPT10") # "Setup shortcut commands for convenience"
+			"$OPT10") # "Setup command line tools"
                 ./install/08_setup_shortcuts.sh
 				break
 				;;

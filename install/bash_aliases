@@ -27,7 +27,7 @@ commands() (
 	fi
 	echo "${HL} ********************" 
 	echo "${HL} commands	${RESET_HL}to see this list"
-	echo "${HL} schedule	${RESET_HL}view/adjust yocto schedules 1 & 2 and time zone"
+	echo "${HL} schedule	${RESET_HL}view/adjust yocto schedules and time zone"
 	echo "${HL} relay   	${RESET_HL}get/set yocto relays   relay -h for help"
 	echo "${HL} pt		${RESET_HL}Pan/Tilt position      pt -h for help"
 	#echo "${HL} vm    	${RESET_HL}vm on   vm off "
@@ -38,7 +38,7 @@ commands() (
 	echo "${HL} status  	${RESET_HL}sudo systemctl status hypernets-sequence"
 	echo "${HL} kill-service	${RESET_HL}kill hypernets-sequence service without going to sleep"
 	echo "${HL} journal  	${RESET_HL}journalctl -b -u hypernets-sequence -e (journal -f to follow)"
-	echo "${HL} portal  	${RESET_HL}makes a portal via ~/Portal folder to $ipServer/${remoteDir%/}/"
+	echo "${HL} portal  	${RESET_HL}makes a portal via ~/Portal folder to $ipServer:${remoteDir%/}/"
 	echo "${HL} gui		${RESET_HL}python -m hypernets.gui (if screen attached)"
 	echo "${HL} webpic 	${RESET_HL}take webcam photo    webpic -h for help"
 	echo "${HL} hypypic  	${RESET_HL}take photo from hypstar camera"
@@ -163,7 +163,14 @@ relay() (
 		python -m hypernets.yocto.relay -s "$2" -n $1
 	fi
 
-	echo -e "PC\tPT\tHYP\tRS\tCAM1\tCAM2"
+	source utils/configparser.sh
+	poe_cameras=$(parse_config "poe_cameras" config_static.ini)
+	if [[ "$poe_cameras" == "yes" ]]; then
+		echo -e "PC\tPT\tHYP\tRS\tPoE\tSPARE"
+	else
+		echo -e "PC\tPT\tHYP\tRS\tCAM1\tCAM2"
+	fi
+
 	echo -e  "1\t2\t3\t4\t5\t6"
 	python -m hypernets.yocto.relay -g -n1 -n2 -n3 -n4 -n5 -n6 2>&1 | grep -E -o  "(True|False)" | sed -e "s/False/${XHL}OFF${RESET_HL}/g;s/True/${GREEN}ON${RESET_HL}/g" | paste -s
 ) # relay()
@@ -673,7 +680,7 @@ schedule() (
 	if [[ "${1-}" == "-h" ]] || [[ "${1-}" == "--help" ]]
 	then
 		echo
-		echo "View & Adjust yocto schedules 1 & 2 and time zone"
+		echo "View & Adjust yocto schedules and time zone"
 		echo "schedule         without options shows current schedules and time zone"
 		echo "         set     opens interactive menu for setting the schedules and time zone"
 		echo "eg:  schedule      schedule set"
