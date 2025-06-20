@@ -241,6 +241,21 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     # TEC consumes 5x more current + does it for longer.
     if swir_is_requested:
         try:
+            # make sure SWIR+TEC have finished init
+            for i in range(retry_count := 5):
+                if instrument_instance.hw_info.swir_module_available and \
+                   instrument_instance.hw_info.swir_pixel_count != 0 and \
+                   instrument_instance.hw_info.swir_tec_module_available:
+                    break
+                else:
+                    if i < retry_count:
+                        debug("SWIR+TEC hardware initialisation is not completed, retrying in 5 seconds")
+                        sleep(5)
+                        instrument_instance.get_hw_info()
+                    else:
+                        error("SWIR+TEC hardware not available")
+                        exit(27)
+
             info(f"Cooling SWIR module to {instrument_swir_tec}°C...")
             instrument_instance.set_SWIR_module_temperature(instrument_swir_tec)
             info("Done!")
