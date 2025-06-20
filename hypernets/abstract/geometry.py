@@ -48,6 +48,7 @@ class Geometry(object):
 
     def __str__(self):
         ref_pan, ref_tilt = Geometry.int_to_reference(self.reference)
+        self.get_absolute_pan_tilt()
         str_output = f"{self.pan:.2f} ({ref_pan}) ; {self.tilt:.2f} ({ref_tilt})" # noqa
         str_output += f" --> [{self.pan_abs:.2f} ; {self.tilt_abs:.2f}] (abs)"
         str_output += f" -- {self.flags}"
