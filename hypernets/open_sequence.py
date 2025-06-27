@@ -241,6 +241,10 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
     # TEC consumes 5x more current + does it for longer.
     if swir_is_requested:
         try:
+            # check if radiometer S/N is in the HYPSTAR-XR range and warn if it is not
+            if instrument_sn < 200000 or instrument_sn > 299999:
+                warning(f"Attempting SWIR measurement with radiometer S/N {instrument_sn} that is not in HYPSTAR-XR range!");
+
             # make sure SWIR+TEC have finished init
             for i in range(retry_count := 5):
                 if instrument_instance.hw_info.swir_module_available and \
@@ -248,8 +252,8 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                    instrument_instance.hw_info.swir_tec_module_available:
                     break
                 else:
-                    if i < retry_count:
-                        debug("SWIR+TEC hardware initialisation is not completed, retrying in 5 seconds")
+                    if i < retry_count - 1:
+                        debug(f"{i} {retry_count} SWIR+TEC hardware initialisation is not completed, retrying in 5 seconds")
                         sleep(5)
                         instrument_instance.get_hw_info()
                     else:

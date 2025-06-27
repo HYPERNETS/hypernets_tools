@@ -48,7 +48,7 @@ class Geometry(object):
 
     def __str__(self):
         ref_pan, ref_tilt = Geometry.int_to_reference(self.reference)
-        self.get_absolute_pan_tilt()
+        self.get_absolute_pan_tilt(quiet=True)
         str_output = f"{self.pan:.2f} ({ref_pan}) ; {self.tilt:.2f} ({ref_tilt})" # noqa
         str_output += f" --> [{self.pan_abs:.2f} ; {self.tilt_abs:.2f}] (abs)"
         str_output += f" -- {self.flags}"
@@ -101,7 +101,7 @@ class Geometry(object):
 
         return block_position
 
-    def get_absolute_pan_tilt(self, now=None):
+    def get_absolute_pan_tilt(self, now=None, quiet=False):
         try:  # FIXME
             from configparser import ConfigParser
             config_file = "config_dynamic.ini"
@@ -130,7 +130,7 @@ class Geometry(object):
         # Get sun position
         if 'sun' in [pan_ref, tilt_ref]:  # pickle me :
             from hypernets.geometry.spa_hypernets import spa_from_datetime
-            azimuth_sun, zenith_sun = spa_from_datetime(now=now)
+            azimuth_sun, zenith_sun = spa_from_datetime(now=now, quiet=quiet)
             zenith_sun = 180 - zenith_sun
 
             # determine hemisphere
