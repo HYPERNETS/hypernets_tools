@@ -87,10 +87,10 @@ dhcp_server = yes
 # Note that for PoE cameras the first address of the camera subnet (i.e.
 # X.Y.Z.1) is reserved for rugged PC enp2s0 interface (eth port 2)
 
-# webcam_site - site webcam (relay 5) credentials
+# webcam_site - SITE webcam (relay 5 if no PoE) credentials
 webcam_site = user:pass@ip_cam_site
 
-# webcam_sky - sky webcam (relay 6) credentials
+# webcam_sky - SKY webcam (relay 6 if no PoE) credentials
 webcam_sky = user:pass@ip_cam_sky
 
 # Both PoE cameras are powered by relay 5 so relay switching logic is different

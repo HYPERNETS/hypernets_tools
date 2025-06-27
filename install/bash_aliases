@@ -1599,8 +1599,8 @@ webpic() (
 		echo
 		echo "Take webcam picture"
 		echo 
-		echo "  site    store site (relay 5) picture in $HYPERNETS_TOOLS/OTHER/WEBCAM_SITE/YYYY/MM/"
-		echo "  sky     store sky (relay 6) picture in $HYPERNETS_TOOLS/OTHER/WEBCAM_SKY/YYYY/MM/"
+		echo "  site    store SITE camera picture in $HYPERNETS_TOOLS/OTHER/WEBCAM_SITE/YYYY/MM/"
+		echo "  sky     store SKY camera picture in $HYPERNETS_TOOLS/OTHER/WEBCAM_SKY/YYYY/MM/"
 		echo "  -h, --help      print this help"
 		echo
 		echo "eg: webpic site    webpic sky"
