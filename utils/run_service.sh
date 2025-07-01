@@ -457,6 +457,17 @@ if [[ "$bypassYocto" != "yes" ]] ; then
 	fi
 	set -e
 
+	# check if Yocto clock is set
+	if [[ $(command -v YRealTimeClock) ]]; then
+		yocto_time_set=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yoctoPrefix get_timeSet)
+
+		if [ "$yocto_time_set" != "TRUE" ]; then
+			log_warning "Yocto clock is not set. Setting now from PC clock."
+			yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yoctoPrefix get_utcOffset)
+			YRealTimeClock -r 127.0.0.1 $yoctoPrefix set_unixTime $(( $(date '+%s') + ($yocto_offset) ))> /dev/null 2>&1
+		fi
+	fi
+
 	# log uptimes
 	if [[ $(command -v YModule) ]]; then
 		yocto_uptime_millisec=$(YModule -f '[result]' -r 127.0.0.1 $yoctoPrefix get_upTime | awk '{print $1}')

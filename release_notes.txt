@@ -17,6 +17,7 @@ Version 3.1.0: (2025-06-27)
 	- Wait for SWIR and TEC init completion before enabling TEC
 	- calculate absolute positions when printing geometry to log
 	- warn if SWIR measurement with S/N not in HYPSTAR-XR range
+	- set Yocto clock from PC at the beginning of sequence if not set already
 
 Version 3.0.0: (2025-04-03)
 	- Integrate yocto-pictor-gps

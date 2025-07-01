@@ -253,7 +253,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                     break
                 else:
                     if i < retry_count - 1:
-                        debug(f"{i} {retry_count} SWIR+TEC hardware initialisation is not completed, retrying in 5 seconds")
+                        debug("SWIR+TEC hardware initialisation is not completed, retrying in 5 seconds")
                         sleep(5)
                         instrument_instance.get_hw_info()
                     else:

@@ -744,9 +744,9 @@ schedule() (
 	fi
 
 	## set yocyo clock if it is not set
-	yocto_time=$(YRealTimeClock -f '[result]' -r 127.0.0.1 "$yoctowifibrd" get_dateTime)
+	yocto_time_set=$(YRealTimeClock -f '[result]' -r 127.0.0.1 "$yoctowifibrd" get_timeSet)
 
-	if [ "$yocto_time" = "" ]; then
+	if [ "$yocto_time_set" != "TRUE" ]; then
 		echo
 		echo "Yocto clock is not set. Setting now from PC clock..."
 		YRealTimeClock -r 127.0.0.1 "$yoctowifibrd" set_unixTime $(( $(date '+%s') + ($yocto_offset) ))> /dev/null 2>&1
