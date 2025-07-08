@@ -1,30 +1,37 @@
-
 from argparse import ArgumentParser
 from yoctopuce.yocto_relay import YRelay
 from urllib.request import urlopen
+from urllib.error import HTTPError
 from time import sleep
-
-from hypernets.yocto.init import get_url_base_prefixed
-from logging import info, warning, debug
-
+from hypernets.yocto.init import get_url_base_prefixed, get_yocto_lower_board_serial
+from logging import info, warning, debug, error
 
 
 def get_state_relay(id_relay):
+    try:
+        url_base = get_url_base_prefixed()
+    
+        if id_relay == -1:
+            id_relay = list(range(1, 7, 1))
+    
+        relay_states = list()
+        for i in id_relay:
+            url = "/".join([url_base, "api", "relay" + str(i), "state"])
+            state = urlopen(url)
+            state = {b"B": True, b"A": False}[state.read()]
+            relay_states.append(state)
+            debug(f"Relay #{i} is {state}.")
 
-    url_base = get_url_base_prefixed()
+    except HTTPError as e:
+        if e.code == 404:
+            error(f"Yocto module '{get_yocto_lower_board_serial()}' is not online")
+        else:
+            error(f"HTTP Error: {e.code}")
+        return None
 
-    # TODO : Parse Y_STATE_INVALID
-
-    if id_relay == -1:
-        id_relay = list(range(1, 7, 1))
-
-    relay_states = list()
-    for i in id_relay:
-        url = "/".join([url_base, "api", "relay" + str(i), "state"])
-        state = urlopen(url)
-        state = {b"B": True, b"A": False}[state.read()]
-        relay_states.append(state)
-        debug(f"Relay #{i} is {state}.")
+    except Exception as e:
+        error(f"{e}")
+        return None
 
     return relay_states
 
@@ -38,30 +45,39 @@ def set_state_relay(id_relay, state, force=False):
           to enable this functionality)""")
         return
 
-    url_base = get_url_base_prefixed()
-
-    if state == "reset":
-        for i in id_relay:
-            # switch off
-            get = "api?ctx=relay" + str(i) + "&state=" + str(YRelay.STATE_A)
-            url = "/".join([url_base, get])
-            urlopen(url)
-
-            sleep(1)
-
-            # switch on
-            get = "api?ctx=relay" + str(i) + "&state=" + str(YRelay.STATE_B)
-            url = "/".join([url_base, get])
-            urlopen(url)
-        return
+    try:
+        url_base = get_url_base_prefixed()
     
-    state = {"on": YRelay.STATE_B, "off": YRelay.STATE_A}[state]
+        if state == "reset":
+            for i in id_relay:
+                # switch off
+                get = "api?ctx=relay" + str(i) + "&state=" + str(YRelay.STATE_A)
+                url = "/".join([url_base, get])
+                urlopen(url)
+    
+                sleep(1)
+    
+                # switch on
+                get = "api?ctx=relay" + str(i) + "&state=" + str(YRelay.STATE_B)
+                url = "/".join([url_base, get])
+                urlopen(url)
+            return
+        
+        state = {"on": YRelay.STATE_B, "off": YRelay.STATE_A}[state]
+    
+        for i in id_relay:
+            get = "api?ctx=relay" + str(i) + "&state=" + str(state)
+            url = "/".join([url_base, get])
+            urlopen(url)
 
-    for i in id_relay:
-        get = "api?ctx=relay" + str(i) + "&state=" + str(state)
-        url = "/".join([url_base, get])
-        urlopen(url)
-    return
+    except HTTPError as e:
+        if e.code == 404:
+            error(f"Yocto module '{get_yocto_lower_board_serial()}' is not online")
+        else:
+            error(f"HTTP Error: {e.code}")
+
+    except Exception as e:
+        error(f"{e}")
 
 
 def set_at_power_on(id_relay, state, force=False):
@@ -70,19 +86,30 @@ def set_at_power_on(id_relay, state, force=False):
              "off": YRelay.STATEATPOWERON_A,
              "unchanged": YRelay.STATEATPOWERON_UNCHANGED}[state]
 
-    id_relay = id_relay[0]
-    url_base = get_url_base_prefixed()
-    get = "api?ctx=relay" + str(id_relay) + "&stateAtPowerOn=" + str(state)
-    url = "/".join([url_base, get])
-    urlopen(url)
-
-    if not force:
-        warning("""You need to use --force [-f] to write on flash
-              memory, else modifications will be lost""")
-    else:
-        get = "api?ctx=module&persistentSettings=1"
+    try:
+        id_relay = id_relay[0]
+        url_base = get_url_base_prefixed()
+        get = "api?ctx=relay" + str(id_relay) + "&stateAtPowerOn=" + str(state)
         url = "/".join([url_base, get])
         urlopen(url)
+    
+        if not force:
+            warning("""You need to use --force [-f] to write on flash
+                  memory, else modifications will be lost""")
+        else:
+            get = "api?ctx=module&persistentSettings=1"
+            url = "/".join([url_base, get])
+            urlopen(url)
+
+    except HTTPError as e:
+        if e.code == 404:
+            error(f"Yocto module '{get_yocto_lower_board_serial()}' is not online")
+        else:
+            error(f"HTTP Error: {e.code}")
+
+    except Exception as e:
+        error(f"{e}")
+
 
 
 
@@ -136,3 +163,4 @@ if __name__ == '__main__':
 
     elif args.set_at_power_on:
         set_at_power_on(args.id_relay, args.set_at_power_on, force=args.force)
+

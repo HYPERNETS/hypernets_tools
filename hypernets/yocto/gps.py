@@ -1,23 +1,35 @@
 from hypernets.yocto.init import get_url_gps
-
-from logging import debug
+from urllib.request import urlopen
+from urllib.error import HTTPError
+from logging import debug, error
 
 
 def get_gps(return_float=True):
-    from urllib.request import urlopen
-    url_base = get_url_gps()
+    try:
+        url_base = get_url_gps()
+    
+        get = "/".join(["api", "gps", "dateTime"])
+        url = "/".join([url_base, get])
+        datetime = urlopen(url).read()
+    
+        get = "/".join(["api", "latitude", "currentValue"])
+        url = "/".join([url_base, get])
+        latitude = float(urlopen(url).read()) / 1000
+    
+        get = "/".join(["api", "longitude", "currentValue"])
+        url = "/".join([url_base, get])
+        longitude = float(urlopen(url).read()) / 1000
 
-    get = "/".join(["api", "gps", "dateTime"])
-    url = "/".join([url_base, get])
-    datetime = urlopen(url).read()
+    except HTTPError as e:
+        if e.code == 404:
+            error(f"Yocto gps is not online")
+        else:
+            error(f"HTTP Error: {e.code}")
+        return None
 
-    get = "/".join(["api", "latitude", "currentValue"])
-    url = "/".join([url_base, get])
-    latitude = float(urlopen(url).read()) / 1000
-
-    get = "/".join(["api", "longitude", "currentValue"])
-    url = "/".join([url_base, get])
-    longitude = float(urlopen(url).read()) / 1000
+    except Exception as e:
+        error(f"{e}")
+        return None
 
     return latitude, longitude, datetime
 

@@ -11,8 +11,8 @@ if __name__ == '__main__':
     config.read('config_dynamic.ini')
     
     ## look for VM measurement in all sequence files
-    expected_keys = ['sequence_file_sched1', 'sequence_file', 
-                     'sequence_file_sched2', 'sequence_file_alt', 
+    expected_keys = ['sequence_file_sched2', 'sequence_file_alt', 
+                     'sequence_file_sched1', 'sequence_file', 
                      'sequence_file_sched3']
     values = {}
     

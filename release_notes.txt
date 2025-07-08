@@ -18,6 +18,7 @@ Version 3.1.0: (2025-06-27)
 	- calculate absolute positions when printing geometry to log
 	- warn if SWIR measurement with S/N not in HYPSTAR-XR range
 	- set Yocto clock from PC at the beginning of sequence if not set already
+	- improve yocto access error handling
 
 Version 3.0.0: (2025-04-03)
 	- Integrate yocto-pictor-gps

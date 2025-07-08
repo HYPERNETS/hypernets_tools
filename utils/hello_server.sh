@@ -264,7 +264,7 @@ do
 	echo "[INFO]  (attempt #$i) Touching $ipServer:$remoteDir/system_is_up"
 
 	# If yocto API is installed, write next scheduled wakeup time into 'system_is_up' file on server
-	if [[ $(command -v YWakeUpMonitor) ]]; then
+	if [[ $(command -v YWakeUpMonitor) && $(command -v YRealTimeClock) ]]; then
 		yocto=$(parse_config "yocto_prefix2" config_static.ini)
 		if [[ "$yocto" == "" ]]; then
 		# host system V4 or newer
@@ -273,8 +273,12 @@ do
 
 		next_wakeup_timestamp=$(YWakeUpMonitor -f '[result]' -r 127.0.0.1 $yocto get_nextWakeUp|sed -e 's/[[:space:]].*//')
 		yocto_offset=$(YRealTimeClock -f '[result]' -r 127.0.0.1 $yocto get_utcOffset)
+		retcode=$?
 
-		if [ "$next_wakeup_timestamp" = 0 ]; then
+		if [[ "$retcode" -ne 0 ]]; then
+			msg_txt="Yocto '$yocto' is not accessible!"
+			echo "[ERROR]  $msg_txt"
+		elif [ "$next_wakeup_timestamp" = 0 ]; then
 			msg_txt="Yocto scheduled wakeup is disabled!"
 		else
 			if [ "$yocto_offset" = 0 ]; then
