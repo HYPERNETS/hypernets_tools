@@ -34,7 +34,7 @@ if [ "$ID"  == "manjaro" ]; then
 fi
 
 echo
-echo "Setting up shortcuts in $home/.bash_aliases"
+echo "Setting up command line tools in $home/.bash_aliases"
 echo
 echo "Run the following line for importing into active shell instance"
 echo ". $home/.bash_aliases"
@@ -46,7 +46,7 @@ sudo -u $user touch $home/.bash_aliases
 cat << EOF >> $home/.bash_aliases
 # This file is generated and installed by hypernets_tools
 #
-# It contains the definitions and aliases of command shortcuts
+# It contains the definitions and aliases of command line tools
 # and executes commands() in the end which prints the help text
 
 HYPERNETS_TOOLS=$PWD

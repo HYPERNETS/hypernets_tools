@@ -1,6 +1,5 @@
 ##########################################################################
 [general]
-
 # keep_pc - control the system status after the end of the automated sequence
 # Allowed values: on/off - do/don't shut down the PC and send Yocto to sleep
 #
@@ -15,12 +14,13 @@ keep_pc = on
 # This parameter does not affect the runseq shortcut
 start_sequence = no
 
-# check_wakeup_reason - control the sequence depending on Yocto wakeup reason
+# check_wakeup_reason - choose the sequence depending on Yocto wakeup reason
 # Allowed values: yes/no - do/don't check the Yocto wakeup reason
 #
 # If the wakeup reason check is enabled, the sequence is chosen as follows:
 # SCHEDULE1 - run default sequence (sequence_file or sequence_file_sched1)
-# SCHEDULE2 - run LED measurement sequence (sequence_file_alt or sequence_file_sched2)
+# SCHEDULE2 - run LED measurement sequence (sequence_file_alt or 
+#             sequence_file_sched2)
 # SCHEDULE3 - run custom sequence (sequence_file_sched3
 #             available only on host units V4 and newer)
 # Any other wakeup reason - don't start the sequence
@@ -30,45 +30,38 @@ start_sequence = no
 # sequence_file_sched2 is started. This is caused by a bug in the Yocto firmware.
 check_wakeup_reason = yes
 
-# sequence_file_sched1 - the default sequence that is executed 
-# For backwards compatibility sequence_file is also accepted as the parameter name
-# 
-# Yocto Schedule1 always executes the default sequence
-# Yocto Schedule2 executes the default sequence if check_wakeup_reason = no
-# Yocto Schedule3 executes the default sequence if check_wakeup_reason = no
+# sequence_file_sched1 - the default sequence that is executed by Yocto
+# Schedule1 if check_wakeup_reason = yes or at every system boot if
+# check_wakeup_reason = no. For backwards compatibility sequence_file is also
+# accepted as the parameter name
 # 
 # If any modifications are made to the sample sequence file it is strongly
-# recommended to edit a copy instead of the original sample file in order to 
+# recommended to edit a copy instead of the original sample file in order to
 # avoid git conflicts in the future.
 sequence_file_sched1 = hypernets/resources/sequences_samples/your_sequence.txt
 
-# sequence_file_sched2 - the alternative sequence that is executed, typically LED source measurement
-# For backwards compatibility sequence_file_alt is also accepted as the parameter name
-# 
-# Yocto Schedule1 executes the alternative sequence if Yocto deep sleep mode is disabled
-# Yocto Schedule2 executes the alternative sequence if check_wakeup_reason = yes
-# Yocto Schedule3 executes the alternative sequence if Yocto deep sleep mode is disabled
+# sequence_file_sched2 - the alternative sequence that is executed by Yocto
+# Schedule2 if check_wakeup_reason = yes, typically the LED source measurement.
+# For backwards compatibility sequence_file_alt is also accepted as the
+# parameter name
 # 
 # If any modifications are made to the sample sequence file it is strongly
-# recommended to edit a copy instead of the original sample file in order to 
+# recommended to edit a copy instead of the original sample file in order to
 # avoid git conflicts in the future.
 sequence_file_sched2 = hypernets/resources/sequences_samples/your_validation_sequence.txt
 
-# sequence_file_sched3 - another alternative sequence, e.g site-specific custom acquisition
-# Yocto Schedule3 is available on host units V4 and newer with Yocto-Pictor-GPS boards
-# 
-# Yocto Schedule3 executes the sequence_file_sched3 sequence if check_wakeup_reason = yes
-# 
-# If any modifications are made to the sample sequence file it is strongly
-# recommended to edit a copy instead of the original sample file in order to 
-# avoid git conflicts in the future.
+# sequence_file_sched3 - another alternative sequence, e.g site-specific custom
+# acquisition that is executed by Yocto Schedule3 if check_wakeup_reason = yes.
+# Yocto Schedule3 is available on host units V4 and newer with Yocto-Pictor-GPS
+# boards
 sequence_file_sched3 = hypernets/resources/sequences_samples/your_custom_sequence.txt
 
-# check_rain - check the rain sensor and skip or abort the sequence if rain is detected
+# check_rain - check the rain sensor and skip or abort the sequence if rain is
+# detected.
 # Allowed values: yes/no
 #
-# The rain sensor is checked before running each geometry (@[ ... ]) of the sequence file
-# The pan-tilt is parked to nadir (0, hyper) before exiting
+# The rain sensor is checked before running each geometry (@[ ... ]) of the
+# sequence file and the pan-tilt is parked to nadir (x, hyper) before exiting
 check_rain = yes
 
 # auto_update - attempt updating hypernets_tools at system boot
@@ -81,72 +74,78 @@ auto_update = no
 # verbosity - the loglevel of hypernets_tools
 # Allowed values: ERROR, WARNING, INFO, DEBUG
 #
-# All messages up to the selected level are recorded in sequence.log
-# Some important INFO records (OS and hypernets_tools version, environmental logs, etc.)
-# are logged even if loglevel = ERROR or WARNING
+# All messages up to the selected level are recorded in sequence.log 
+# Some important INFO records (OS and hypernets_tools version, environmental
+# logs, etc.) are logged even if loglevel = ERROR or WARNING
 verbosity = INFO
 
 
 ##########################################################################
 [GPS] 
-# The geographic coordinates of the system which are used for calculating the Sun angles
-# and copied to the metadata.txt of each sequence
+# latitude/longitude - the geographic coordinates of the system which are used
+# for calculating the sun angles. These values are copied to the metadata.txt
+# of each sequence.
 # Allowed latitude values: floating point in the range [-90...90]
 # Positive latititude is Northern Hemisphere
 # Allowed longitude values: floating point in the range [-180...180]
 # Positive longitude is Eastern Hemisphere
 #
-# The HYPSTAR systems are designed for fixed installation, hence the coordinates are
-# defined in the configuration file. The accuracy and availability of the coordinates 
-# from the GPS depend on the signal quality and the GPS data are used only for validation
-# of the coordinates in the config file. The difference between the coordinates from 
-# GPS and config file are recorded in sequence.log at the end of the sequence at INFO
-# or WARNING loglevel if the difference is below or above 100 m, respectively.
+# The HYPSTAR systems are designed for fixed installation, hence the
+# coordinates are defined in the configuration file. The accuracy and
+# availability of the coordinates from the GPS depend on the signal quality and
+# the GPS data are used only for validation of the coordinates in the config
+# file. The difference between the coordinates from GPS and config file are
+# recorded in sequence.log at the end of the sequence at INFO or WARNING
+# loglevel if the difference is below or above 100 m, respectively.
 latitude = 0.0
 longitude = 0.0
 
 
 ##########################################################################
 [SPA]
-# elevation - elevation of the HYPSTAR in meters from WGS-84 ellipsoid used for 
-# calculating the Sun angles
+# elevation - elevation of the HYPSTAR in meters from WGS-84 ellipsoid used for
+# calculating the sun angles
 #
-# The elevation is only used in PySolar functions get_projected_radial_distance() and 
-# get_projected_axial_distance() and does not alter the default atmoshperic pressure
-# used in the refraction correction
+# The elevation is only used in PySolar functions
+# get_projected_radial_distance() and get_projected_axial_distance() and does
+# not alter the default atmoshperic pressure used in the refraction correction
 elevation = 0
 
 
 ##########################################################################
 [pantilt]
-# offset_pan - the offset from geographic north in degrees when HYPSTAR is pointing 
-# at pan(abs) = 0, tilt(hyper) = 90
+# offset_pan - the offset from geographic north in degrees when HYPSTAR is
+# pointing at pan(abs) = 0, tilt(hyper) = 90
 # Allowed values: integer or floating point in the range [0...360] or [-180...180]
 #
-# Offset towards east is positive
+# Offset towards east is positive.
 # pan(abs) = pan(hyper) - offset_pan
 # pan(hyper) = 0, tilt(hyper) = 90 should point to geographic north
 offset_pan = 0
 
-# offset_tilt - the offset from nadir in degrees when HYPSTAR is pointing at tilt(abs) = 0
+# offset_tilt - the offset from nadir in degrees when HYPSTAR is pointing at
+# tilt(abs) = 0
 # Allowed values: integer or floating point in the range [0...360] or [-180...180]
 #
-# Clockwise offset when standing in front of the radiometer 
-# (pan-tilt behind the radiometer) is positive.
+# Clockwise offset when standing in front of the radiometer (pan-tilt behind
+# the radiometer) is positive.
 # tilt(abs) = tilt(hyper) - offset_tilt
-# tilt(hyper) = 0 should point to nadir
-offset_tilt = 60
+# tilt(hyper) = 180 should point to zenith
+offset_tilt = 55
 
 # pantilt_port - the pan-tilt serial port device file
 # 
-# This should be normally /dev/ttyS3 for V1 & V2 systems (PC COM4) and /dev/ttyS0 for V3 (PC COM1)
+# This should be normally /dev/ttyS3 for V1 & V2 systems (PC COM4) and
+# /dev/ttyS0 from V3 onward (PC COM1)
 pantilt_port = /dev/ttyS0
 
-# azimuth_switch - when to switch from left to right of Sun when using relative azimuth from Sun
+# azimuth_switch - when to switch from left to right of sun when using relative
+# azimuth from sun.
 # Allowed values: integer or floating point in the range [0...360] or [-180...180]
 #
-# The switch from left (sun_az - rel_az) to right (sun_az + rel_az) is made when sun_az has passed
-# the azimuth_switch angle. The parameter works similarly in both the Northern and Southern Hemispheres.
+# The switch from left (sun_az - rel_az) to right (sun_az + rel_az) is made
+# when sun_az has passed the azimuth_switch angle. The parameter works
+# similarly in both the Northern and Southern Hemispheres.
 azimuth_switch = 0
 
 
@@ -154,8 +153,8 @@ azimuth_switch = 0
 [hypstar]
 # pantilt_port - link to the radiometer serial port device file
 # 
-# Normally the radiometer is connected via an USB-RS485 converter (FTDI board) and udev links
-# /dev/radiometer0 to the correct ttyUSB device
+# Normally the radiometer is connected via an USB-RS485 converter (FTDI board)
+# and udev links /dev/radiometer0 to the correct ttyUSB device
 hypstar_port = /dev/radiometer0
 
 # boot_timeout - how many seconds to wait for the radiometer to boot
@@ -173,26 +172,26 @@ baudrate = 3000000
 #                 DEBUG (driver command execution printout to stdout)
 #                 TRACE (low level communication bytes are printed to stdout)
 #
-# Some important INFO records (libhypstar version, serial numbers, firmware versions, etc)
-# are logged even if loglevel = ERROR
+# Some important INFO records (libhypstar version, serial numbers, firmware
+# versions, etc) are logged even if loglevel = ERROR
 loglevel = INFO
 
 # swir_tec - SWIR sensor temperature setpoint in Celsius
 # Allowed values: integer in the range [-15...40]
 #
-# The SWIR temperature controller can handle setpoint up to approximately 35...40 'C below
-# ambient before going into thermal runaway. 
-# The setpoint is usually 0 'C in normal conditions and 10 'C in extreme hot conditions. 
-# This parameter has no effect if no SWIR spectra are requested in the sequence.
+# The SWIR temperature controller can handle setpoint up to approximately
+# 35...40 'C below ambient before going into thermal runaway. The setpoint is
+# usually 0 'C in normal conditions and 10 'C in extreme hot conditions. This
+# parameter has no effect if no SWIR spectra are requested in the sequence.
 swir_tec = 0
 
 
 ##########################################################################
 [metadata]
-# The fields in the [metadata] section are directly copied into metadata.txt of each sequence.
-# In addition, the following fields are automatically populated in metadata.txt: 
-# datetime, hypstar_sn, led_sn, latitude, longitude, protocol_file_name, offset_pan, 
-# offset_tilt, azimuth_switch
+# The fields in the [metadata] section are directly copied into metadata.txt of
+# each sequence. In addition, the following fields are automatically populated
+# in metadata.txt: datetime, hypstar_sn, led_sn, latitude, longitude,
+# protocol_file_name, offset_pan, offset_tilt, azimuth_switch
 principal_investigator = Investigator Name
 site_id = A Site ID
 

@@ -1,3 +1,25 @@
+Version 3.1.0: (2025-06-27)
+	- schedule schortcut bugfix for yocto-pictor-wifi boards
+	- Updated config and sequence file comment formatting for importing into
+	  user manual
+	- Improved error handling and logging for V4 systems if PC relay override
+	  is switched on and Yocto is sleeping or brown-out protection has
+	  triggered
+	- Improve surveillance camera image quality
+	- Allow Yocto auto-confing with existing config_static.ini
+	- generate rsa key before asking whether to copy it when setting up
+	  hypernets-hello.service
+	- power cycle radiometer for second attempt if exit code is 6 (instrunent 
+	  failed to init comms)
+	- add correct labels for relay command on systems with PoE switch
+	- if SWIR TEC stabilisation fails then catch exception and exit
+	- add led option to pt command line tool
+	- Wait for SWIR and TEC init completion before enabling TEC
+	- calculate absolute positions when printing geometry to log
+	- warn if SWIR measurement with S/N not in HYPSTAR-XR range
+	- set Yocto clock from PC at the beginning of sequence if not set already
+	- improve yocto access error handling
+
 Version 3.0.0: (2025-04-03)
 	- Integrate yocto-pictor-gps
 	- Integrate PoE cameras

@@ -75,7 +75,7 @@ class HypstarHandler(Hypstar):
                 if self.hw_info.optical_multiplexer_available:
                     break
                 else:
-                    if i < retry_count:
+                    if i < retry_count - 1:
                         debug("MUX+SWIR+TEC hardware not available, retrying in 5 seconds")
                         sleep(5)
                     else:

@@ -5,7 +5,7 @@ import warnings
 from logging import info, debug, error
 
 
-def spa_from_datetime(now=None):
+def spa_from_datetime(now=None, quiet=False):
 
     if now is None:
         now = datetime.now(timezone.utc)
@@ -32,7 +32,11 @@ def spa_from_datetime(now=None):
         azimuth = get_azimuth(latitude, longitude, now, elevation)
         zenith = 90 - get_altitude(latitude, longitude, now, elevation)
 
-    info(f"Sun Position  (azimuth : {azimuth:.2f}, "
+    if quiet is False:
+        info(f"Sun Position  (azimuth : {azimuth:.2f}, "
+         f"zenith : {zenith:.2f})")
+    else:
+        debug(f"Sun Position  (azimuth : {azimuth:.2f}, "
          f"zenith : {zenith:.2f})")
 
     return azimuth, zenith

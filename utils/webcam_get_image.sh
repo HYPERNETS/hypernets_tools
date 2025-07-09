@@ -45,8 +45,9 @@ function take_picture(){
 	else
 		loglevel=24
 	fi
-	ffmpeg -v $loglevel -y -i rtsp://"$CREDENTIALS$IP_ADDRESS":554 -update 1 -frames:v 1 \
-		"$OUTPUT_DIR/$FILEPREFIX$DATE.jpg"
+
+	ffmpeg -v $loglevel -y -rtsp_transport tcp -i rtsp://"$CREDENTIALS$IP_ADDRESS":554 \
+		-update 1 -frames:v 10 -q:v 1 "$OUTPUT_DIR/$FILEPREFIX$DATE.jpg"
 
 	if [[ $? -eq 0 ]] ; then
 		echo "[INFO]  Output File is : '$OUTPUT_DIR/$FILEPREFIX$DATE.jpg'"
@@ -83,8 +84,10 @@ function wait_up(){
 		exit 1
 	else
 		if [ "$VERBOSE" -eq 1 ] ; then
-			echo "[DEBUG]  $IP_ADDRESS is up."
+			echo "[DEBUG]  $IP_ADDRESS is up. Sleeping 3 more seconds."
 		fi
+		# let the camera auto-adjust exposure
+		sleep 3
 	fi
 }
 

@@ -27,7 +27,7 @@ commands() (
 	fi
 	echo "${HL} ********************" 
 	echo "${HL} commands	${RESET_HL}to see this list"
-	echo "${HL} schedule	${RESET_HL}view/adjust yocto schedules 1 & 2 and time zone"
+	echo "${HL} schedule	${RESET_HL}view/adjust yocto schedules and time zone"
 	echo "${HL} relay   	${RESET_HL}get/set yocto relays   relay -h for help"
 	echo "${HL} pt		${RESET_HL}Pan/Tilt position      pt -h for help"
 	#echo "${HL} vm    	${RESET_HL}vm on   vm off "
@@ -38,7 +38,7 @@ commands() (
 	echo "${HL} status  	${RESET_HL}sudo systemctl status hypernets-sequence"
 	echo "${HL} kill-service	${RESET_HL}kill hypernets-sequence service without going to sleep"
 	echo "${HL} journal  	${RESET_HL}journalctl -b -u hypernets-sequence -e (journal -f to follow)"
-	echo "${HL} portal  	${RESET_HL}makes a portal via ~/Portal folder to $ipServer/${remoteDir%/}/"
+	echo "${HL} portal  	${RESET_HL}makes a portal via ~/Portal folder to $ipServer:${remoteDir%/}/"
 	echo "${HL} gui		${RESET_HL}python -m hypernets.gui (if screen attached)"
 	echo "${HL} webpic 	${RESET_HL}take webcam photo    webpic -h for help"
 	echo "${HL} hypypic  	${RESET_HL}take photo from hypstar camera"
@@ -163,9 +163,23 @@ relay() (
 		python -m hypernets.yocto.relay -s "$2" -n $1
 	fi
 
-	echo -e "PC\tPT\tHYP\tRS\tCAM1\tCAM2"
+	relay_states="$(python -m hypernets.yocto.relay -g -n1 -n2 -n3 -n4 -n5 -n6 2>&1)"
+	
+	if grep -q -i "error" <<< $relay_states; then
+		echo "${XHL}$relay_states${RESET_HL}"
+		exit
+	fi
+
+	source utils/configparser.sh
+	poe_cameras=$(parse_config "poe_cameras" config_static.ini)
+	if [[ "$poe_cameras" == "yes" ]]; then
+		echo -e "PC\tPT\tHYP\tRS\tPoE\tSPARE"
+	else
+		echo -e "PC\tPT\tHYP\tRS\tCAM1\tCAM2"
+	fi
+
 	echo -e  "1\t2\t3\t4\t5\t6"
-	python -m hypernets.yocto.relay -g -n1 -n2 -n3 -n4 -n5 -n6 2>&1 | grep -E -o  "(True|False)" | sed -e "s/False/${XHL}OFF${RESET_HL}/g;s/True/${GREEN}ON${RESET_HL}/g" | paste -s
+	echo -e "$(grep -E -o '(True|False)' <<< $relay_states | sed -e "s/False/${XHL}OFF${RESET_HL}/g;s/True/${GREEN}ON${RESET_HL}/g" | paste -s)"
 ) # relay()
 
 
@@ -462,10 +476,11 @@ pt() (
 		echo "   abs new_pan new_tilt     move pan-tilt to absolute position"
 		echo "   sun new_pan new_tilt     move pan-tilt to position relative to the sun"
 		echo "   delta new_pan new_tilt   move pan-tilt relative to the current position"
+		echo "   led                      move tilt to LED irradiance measurement position"
 		echo
 		echo "pt sun  without arguments points to the sun"
 		echo "use x as new value for the axis that has to stay in the current position"
-		echo "eg: pt 270 90   pt abs 270 90   pt x 0   pt sun   pt delta x -5"
+		echo "eg: pt 270 90   pt abs 270 90   pt x 0   pt sun   pt delta x -5   pt led"
 		echo
 		exit 
 	fi
@@ -484,6 +499,24 @@ pt() (
 		sunpos=0
 		deltapos=0
 		shift 1
+	elif [[ "${1-}" == "led" ]]; then
+		abspos=1
+		sunpos=0
+		deltapos=0
+		shift 1
+
+		## retrieve LED sequence file name from config
+		set +e
+		led_tilt="$(python -m hypernets.abstract.get_led_tilt)"
+
+		if [ $? -ne 0 ]; then
+			echo "${XHL}$led_tilt${RESET_HL}"
+			exit -1
+		fi
+		set -e
+
+		## Replace positional parameters
+		set -- "x" "$led_tilt" 
 	elif [[ "${1-}" == "sun" ]]; then
 		abspos=0
 		sunpos=1
@@ -604,7 +637,7 @@ EOF
 		new_pan="${1#+}"
 		new_tilt="${2#+}"
 
-		if [[ "$new_pan" == "x" ]]; then ## use current
+		if [[ "$new_pan"  =~ ^([xX])$ ]]; then ## use current
 			requested_abs_pan=$current_abs_pan
 		elif [ "$abspos" = 1 ]; then ## requested abs
 			requested_abs_pan="$new_pan"
@@ -617,7 +650,7 @@ EOF
 			requested_abs_pan=$(printf "%.1f" $(bc <<< "(($new_pan) - ($offset_pan) + 36000) % 360"))
 		fi
 
-		if [[ "$new_tilt" == "x" ]]; then ## use current
+		if [[ "$new_tilt" =~ ^([xX])$ ]]; then ## use current
 			requested_abs_tilt=$current_abs_tilt
 		elif [ "$abspos" = 1 ]; then ## requested abs
 			requested_abs_tilt="$new_tilt"
@@ -634,8 +667,22 @@ EOF
 		requested_abs_pan=$(bc <<< "($requested_abs_pan + 36000) % 360")
 		requested_abs_tilt=$(bc <<< "($requested_abs_tilt + 36000) % 360")
 	
-		printf "Moving to requested absolute position pan = %.1f, tilt = %.1f\n" "$requested_abs_pan" "$requested_abs_tilt"
-		output=$(python -m hypernets.geometry.pan_tilt -w -p "$requested_abs_pan" -t "$requested_abs_tilt" 2>&1)
+		## don't move the axis with "x" position to avoid any full rotations due to 0/360 position uncertainty
+		if [[ "$new_pan" =~ ^([xX])$ ]] && [[ "$new_tilt" =~ ^([xX])$ ]]; then
+			printf "No movement requested, staying in current position:\n"
+			printf "abs:   pan = %.1f, tilt = %.1f\n" "$current_abs_pan" "$current_abs_tilt"
+			printf "hyper: pan = %.1f, tilt = %.1f\n" "$current_hyper_pan" "$current_hyper_tilt"
+			exit 0
+		elif [[ "$new_pan" =~ ^([xX])$ ]]; then
+			printf "Moving to requested absolute position tilt = %.1f\n" "$requested_abs_tilt"
+			output=$(python -m hypernets.geometry.pan_tilt -w -t "$requested_abs_tilt" 2>&1)
+		elif [[ "$new_tilt" =~ ^([xX])$ ]]; then
+			printf "Moving to requested absolute position pan = %.1f\n" "$requested_abs_pan"
+			output=$(python -m hypernets.geometry.pan_tilt -w -p "$requested_abs_pan" 2>&1)
+		else
+			printf "Moving to requested absolute position pan = %.1f, tilt = %.1f\n" "$requested_abs_pan" "$requested_abs_tilt"
+			output=$(python -m hypernets.geometry.pan_tilt -w -p "$requested_abs_pan" -t "$requested_abs_tilt" 2>&1)
+		fi
 
 		if [[ ! $output =~ "ERROR" ]]; then
 			## read new abs positions
@@ -673,7 +720,7 @@ schedule() (
 	if [[ "${1-}" == "-h" ]] || [[ "${1-}" == "--help" ]]
 	then
 		echo
-		echo "View & Adjust yocto schedules 1 & 2 and time zone"
+		echo "View & Adjust yocto schedules and time zone"
 		echo "schedule         without options shows current schedules and time zone"
 		echo "         set     opens interactive menu for setting the schedules and time zone"
 		echo "eg:  schedule      schedule set"
@@ -688,6 +735,8 @@ schedule() (
 		if [[ "$yoctowifibrd" == "" ]]; then
 		# host system V4 or newer
 			yoctowifibrd=$(parse_config "yocto_prefix3" config_static.ini)
+		else
+			is_yocto_pictor_wifi=1
 		fi
 	else
 		echo "${XHL}Yocto API is not installed${RESET_HL}"
@@ -702,9 +751,9 @@ schedule() (
 	fi
 
 	## set yocyo clock if it is not set
-	yocto_time=$(YRealTimeClock -f '[result]' -r 127.0.0.1 "$yoctowifibrd" get_dateTime)
+	yocto_time_set=$(YRealTimeClock -f '[result]' -r 127.0.0.1 "$yoctowifibrd" get_timeSet)
 
-	if [ "$yocto_time" = "" ]; then
+	if [ "$yocto_time_set" != "TRUE" ]; then
 		echo
 		echo "Yocto clock is not set. Setting now from PC clock..."
 		YRealTimeClock -r 127.0.0.1 "$yoctowifibrd" set_unixTime $(( $(date '+%s') + ($yocto_offset) ))> /dev/null 2>&1
@@ -719,6 +768,11 @@ schedule() (
 		echo "All inactive for all fields disables the schedule"
 
 		for n_sched in 1 2 3; do
+			## Yocto-Pictor-Wifi has only two schedules
+			if [[ ${is_yocto_pictor_wifi-} == 1 && $n_sched == 3 ]]; then
+				break
+			fi
+
 			echo "----------------------------------------------------------"
 			echo "   ${HL}Schedule $n_sched${RESET_HL}"
 			echo -e -n "Months:\t\t"
@@ -898,8 +952,11 @@ EOF
 			echo -n "Enter option: ${HL}"
 			echo "1 - adjust schedule 1 (standard)"
 			echo "              2 - adjust schedule 2 (LED)"
-			echo "              3 - adjust schedule 3 (custom)"
-			echo "              4 - adjust Yocto time zone"
+			## Yocto-Pictor-Wifi has only two schedules
+			if [[ ${is_yocto_pictor_wifi-} != 1 ]]; then
+				echo "              3 - adjust schedule 3 (custom)"
+			fi
+			echo "              Z - adjust Yocto time zone"
 			echo "              E - Exit"
 			echo "  any other key - Refresh ${RESET_HL}"
 			
@@ -946,7 +1003,7 @@ EOF
 		then
 			schedy=2
 			ch=99
-		elif [ "$ch" = "3" ] # Schedule 3 (custom)
+		elif [[ "$ch" = "3" && ${is_yocto_pictor_wifi-} != 1 ]] # Schedule 3 (custom)
 		then
 			schedy=3
 			ch=99
@@ -1446,7 +1503,7 @@ EOF
 
 
 		########### Yocto time zone adjustment ##############
-		if [ "$ch" = "4" ] # yocto time zone
+		if [[ "$ch" =~ ^([zZ])$ ]] # yocto time zone
 		then
 			clear
 			echo 
@@ -1519,7 +1576,7 @@ EOF
 
 				sleep 1
 			fi
-		fi # [ "$ch" = "4" ] # yocto time zone
+		fi # [[ "$ch" =~ ^([zZ])$ ]] # yocto time zone
 	
 
 		######### EXIT #########
@@ -1549,8 +1606,8 @@ webpic() (
 		echo
 		echo "Take webcam picture"
 		echo 
-		echo "  site    store site (relay 5) picture in $HYPERNETS_TOOLS/OTHER/WEBCAM_SITE/YYYY/MM/"
-		echo "  sky     store sky (relay 6) picture in $HYPERNETS_TOOLS/OTHER/WEBCAM_SKY/YYYY/MM/"
+		echo "  site    store SITE camera picture in $HYPERNETS_TOOLS/OTHER/WEBCAM_SITE/YYYY/MM/"
+		echo "  sky     store SKY camera picture in $HYPERNETS_TOOLS/OTHER/WEBCAM_SKY/YYYY/MM/"
 		echo "  -h, --help      print this help"
 		echo
 		echo "eg: webpic site    webpic sky"
