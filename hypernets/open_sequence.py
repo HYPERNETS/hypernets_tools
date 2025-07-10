@@ -21,7 +21,7 @@ from logging import debug, info, warning, error, getLogger, INFO
 from hypernets.rain_sensor import RainSensor
 
 from hypernets.abstract.geometry import Geometry
-from hypernets.geometry.pan_tilt import move_to_geometry, move_to
+from hypernets.geometry.pan_tilt import move_to_geometry, move_to, NoGoZoneError
 
 from hypernets.yocto.lightsensor_logger import start_lightsensor_thread, terminate_lightsensor_thread
 from hypernets.yocto.relay import set_state_relay
@@ -67,7 +67,6 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
         except KeyError as key:
             tilt_limiter = False
             debug("pantilt/tilt_limiter not found in config_static.ini, defaults to tilt_limiter = no")
-
 
     # Check if it is raining
     if not instrument_standalone and check_rain:
@@ -322,6 +321,8 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
         info("-"*72)
         if not instrument_standalone:
+            skip_geometry = False
+
             geometry.get_absolute_pan_tilt()
             info(f"--> Requested Position : {geometry}")
 
@@ -358,12 +359,21 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                     warning(f"Failed to read the final position from pan-tilt")
                     pan_real, tilt_real = -999, -999
 
+                except NoGoZoneError as e:
+                    error(f"{e}")
+                    error("Skipping this geometry !!")
+                    skip_geometry = True
+                    break
+
                 except Exception as e:
                     error(f"{e}")
                     # Don't retry if this was the first attempt
-                    i = 1
+                    break
 
             logger.setLevel(old_loglevel)
+
+        if skip_geometry is True:
+            continue
 
         for request in requests:
             if not instrument_standalone:

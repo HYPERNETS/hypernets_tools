@@ -15,6 +15,10 @@ from datetime import datetime, timezone
 from logging import debug, info, warning, error
 
 
+class NoGoZoneError(Exception):
+    pass
+
+
 def pt_time_estimation(position_0, position_1,
                        pan_speed=20.0, tilt_speed=6.0, unit=1e-2):
     """
@@ -180,7 +184,7 @@ def move_to(ser, pan=None, tilt=None, wait=False, tilt_limiter=True):
 
     # Tilt no-go-zone: abs_deg (130.0, 181.0); abs_tilt (13000, 18100)
     if tilt_limiter is True and tilt is not None and tilt > 13000 and tilt < 18010:
-        raise Exception(f"Requested absolute tilt position {tilt/100:.2f} is in no-go zone (130.0, 181.0) !!")
+        raise NoGoZoneError(f"Requested absolute tilt position {tilt/100:.2f} is in no-go zone (130.0, 181.0) !!")
 
     if wait:
         initial_position = query_position(ser)
@@ -264,7 +268,7 @@ def move_to(ser, pan=None, tilt=None, wait=False, tilt_limiter=True):
 
 
 def move_to_geometry(geometry, wait=False, tilt_limiter=True):
-    return move_to(None, geometry.pan_abs, geometry.tilt_abs, wait=wait, tilt_limiter=True)
+    return move_to(None, geometry.pan_abs, geometry.tilt_abs, wait=wait, tilt_limiter=tilt_limiter)
 
 
 def open_serial():
