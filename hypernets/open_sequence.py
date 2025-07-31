@@ -151,7 +151,7 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
         # mkdir(path.join(seq_path, "METEO"))
         # Write one line meteo file
-		meteo_fn = path.join(DATA_DIR, seq_name, "meteo.csv")
+        meteo_fn = path.join(DATA_DIR, seq_name, "meteo.csv")
         with open(meteo_fn, "w") as meteo:
             try:
                 meteo_data = get_meteo()
