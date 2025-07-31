@@ -2,6 +2,7 @@ Version 3.1.2: (2025-07-31)
 	- fixed allowed SWIR TEC setpoint range in config_dynamic.ini comments
 	- Yocto-Pictor-Wifi auto-configuration bugfix
 	- config file sync bugfix if server is not accessible
+	- delete PoE camera interface in sysconfig script if no PoE cameras
 
 Version 3.1.1: (2025-07-10)
 	- tilt no-go zone bugfix if no-go zone is disabled

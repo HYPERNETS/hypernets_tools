@@ -151,7 +151,8 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
 
         # mkdir(path.join(seq_path, "METEO"))
         # Write one line meteo file
-        with open(path.join(DATA_DIR, seq_name, "meteo.csv"), "w") as meteo:
+		meteo_fn = path.join(DATA_DIR, seq_name, "meteo.csv")
+        with open(meteo_fn, "w") as meteo:
             try:
                 meteo_data = get_meteo()
                 meteo_data = "; ".join([str(val) + str(unit)
@@ -160,7 +161,8 @@ def run_sequence_file(sequence_file, instrument_port, instrument_br, # noqa C901
                 meteo.write(f"{meteo_data}\n")
 
             except Exception as e:
-                meteo.write(e)
+                error(f"{e}")
+                error(f"Failed to save Yocto environmental sensor data to {meteo_fn}")
 
         # Start monitor photodiode logging in a separate thread
         monitor_pd_path = path.join(DATA_DIR, seq_name, "monitorPD.csv")

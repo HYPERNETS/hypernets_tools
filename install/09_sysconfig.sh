@@ -240,7 +240,17 @@ EOF
 			nmcli connection up poe_cam_interface
 		fi
 	fi
-fi # "$poe_cameras" == "yes"
+else
+	## either poe_cameras != yes or no IP for either camera
+
+	## delete previous conf
+	rm -rf /etc/network/interfaces.d/poe_cam_interface
+
+	if [[ $(nmcli connection show | grep poe_cam_interface) ]]; then
+		echo "${HL}Removing PoE camera network interface${RESET_HL}"
+		nmcli connection delete poe_cam_interface
+	fi
+fi # poe_cameras
 
 echo 
 
