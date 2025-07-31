@@ -28,7 +28,7 @@ bidirectional_sync(){
 	echo "[INFO]          <->  $localPath"
 
 	set +e  # Temporary allow error in script
-	remoteDate=$(ssh -p "$sshPort" -t "$remoteAccess" \
+	remoteDate=$(ssh -p "$sshPort" -T "$remoteAccess" \
 		"stat -c %y $remotePath 2> /dev/null")
 
 	retcode="$?"
