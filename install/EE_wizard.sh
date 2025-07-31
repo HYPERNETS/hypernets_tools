@@ -104,7 +104,7 @@ function auto_config_yocto(){
 		echo -e "Yocto IDs are : $yocto_id1, $yocto_id2 and $yocto_gps\n"
 
 		sudo -u $SUDO_USER sed -i -e '/^yocto_prefix1/s/OBSVLFR1-....../OBSVLFR1-'${yocto_id1:9:6}'/' config_static.ini
-		sudo -u $SUDO_USER sed -i -e '/^yocto_prefix2/s/OBSVLFR2-....../OBSVLFR2-/'${yocto_id2:9:6}'/' config_static.ini
+		sudo -u $SUDO_USER sed -i -e '/^yocto_prefix2/s/OBSVLFR2-....../OBSVLFR2-'${yocto_id2:9:6}'/' config_static.ini
 		sudo -u $SUDO_USER sed -i '/yocto_prefix3 [-=]/d' config_static.ini
 		sudo -u $SUDO_USER sed -i -e '/^yocto_gps/s/YGNSSMK2-....../YGNSSMK2-'${yocto_gps:9:6}'/' config_static.ini
 	elif [[ "$yocto_ver" == "Yocto-Pictor-GPS" ]]; then

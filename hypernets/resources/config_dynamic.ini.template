@@ -177,7 +177,7 @@ baudrate = 3000000
 loglevel = INFO
 
 # swir_tec - SWIR sensor temperature setpoint in Celsius
-# Allowed values: integer in the range [-15...40]
+# Allowed values: integer in the range [-10...40]
 #
 # The SWIR temperature controller can handle setpoint up to approximately
 # 35...40 'C below ambient before going into thermal runaway. The setpoint is
