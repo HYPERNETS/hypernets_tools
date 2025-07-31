@@ -30,31 +30,40 @@ bidirectional_sync(){
 	set +e  # Temporary allow error in script
 	remoteDate=$(ssh -p "$sshPort" -t "$remoteAccess" \
 		"stat -c %y $remotePath 2> /dev/null"\
-		2> /dev/null)
+		2> /dev/stderr)
 
-	if [[ "$?" -eq 1 ]]; then
-		echo "[INFO]  $0 : Remote file does not exist"
-		scp -P "$sshPort" "$localPath" "$remoteAccess:$remotePath"
+	retcode="$?"
+
+	if [[ "$retcode" -eq 1 ]]; then
+		echo "[INFO]  $0 : Remote file does not exist, uploading now"
+		scp -p -P "$sshPort" "$localPath" "$remoteAccess:$remotePath"
 		return $?
+	elif [[ "$retcode" -eq 255 || "$remoteDate" == "" ]]; then
+		echo "[ERROR]  Failed to retreive remote file modification time"
+		return -1
 	fi
 
 	localDate=$(stat -c %y "$localPath" 2> /dev/null)
 	if [[ "$?" -eq 1 ]]; then
-		echo "[INFO]  $0 : Local file does not exist"
-		scp -P "$sshPort" "$remoteAccess:$remotePath" "$localPath"
+		echo "[INFO]  $0 : Local file does not exist, downloading now"
+		scp -p -P "$sshPort" "$remoteAccess:$remotePath" "$localPath"
 		return $?
 	fi
 	set -e  # Back to strict mode
 
 	# Conversion in integer
-	remoteDate=$(date -d "$remoteDate" +%s)
-	localDate=$(date -d "$localDate" +%s)
+	remoteTimeStamp=$(date -d "$remoteDate" +%s)
+	localTimeStamp=$(date -d "$localDate" +%s)
 
 	# Both files exists, compare of datetimes and sync
-	if [ "$remoteDate" -gt "$localDate" ] ; then
+	if [ "$remoteTimeStamp" -gt "$localTimeStamp" ] ; then
+		echo "[INFO]  Local date: $localDate"
+		echo "[INFO]  Remote date: $remoteDate"
 		echo "[INFO]  Sync from remote to local"
 		rsync -e "ssh -p $sshPort" -vt "$remoteAccess:$remotePath" "$localPath"
-	elif [ "$remoteDate" -lt "$localDate" ] ; then
+	elif [ "$remoteTimeStamp" -lt "$localTimeStamp" ] ; then
+		echo "[INFO]  Local date: $localDate"
+		echo "[INFO]  Remote date: $remoteDate"
 		echo "[INFO]  Sync from local to remote"
 		rsync -e "ssh -p $sshPort" -vt "$localPath" "$remoteAccess:$remotePath"
 	else
